@@ -8,7 +8,7 @@
     <meta http-equiv="Expires" content="0" data-page-node-id="YXlbOTFHU2Nr6SGRQHt7cy">
     <script>
         (function () {
-            var APP_VERSION = '20260909.8';
+            var APP_VERSION = '20260909.9';
             try {
                 var params = new URLSearchParams(location.search);
                 if (params.get('v') !== APP_VERSION) {
@@ -3431,7 +3431,7 @@
             for (let i = 0; i < 3; i++) {
                 const star = document.createElement('div');
                 star.className = 'float-star';
-                star.textContent = golden ? '\u2728' : '\U0001FA99';
+                star.textContent = golden ? '\u2728' : '\uD83E\uDE99';
                 if (golden) star.classList.add('golden');
                 star.style.left = `${rect.left + rect.width * (0.3 + i * 0.2)}px`;
                 star.style.top = `${rect.top + rect.height / 2}px`;
