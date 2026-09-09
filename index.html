@@ -8,7 +8,7 @@
     <meta http-equiv="Expires" content="0" data-page-node-id="YXlbOTFHU2Nr6SGRQHt7cy">
     <script>
         (function () {
-            var APP_VERSION = '20260909.7';
+            var APP_VERSION = '20260909.8';
             try {
                 var params = new URLSearchParams(location.search);
                 if (params.get('v') !== APP_VERSION) {
@@ -2773,6 +2773,7 @@
                 for (const w of normalPool) { if (q.length >= 10) break; q.push(w); }
                 if (q.length === 0) { showToast('词语库还是空的，请先在「词语库」里添加已学词语'); return; }
             }
+            if (!synth) showToast('本设备不支持语音朗读，已切换为文字模式（看词书写即可）');
             dictQueue = q; dictIdx = 0; dictWrong = [];
             document.getElementById('dictationModal').classList.add('active');
             document.getElementById('dictSummary').style.display = 'none';
@@ -3305,66 +3306,73 @@
             try {
                 const ctx = ensureAudio();
                 if (!ctx) return;
-                const now = ctx.currentTime;
+                const start = function () {
+                    const now = ctx.currentTime;
 
-                if (type === 'check') {
-                    // 清脆的"叮"声 — 两个上升音符
-                    [880, 1320].forEach(function(freq, i) {
+                    if (type === 'check') {
+                        // 清脆的"叮"声 — 两个上升音符
+                        [880, 1320].forEach(function(freq, i) {
+                            const osc = ctx.createOscillator();
+                            const gain = ctx.createGain();
+                            osc.connect(gain);
+                            gain.connect(ctx.destination);
+                            osc.type = 'sine';
+                            osc.frequency.value = freq;
+                            const t = now + i * 0.06;
+                            gain.gain.setValueAtTime(0.25, t);
+                            gain.gain.exponentialRampToValueAtTime(0.001, t + 0.15);
+                            osc.start(t);
+                            osc.stop(t + 0.15);
+                        });
+                    } else if (type === 'uncheck') {
+                        // 取消打卡 — 下降音
                         const osc = ctx.createOscillator();
                         const gain = ctx.createGain();
                         osc.connect(gain);
                         gain.connect(ctx.destination);
                         osc.type = 'sine';
-                        osc.frequency.value = freq;
-                        const t = now + i * 0.06;
-                        gain.gain.setValueAtTime(0.25, t);
-                        gain.gain.exponentialRampToValueAtTime(0.001, t + 0.15);
-                        osc.start(t);
-                        osc.stop(t + 0.15);
-                    });
-                } else if (type === 'uncheck') {
-                    // 取消打卡 — 下降音
-                    const osc = ctx.createOscillator();
-                    const gain = ctx.createGain();
-                    osc.connect(gain);
-                    gain.connect(ctx.destination);
-                    osc.type = 'sine';
-                    osc.frequency.setValueAtTime(660, now);
-                    osc.frequency.exponentialRampToValueAtTime(330, now + 0.15);
-                    gain.gain.setValueAtTime(0.15, now);
-                    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.15);
-                    osc.start(now);
-                    osc.stop(now + 0.15);
-                } else if (type === 'celebrate') {
-                    // 全部完成 — 上升庆祝音阶
-                    [523.25, 659.25, 783.99, 1046.5, 1318.5].forEach(function(freq, i) {
-                        const osc = ctx.createOscillator();
-                        const gain = ctx.createGain();
-                        osc.connect(gain);
-                        gain.connect(ctx.destination);
-                        osc.type = 'sine';
-                        osc.frequency.value = freq;
-                        const t = now + i * 0.12;
-                        gain.gain.setValueAtTime(0.2, t);
-                        gain.gain.exponentialRampToValueAtTime(0.001, t + 0.3);
-                        osc.start(t);
-                        osc.stop(t + 0.3);
-                    });
-                } else if (type === 'praise') {
-                    // 鼓励音 — 友好上行双音（自包含，无需外部文件）
-                    [659.25, 987.77].forEach(function(freq, i) {
-                        const osc = ctx.createOscillator();
-                        const gain = ctx.createGain();
-                        osc.connect(gain);
-                        gain.connect(ctx.destination);
-                        osc.type = 'triangle';
-                        osc.frequency.value = freq;
-                        const t = now + i * 0.08;
-                        gain.gain.setValueAtTime(0.22, t);
-                        gain.gain.exponentialRampToValueAtTime(0.001, t + 0.25);
-                        osc.start(t);
-                        osc.stop(t + 0.25);
-                    });
+                        osc.frequency.setValueAtTime(660, now);
+                        osc.frequency.exponentialRampToValueAtTime(330, now + 0.15);
+                        gain.gain.setValueAtTime(0.15, now);
+                        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.15);
+                        osc.start(now);
+                        osc.stop(now + 0.15);
+                    } else if (type === 'celebrate') {
+                        // 全部完成 — 上升庆祝音阶
+                        [523.25, 659.25, 783.99, 1046.5, 1318.5].forEach(function(freq, i) {
+                            const osc = ctx.createOscillator();
+                            const gain = ctx.createGain();
+                            osc.connect(gain);
+                            gain.connect(ctx.destination);
+                            osc.type = 'sine';
+                            osc.frequency.value = freq;
+                            const t = now + i * 0.12;
+                            gain.gain.setValueAtTime(0.2, t);
+                            gain.gain.exponentialRampToValueAtTime(0.001, t + 0.3);
+                            osc.start(t);
+                            osc.stop(t + 0.3);
+                        });
+                    } else if (type === 'praise') {
+                        // 鼓励音 — 友好上行双音（自包含，无需外部文件）
+                        [659.25, 987.77].forEach(function(freq, i) {
+                            const osc = ctx.createOscillator();
+                            const gain = ctx.createGain();
+                            osc.connect(gain);
+                            gain.connect(ctx.destination);
+                            osc.type = 'triangle';
+                            osc.frequency.value = freq;
+                            const t = now + i * 0.08;
+                            gain.gain.setValueAtTime(0.22, t);
+                            gain.gain.exponentialRampToValueAtTime(0.001, t + 0.25);
+                            osc.start(t);
+                            osc.stop(t + 0.25);
+                        });
+                    }
+                };
+                if (ctx.state === 'suspended') {
+                    ctx.resume().then(start).catch(start);
+                } else {
+                    start();
                 }
             } catch (e) { /* 忽略音频错误 */ }
         }
