@@ -8,7 +8,7 @@
     <meta http-equiv="Expires" content="0" data-page-node-id="YXlbOTFHU2Nr6SGRQHt7cy">
     <script>
         (function () {
-            var APP_VERSION = '20260910.19';
+            var APP_VERSION = '20260910.20';
             window.APP_VERSION_STR = APP_VERSION;   // 主脚本里做线上版本自检要用
             try {
                 var params = new URLSearchParams(location.search);
@@ -1660,6 +1660,11 @@
     .dict-right { background:#4ECDC4 !important; color:#fff !important; }
     .dict-wrong { background:#ff7675 !important; color:#fff !important; }
     .dict-summary { padding:16px 8px; text-align:center; }
+    .dict-done-bar { margin-top:14px; padding-top:12px; border-top:1px dashed #E4E8EC; text-align:center; }
+    .dict-done-tip { font-size:12px; color:#8A9AA5; line-height:1.6; margin-bottom:8px; }
+    .dict-undo { border:1px solid #D8DEE4; background:#fff; color:#7A8894; border-radius:18px;
+                 padding:8px 16px; font-size:13px; cursor:pointer; }
+    .dict-undo:active { transform:scale(0.96); }
     .wrong-chip { display:inline-block; background:#ffeaea; color:#e74c3c; border-radius:12px; padding:4px 10px; margin:3px; font-size:14px; }
     .bank-progress-row { display:flex; align-items:center; gap:10px; margin-bottom:8px; }
     .bank-progress-row select { flex:1; padding:8px; border-radius:8px; border:1px solid #ddd; font-size:14px; }
@@ -1847,6 +1852,10 @@
                 </div>
             </div>
             <div class="dict-summary" id="dictSummary" style="display:none;"></div>
+            <div class="dict-done-bar" id="dictDoneBar" style="display:none;">
+                <div class="dict-done-tip">今天已经打过卡啦 · 想改的话可以把任务放回待办</div>
+                <button class="dict-undo" onclick="undoDictation()">🔄 撤销打卡，放回任务栏</button>
+            </div>
         </div>
     </div>
 
@@ -4326,6 +4335,9 @@
             document.getElementById('dictationModal').classList.add('active');
             document.getElementById('dictSummary').style.display = 'none';
             document.getElementById('dictStage').style.display = '';
+            // 已打过卡 → 弹窗底部给一个「放回任务栏」的出口（避免误点后变成死路）
+            var _doneBar = document.getElementById('dictDoneBar');
+            if (_doneBar) _doneBar.style.display = state.todayChecks['a_dictation'] ? 'block' : 'none';
             renderDictWord();
         }
         function renderDictWord() {
@@ -4384,12 +4396,42 @@
             box.style.display = 'block';
         }
         function finishDictation() {
-            if (!state.todayChecks['a_dictation']) { state.totalStars += 2; state.coinsEver = (state.coinsEver || 0) + 2; feedPet(2); }
-            state.todayChecks['a_dictation'] = { stars: 2, nutri: 'wisdom', golden: false };
-            saveState(); saveTodayToHistory(); saveState();
-            renderTasks(); renderStats(); renderPet();
+            // 已打过卡：不重复发奖，只提示（要改的话用弹窗底部的「撤销打卡」）
+            if (state.todayChecks['a_dictation']) {
+                closeDictation();
+                showToast('今天已经打过卡啦，不用再打一次～');
+                return;
+            }
+            var task = state.tasks.filter(function (t) { return t.id === 'a_dictation'; })[0]
+                    || { id: 'a_dictation', name: '词语听写 10 个', icon: '\u270D\uFE0F', category: 'evening', stars: 2, nutri: 'wisdom' };
+            closeDictation();   // 先关弹窗（同时停掉朗读），再走打卡动画
+            // 走与普通任务完全相同的链路：营养/勋章/时间结算/四维全满/全部完成庆祝/宠物成就
+            finishCheck(task, task.stars, 'ok');
+            showToast('✅ 词语听写打卡完成，+' + task.stars + '⭐');
+        }
+        // 撤销听写打卡：把任务放回待办，并收回星星、营养与宠物经验
+        function undoDictation() {
+            var rec = state.todayChecks['a_dictation'];
+            if (!rec) { showToast('今天还没打卡呢'); return; }
+            var got = (typeof rec === 'object' && rec.stars !== undefined) ? rec.stars : 2;
+            if (!window.confirm('取消今天的听写打卡吗？\n\n· 收回 ' + got + ' 颗星，任务回到待办里\n'
+                              + '· 听写进度和错词本不受影响')) return;
+            state.totalStars = Math.max(0, state.totalStars - got);
+            if (state.pet && state.pet.nutri && rec.nutri) {
+                state.pet.nutri[rec.nutri] = Math.max(0, (state.pet.nutri[rec.nutri] || 0) - (rec.golden ? 2 : 1));
+            }
+            state.todayChecks['a_dictation'] = false;
+            playSound('uncheck');
+            deductPet(got);
+            saveState();
+            saveTodayToHistory();
+            saveState();
+            renderStats();
+            renderTasks();
+            renderHistory();
+            renderPet();
             closeDictation();
-            showToast('✅ 词语听写打卡完成，+2⭐');
+            showToast('已撤销打卡，任务回到待办里啦');
         }
         function closeDictation() { document.getElementById('dictationModal').classList.remove('active'); if (synth) { try { synth.cancel(); } catch(e){} } }
         function practiceWrong() { closeDictation(); setTimeout(function(){ openDictation(true); }, 200); }
