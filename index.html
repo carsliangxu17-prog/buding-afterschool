@@ -8,7 +8,7 @@
     <meta http-equiv="Expires" content="0" data-page-node-id="YXlbOTFHU2Nr6SGRQHt7cy">
     <script>
         (function () {
-            var APP_VERSION = '20260909.9';
+            var APP_VERSION = '20260910.2';
             try {
                 var params = new URLSearchParams(location.search);
                 if (params.get('v') !== APP_VERSION) {
@@ -149,6 +149,43 @@
             50% { transform: scale(1.5) rotate(8deg); filter: brightness(1.7); }
             75% { transform: scale(1.3) rotate(-4deg); }
             100% { transform: scale(1) rotate(0deg); }
+        }
+        .pet-main { display:flex; align-items:center; gap:14px; flex-wrap:wrap; justify-content:center; position:relative; z-index:2; }
+        .pet-side { flex:1; min-width:210px; text-align:left; }
+        .nutri-pill { display:inline-flex; align-items:center; gap:3px; background:#fff; border:1.5px solid #D6F2E6; border-radius:12px; padding:3px 8px; font-size:11.5px; color:#4A5F57; }
+        .nutri-pill .nutri-lv { font-style:normal; font-size:10px; color:#fff; border-radius:8px; padding:1px 6px; margin-left:3px; }
+        .nutri-pill .nutri-today { font-weight:400; font-size:10px; color:#C0392B; margin-left:2px; }
+        .nutri-pill.low { opacity:.7; }
+        .pet-actions { margin-top:10px; position:relative; z-index:2; }
+        .pet-profile-btn { background:linear-gradient(135deg,#6C5CE7,#8E7CF3); color:#fff; border:none; border-radius:12px; padding:7px 18px; font-size:13px; font-weight:700; cursor:pointer; }
+        .pet-profile-btn:active { transform: scale(0.95); }
+        .pet-hint { font-size:11px; color:#9AB0A7; margin-top:8px; position:relative; z-index:2; }
+        .pet-tl { display:flex; justify-content:space-between; margin:12px 0 2px; }
+        .pet-tl-step { text-align:center; font-size:11px; color:#B7C6C0; flex:1; }
+        .pet-tl-step .tl-emoji { font-size:22px; display:block; margin-bottom:2px; }
+        .pet-tl-step.on { color:#3AA17E; font-weight:700; }
+        .pet-tl-step.on .tl-emoji { transform:scale(1.18); }
+        .pet-tl-step small { font-size:9.5px; color:#B7C6C0; }
+        .pet-profile-row { display:flex; justify-content:space-between; font-size:13px; color:#5A6B63; padding:7px 4px; border-bottom:1px dashed #E4EEE9; }
+        .pet-profile-row b { color:#2E9E6B; }
+        .pet-change-btn {
+            position: absolute; top: 10px; right: 10px; z-index: 3;
+            width: 30px; height: 30px; line-height: 26px; padding: 0;
+            border: 2px solid #D6F2E6; background: #fff; color: #3AA17E;
+            border-radius: 50%; font-size: 14px; cursor: pointer;
+        }
+        .pet-change-btn:active { transform: scale(0.9); }
+        .pet-scene {
+            display: inline-block; position: relative; z-index: 2;
+            font-size: 12px; color: #8A6A3A; background: rgba(255,255,255,0.78);
+            border-radius: 10px; padding: 2px 10px; margin-bottom: 8px;
+        }
+        .pet-decor-row { position: relative; z-index: 2; margin-top: 6px; }
+        .pet-decor { font-size: 18px; margin: 0 3px; display: inline-block; }
+        .pet-cancel {
+            width: 100%; margin-top: 10px; padding: 11px;
+            background: #F1F5F3; color: #7A8C84; border: none; border-radius: 14px;
+            font-size: 15px; font-weight: 700; cursor: pointer;
         }
         /* 选宠界面 */
         .pet-pick-mask {
@@ -1686,9 +1723,14 @@
         function syncToCloud() {
             if (!cloudReady || isParentMode) return;
             const payload = SYNC_FIELDS.reduce((acc, key) => {
-                acc[key] = state[key];
+                const v = state[key];
+                // 关键：本地还没养伙伴 / 还没买装扮时不要上传空值，否则会把云端已有的养成进度洗掉
+                if (key === 'pet' && !v) return acc;
+                if ((key === 'owned' || key === 'medals') && (!Array.isArray(v) || v.length === 0)) return acc;
+                acc[key] = v;
                 return acc;
             }, {});
+            if (!Object.keys(payload).length) return;
             const body = {
                 id: SYNC_OBJECT_ID,
                 payload: payload,
@@ -1734,14 +1776,15 @@
                 syncFromCloud(data => {
                     syncingFromCloud = false;
                     if (data && data.todayDate === getTodayStr()) {
-                        // 除今日打卡外整体采用云端；今日打卡按任务合并（防丢卡）
-                        for (const key of SYNC_FIELDS) {
-                            if (key === 'todayChecks') continue;
-                            if (data[key] !== undefined) state[key] = data[key];
-                        }
-                        if (data.todayChecks) {
-                            state.todayChecks = mergeTodayChecks(state.todayChecks, data.todayChecks);
-                        }
+                        // 统一走「只增不减」合并：伙伴 / 装扮 / 金币都不会被空值或旧值洗掉
+                        const snap = function () {
+                            return JSON.stringify([state.pet, state.owned, state.medals,
+                                                   state.totalStars, state.streak,
+                                                   state.todayChecks, state.history]);
+                        };
+                        const before = snap();
+                        mergeCloudIntoState(data);
+                        if (snap() !== before) saveState();
                         // 检查家长提醒：有新消息则弹窗 + 响铃
                         if (data.parentMessage && data.parentMessage.time > (state.lastReadMsgTime || 0)) {
                             state.lastReadMsgTime = data.parentMessage.time;
@@ -1750,6 +1793,7 @@
                         }
                         renderStats();
                         renderTasks();
+                        renderPet();
                     }
                 });
             }, 20000);
@@ -1904,15 +1948,22 @@
             }
             return today;
         }
+        function nutriLevel(n) { return (n || 0) >= 12 ? 3 : (n || 0) >= 8 ? 2 : (n || 0) >= 4 ? 1 : 0; }
+        const NUTRI_LV_NAME = ['要补一补', '还行', '不错', '超棒'];
+        const NUTRI_LV_COLOR = ['#B9C9C2', '#9FD9BE', '#3AA17E', '#F5A623'];
         function nutriRowHTML() {
             if (!state.pet) return '';
             const n = state.pet.nutri || { calcium: 0, wisdom: 0, energy: 0, peace: 0 };
             const today = todayNutri();
             let html = '<div class="nutri-row">';
             for (const k of ['calcium', 'wisdom', 'energy', 'peace']) {
-                const low = today[k] === 0;
-                html += '<span class="nutri-pill' + (low ? ' low' : '') + '">' + NUTRI_ICON[k] + ' ' +
-                        NUTRI_NAME[k] + ' ' + (n[k] || 0) + (low ? ' · 今天还没' : '') + '</span>';
+                const lv = nutriLevel(n[k]);
+                const ate = today[k] > 0;
+                html += '<span class="nutri-pill' + (ate ? '' : ' low') + '" title="' + NUTRI_NAME[k] + ' 累计 ' + (n[k] || 0) + ' 口">' +
+                        NUTRI_ICON[k] + ' ' + (n[k] || 0) +
+                        '<i class="nutri-lv" style="background:' + NUTRI_LV_COLOR[lv] + '">' + NUTRI_LV_NAME[lv] + '</i>' +
+                        (ate ? '' : '<b class="nutri-today">今天没吃</b>') +
+                        '</span>';
             }
             return html + '</div>';
         }
@@ -1925,25 +1976,133 @@
             return 0;
         }
         function getPetMood(stage, percent, done) {
-            if (stage === 0) return '\u8fd8\u5728\u86cb\u91cc\uff0c\u5b8c\u6210 1 \u4e2a\u4efb\u52a1\u5c31\u5b75\u5316\u5566 \uD83E\uDD5A';
+            if (stage === 0) return '还在蛋里，完成 1 个任务就孵化啦 🥚';
             if (done > 0) {
                 const tn = todayNutri();
-                if (!tn.calcium && !tn.wisdom && !tn.energy && !tn.peace) return '今天还没吃东西，快去打卡吧';
-                if (!tn.calcium) return '今天牛奶没喝完，我骨头有点软…';
-                if (!tn.energy)  return '好久没一起出去跑跑了';
-                if (!tn.peace)   return '你还没洗漱，我先打个哈欠';
-                if (!tn.wisdom)  return '想听你读一段《西游记》';
+                const miss = [];
+                if (!tn.calcium) miss.push('早餐(钙钙)');
+                if (!tn.wisdom)  miss.push('阅读(智慧)');
+                if (!tn.energy)  miss.push('运动(活力)');
+                if (!tn.peace)   miss.push('洗漱(安心)');
+                if (miss.length) return '今天还差：' + miss.join('、');
+                if (percent >= 100) return '今天吃全了，开心得转圈圈！💃';
+                if (percent >= 60) return '营养全吃到了，继续加油！🌟';
+                return '吃得饱饱的，在等你继续完成任务 👀';
             }
-            if (percent >= 100) return '\u4eca\u5929\u5168\u90e8\u5b8c\u6210\uff0c\u5f00\u5fc3\u5f97\u8f6c\u5708\u5708\uff01\uD83D\uDC83';
-            if (percent >= 60)  return '\u4eca\u5929\u8868\u73b0\u5f88\u68d2\uff0c\u7ee7\u7eed\u52a0\u6cb9\uff01\uD83C\uDF1F';
-            if (done > 0)       return '\u5728\u7b49\u4f60\u7ee7\u7eed\u5b8c\u6210\u4efb\u52a1\u5462 \uD83D\uDC40';
-            return '\u6709\u70b9\u60f3\u4f60\u4e86\uff0c\u5feb\u6765\u6253\u5361\u5427 \uD83E\uDD7A';
+            return '有点想你了，快来打卡喂我吧 🥺';
+        }
+        function petAura() {
+            if (!state.pet || !state.pet.nutri) return '';
+            const n = state.pet.nutri;
+            const ok = nutriLevel(n.calcium) >= 2 && nutriLevel(n.wisdom) >= 2 &&
+                       nutriLevel(n.energy) >= 2 && nutriLevel(n.peace) >= 2;
+            return ok ? '✨' : '';
+        }
+        function petAgeDays() {
+            if (!state.pet || !state.pet.bornAt) return 1;
+            const d1 = new Date(state.pet.bornAt), d2 = new Date(getTodayStr());
+            return Math.max(1, Math.round((d2 - d1) / 86400000) + 1);
+        }
+        const SCENE_BG = {
+            s_room: 'linear-gradient(160deg,#FFF6E5,#FFE2B7)',
+            s_tree: 'linear-gradient(160deg,#EAF7EC,#C9E9CE)',
+            s_star: 'linear-gradient(160deg,#EFEAFB,#D6CBF5)'
+        };
+        function petOwnedItems(type) {
+            const owned = state.owned || [];
+            return (state.shop || []).filter(function (x) { return x.type === type && owned.indexOf(x.id) >= 0; });
+        }
+        function petFeedLeft() {
+            const used = (state.petExpDate === state.todayDate) ? (state.petExpToday || 0) : 0;
+            return Math.max(0, 80 - used);
+        }
+        // 主动换一个学习伙伴（装扮和小屋会保留给新伙伴）
+        function confirmChangePet() {
+            const cur = state.pet ? state.pet.name : '';
+            const ok = window.confirm('确定要换一个学习伙伴吗？\n\n现在的「' + cur + '」会离开，新伙伴从 0 经验重新开始。\n（已买到的装扮和小屋会保留）');
+            if (!ok) return;
+            showPetPicker(true);
+        }
+        // 点击宠物：跳一下 + 随状态说话
+        function petInteract() {
+            if (!state.pet) return;
+            const av = document.getElementById('petAvatar');
+            if (av) {
+                av.classList.add('pet-evolve');
+                setTimeout(function () { av.classList.remove('pet-evolve'); }, 1300);
+            }
+            playSound('praise');
+            const tn = todayNutri();
+            const done = calcTodayCompleted();
+            const pool = [];
+            if (getPetStage(state.pet.exp || 0) === 0) pool.push('我在蛋里听到你的声音啦，再打个卡我就出来！');
+            if (done === 0) { pool.push('今天还没喂我呢，去打个卡吧～', '有点想你了，快来打卡吧 🥺'); }
+            else {
+                const eaten = (tn.calcium || 0) + (tn.wisdom || 0) + (tn.energy || 0) + (tn.peace || 0);
+                pool.push('今天吃了 ' + eaten + ' 口饭，好满足～', '最喜欢和布丁一起努力啦！', '继续加油，我陪你！');
+            }
+            if (!tn.calcium && done > 0) pool.push('牛奶还没喝完，我骨头有点软…');
+            if (!tn.wisdom && done > 0) pool.push('想听你读一段《西游记》');
+            showToast(pool[Math.floor(Math.random() * pool.length)]);
+        }
+        // 成长档案：伙伴现在的完整状态
+        function showPetProfile() {
+            if (!state.pet) return;
+            const kind = PET_KINDS.find(function (k) { return k.id === state.pet.kind; }) || PET_KINDS[0];
+            const exp = state.pet.exp || 0;
+            const stage = getPetStage(exp);
+            const n = state.pet.nutri || {};
+            const tlIcons = ['🥚', '🐣', '🐾', '🐕', '👑'];
+            let tl = '';
+            for (let i = 0; i < PET_STAGE_MIN.length; i++) {
+                tl += '<div class="pet-tl-step' + (i <= stage ? ' on' : '') + '">' +
+                        '<span class="tl-emoji">' + tlIcons[i] + '</span>' + PET_STAGE_NAME[i] +
+                        (i > 0 ? '<br><small>' + PET_STAGE_MIN[i] + ' 经验</small>' : '') +
+                      '</div>';
+            }
+            let nu = '';
+            for (const k of ['calcium', 'wisdom', 'energy', 'peace']) {
+                const v = n[k] || 0, lv = nutriLevel(v);
+                nu += '<div class="pet-profile-row"><span>' + NUTRI_ICON[k] + ' ' + NUTRI_NAME[k] +
+                      '（累计 ' + v + ' 口）</span><b style="color:' + NUTRI_LV_COLOR[lv] + '">' + NUTRI_LV_NAME[lv] + '</b></div>';
+            }
+            const decorList = petOwnedItems('decor');
+            const sceneList = petOwnedItems('scene');
+            const scene = sceneList.length ? sceneList[sceneList.length - 1] : null;
+            const nextExp = stage >= PET_STAGE_MIN.length - 1 ? '已满级' : ('距下一阶段还差 ' + (PET_STAGE_MIN[stage + 1] - exp) + ' 经验');
+            const mask = document.createElement('div');
+            mask.className = 'pet-pick-mask';
+            mask.innerHTML =
+                '<div class="pet-pick-box" style="text-align:left;max-width:420px;">' +
+                    '<div style="text-align:center;">' +
+                        '<div class="pet-avatar" style="font-size:' + PET_STAGE_SIZE[stage] + ';cursor:default;">' +
+                            (stage === 0 ? '🥚' : kind.emoji) + petAura() + (stage >= 4 ? '👑' : (stage >= 3 ? '🌟' : '')) + '</div>' +
+                        '<div class="pet-name" style="margin-top:10px;">' + (state.pet.name || kind.name) +
+                            '<span class="pet-stage">Lv.' + (stage + 1) + ' ' + PET_STAGE_NAME[stage] + '</span></div>' +
+                        '<div style="font-size:12px;color:#8AA39A;margin-top:4px;">' + kind.name + ' · 陪布丁 ' + petAgeDays() + ' 天 · 总经验 ' + exp + '</div>' +
+                        '<div style="font-size:12px;color:#B8860B;margin-top:2px;">' + nextExp + (petAura() ? ' · ✨ 四维光环已点亮' : '') + '</div>' +
+                    '</div>' +
+                    '<div style="height:1px;background:#E4EEE9;margin:12px 0;"></div>' +
+                    '<div style="font-size:13px;font-weight:700;color:#2E9E6B;margin-bottom:2px;">🌱 成长时间线</div>' +
+                    '<div class="pet-tl">' + tl + '</div>' +
+                    '<div style="font-size:13px;font-weight:700;color:#2E9E6B;margin:10px 0 2px;">🍚 四维营养（靠每天打卡吃进去）</div>' + nu +
+                    '<div style="font-size:13px;font-weight:700;color:#2E9E6B;margin:10px 0 2px;">🎀 已拥有的好东西</div>' +
+                    '<div class="pet-profile-row"><span>装扮</span><b>' + (decorList.length ? decorList.map(function (d) { return d.icon + ' ' + d.name; }).join('　') : '还没有') + '</b></div>' +
+                    '<div class="pet-profile-row"><span>小屋</span><b>' + (scene ? scene.icon + ' ' + scene.name : '还没有') + '</b></div>' +
+                    '<div style="background:#F2FBF7;border-radius:12px;padding:10px 12px;margin-top:12px;font-size:11.5px;color:#5A6B63;line-height:1.7;">' +
+                        '📖 <b>成长逻辑：</b>每天打卡 = 喂它（四维营养 +1 口、经验 +5/星）；<br>' +
+                        '金币 = 打卡攒下的奖励，买食物<b>直接加经验</b>，买装扮小屋让它<b>更好看</b>；<br>' +
+                        '经验决定它长多大（五个阶段），四维决定状态好不好（四项都"不错"以上，头顶会亮 ✨）。' +
+                    '</div>' +
+                    '<button class="pet-confirm" onclick="this.closest(\'.pet-pick-mask\').remove()">知道啦</button>' +
+                '</div>';
+            document.body.appendChild(mask);
         }
         function renderPet() {
             const area = document.getElementById('petArea');
             if (!area) return;
             if (!state.pet) { area.innerHTML = ''; return; }
-            const kind = PET_KINDS.find(k => k.id === state.pet.kind) || PET_KINDS[0];
+            const kind = PET_KINDS.find(function (k) { return k.id === state.pet.kind; }) || PET_KINDS[0];
             const exp  = state.pet.exp || 0;
             const stage = getPetStage(exp);
             const isEgg = stage === 0;
@@ -1951,29 +2110,46 @@
             const total = getActiveTasks().length;
             const percent = total > 0 ? Math.round(completed / total * 100) : 0;
             const mood = getPetMood(stage, percent, completed);
-            const avatar = isEgg ? '\uD83E\uDD5A' : kind.emoji;
-            const deco = stage >= 4 ? '\uD83D\uDC51' : (stage >= 3 ? '\u2728' : '');
+            const avatar = (isEgg ? '🥚' : kind.emoji) + petAura();
+            const deco = stage >= 4 ? '👑' : (stage >= 3 ? '🌟' : '');
             let expText, expPct;
             if (stage >= PET_STAGE_MIN.length - 1) {
                 expPct = 100;
-                expText = '\u5df2\u6ee1\u7ea7\uff0c\u8d85\u5389\u5bb3\uff01';
+                expText = '已满级，超厉害！';
             } else {
                 const cur = PET_STAGE_MIN[stage], next = PET_STAGE_MIN[stage + 1];
                 expPct = Math.min(100, Math.round((exp - cur) / (next - cur) * 100));
-                expText = '\u7ecf\u9a8c ' + exp + ' / ' + next;
+                expText = '经验 ' + exp + ' / ' + next;
             }
+            const sceneList = petOwnedItems('scene');
+            const decorList = petOwnedItems('decor');
+            const scene = sceneList.length ? sceneList[sceneList.length - 1] : null;
+            const bg = scene ? (SCENE_BG[scene.id] || '') : '';
             area.innerHTML =
-                '<div class="pet-card">' +
-                    '<div class="pet-avatar" id="petAvatar" style="font-size:' + PET_STAGE_SIZE[stage] + ';">' + avatar + deco + '</div>' +
-                    '<div class="pet-name">' + (state.pet.name || kind.name) +
-                        '<span class="pet-stage">Lv.' + (stage + 1) + ' ' + PET_STAGE_NAME[stage] + '</span></div>' +
-                    '<div class="pet-mood">' + mood + '</div>' +
-                    nutriRowHTML() +
-                    '<div class="pet-exp-wrap"><div class="pet-exp-fill" style="width:' + expPct + '%;"></div></div>' +
-                    '<div class="pet-exp-text">' + expText + '</div>' +
+                '<div class="pet-card"' + (bg ? ' style="background:' + bg + ';"' : '') + '>' +
+                    '<button class="pet-change-btn" onclick="confirmChangePet()" title="换一个伙伴">🔄</button>' +
+                    (scene ? '<div class="pet-scene">🏡 ' + scene.name + '</div>' : '') +
+                    '<div class="pet-main">' +
+                        '<div class="pet-avatar" id="petAvatar" style="font-size:' + PET_STAGE_SIZE[stage] + ';cursor:pointer;" onclick="petInteract()" title="摸摸它">' + avatar + deco + '</div>' +
+                        '<div class="pet-side">' +
+                            '<div class="pet-name">' + (state.pet.name || kind.name) +
+                                '<span class="pet-stage">Lv.' + (stage + 1) + ' ' + PET_STAGE_NAME[stage] + '</span></div>' +
+                            '<div class="pet-mood">' + mood + '</div>' +
+                            nutriRowHTML() +
+                            '<div class="pet-exp-wrap"><div class="pet-exp-fill" style="width:' + expPct + '%;"></div></div>' +
+                            '<div class="pet-exp-text">' + expText + ' · 今天打卡还能喂 ' + petFeedLeft() + ' 点</div>' +
+                        '</div>' +
+                    '</div>' +
+                    (decorList.length ? '<div class="pet-decor-row">' +
+                        decorList.map(function (d) { return '<span class="pet-decor" title="' + d.name + '">' + d.icon + '</span>'; }).join('') +
+                        '</div>' : '') +
+                    '<div class="pet-actions"><button class="pet-profile-btn" onclick="showPetProfile()">📖 成长档案</button></div>' +
+                    '<div class="pet-hint">👆 点它会说话 · 四维营养靠每天打卡 · 金币买食物直接加经验</div>' +
                 '</div>';
         }
-        function showPetPicker() {
+        function showPetPicker(cancelable) {
+            const backup = state.pet;
+
             const mask = document.createElement('div');
             mask.className = 'pet-pick-mask';
             let opts = '';
@@ -1990,6 +2166,7 @@
                     '<div class="pet-grid">' + opts + '</div>' +
                     '<input class="pet-name-input" id="petNameInput" placeholder="\u7ed9\u5b83\u53d6\u4e2a\u540d\u5b57\u5427\uff08\u53ef\u4ee5\u4e0d\u586b\uff09" maxlength="8">' +
                     '<button class="pet-confirm" id="petConfirmBtn">\u5c31\u662f\u5b83\u5566\uff01</button>' +
+                    (cancelable ? '<button class="pet-cancel" id="petCancelBtn">\u518d\u60f3\u60f3</button>' : '') +
                 '</div>';
             document.body.appendChild(mask);
             let sel = PET_KINDS[0].id;
@@ -2014,6 +2191,17 @@
                 renderPet();
                 showToast('\u6b22\u8fce ' + state.pet.name + ' \u52a0\u5165\uff01\u5f00\u59cb\u6253\u5361\u5582\u517b\u5b83\u5427');
             });
+            if (cancelable) {
+                const cancelBtn = document.getElementById('petCancelBtn');
+                if (cancelBtn) {
+                    cancelBtn.addEventListener('click', function () {
+                        state.pet = backup;
+                        saveState();
+                        mask.remove();
+                        renderPet();
+                    });
+                }
+            }
         }
         function showToast(msg, bg) {
             const t = document.createElement('div');
@@ -2265,6 +2453,13 @@
                 state.appVersion = APP_VERSION;
             }
             if (state.poemLibVer !== POEM_LIB_VERSION) { state.poemLog = {}; state.poemLibVer = POEM_LIB_VERSION; }
+            // 商店文案与默认值同步（只更新名称/图标/描述，不动购买记录）
+            if (Array.isArray(state.shop)) {
+                state.shop.forEach(function (t) {
+                    const d = (DEFAULT_SHOP || []).find(function (x) { return x.id === t.id; });
+                    if (d) { t.name = d.name; t.icon = d.icon; t.desc = d.desc; }
+                });
+            }
             // 词语听写：默认已学进度（一上24+一下18+二上第一单元L1-L3=45课），仅在未初始化时设置，尊重用户后续手动调整
             if (state.dictationLibVer !== DICTATION_LIB_VER) {
                 state.dictationLearned = 45;
@@ -3534,6 +3729,9 @@
                 '🪙 当前拥有 ' + state.totalStars + ' 枚金币（打卡就能赚）';
             const typeName = { food: '🍽 好吃的 · 喂了就长大', decor: '🎀 装扮 · 买了就戴上', scene: '🏡 小家 · 给伙伴安个家' };
             let html = '';
+            html += state.pet
+                ? '<div class="shop-group">\uD83C\uDF7D \u4eca\u5929\u6253\u5361\u8fd8\u80fd\u5582 <b>' + petFeedLeft() + '</b> \u70b9\u7ecf\u9a8c\uff08\u4e70\u98df\u7269\u4e0d\u53d7\u9650\u5236\uff09</div>'
+                : '<div class="shop-group">\u26A0\uFE0F \u8fd8\u6ca1\u6709\u5b66\u4e60\u4f19\u4f34\uff0c\u5148\u53bb\u4e3b\u9875\u9009\u4e00\u4e2a\u5427\uff5e</div>';
             for (const tp of ['food', 'decor', 'scene']) {
                 const items = (state.shop || []).filter(function (x) { return x.type === tp; });
                 if (!items.length) continue;
@@ -3565,11 +3763,26 @@
 
             state.totalStars -= it.cost;
             if (it.type === 'food') {
-                if (state.pet) state.pet.exp = (state.pet.exp || 0) + it.exp;
-                showToast('好吃！' + (state.pet ? state.pet.name : '小伙伴') + ' 经验 +' + it.exp);
+                if (!state.pet) {
+                    showToast('\u8fd8\u6ca1\u6709\u5b66\u4e60\u4f19\u4f34\uff0c\u5148\u53bb\u4e3b\u9875\u9009\u4e00\u4e2a\u518d\u6765\u5582\u5b83\u5427\uff5e');
+                } else {
+                    const before = getPetStage(state.pet.exp || 0);
+                    state.pet.exp = (state.pet.exp || 0) + it.exp;
+                    const after = getPetStage(state.pet.exp);
+                    showToast('\u597d\u5403\uff01' + state.pet.name + ' \u7ecf\u9a8c +' + it.exp);
+                    if (after > before) {
+                        setTimeout(function () {
+                            showToast('\uD83C\uDF89 ' + state.pet.name + ' \u8fdb\u5316\u6210\u300c' + PET_STAGE_NAME[after] + '\u300d\u5566\uff01');
+                            playSound('celebrate');
+                            launchConfetti();
+                        }, 900);
+                    } else {
+                        playSound('check');
+                    }
+                }
             } else {
                 state.owned.push(it.id);
-                showToast('🎉 买下了「' + it.name + '」！');
+                showToast('\uD83C\uDF89 \u4e70\u4e0b\u4e86\u300c' + it.name + '\u300d\uff01\u5173\u6389\u5c31\u80fd\u770b\u5230\u4f19\u4f34\u7684\u65b0\u53d8\u5316\u561b\uff5e');
             }
             saveState();
             renderStats();
@@ -3753,6 +3966,35 @@
             // 累计星星取较大值（单调不减）
             if (typeof data.totalStars === 'number') {
                 state.totalStars = Math.max(state.totalStars, data.totalStars);
+            }
+            // 学习伙伴：取经验更高的那只（任一端为空都不会把另一端洗掉）
+            if (data.pet && (!state.pet || (data.pet.exp || 0) > (state.pet.exp || 0))) {
+                state.pet = data.pet;
+            }
+            // 已买到的装扮 / 小屋：并集（只增不减）
+            if (Array.isArray(data.owned)) {
+                state.owned = Array.from(new Set([...(state.owned || []), ...data.owned]));
+            }
+            // 勋章：并集
+            if (Array.isArray(data.medals)) {
+                state.medals = Array.from(new Set([...(state.medals || []), ...data.medals]));
+            }
+            // 剩饭记录：按 日期+任务 去重合并
+            if (Array.isArray(data.leftovers)) {
+                state.leftovers = state.leftovers || [];
+                const seen = new Set(state.leftovers.map(function (x) { return (x.d || '') + '|' + (x.id || ''); }));
+                for (const l of data.leftovers) {
+                    const k = (l.d || '') + '|' + (l.id || '');
+                    if (!seen.has(k)) { seen.add(k); state.leftovers.push(l); }
+                }
+            }
+            // 连续天数取较大值
+            if (typeof data.streak === 'number') {
+                state.streak = Math.max(state.streak || 0, data.streak);
+            }
+            // 古诗记录合并
+            if (data.poemLog && typeof data.poemLog === 'object') {
+                state.poemLog = Object.assign({}, state.poemLog || {}, data.poemLog);
             }
             // 已兑换奖励合并去重
             if (Array.isArray(data.claimedRewards)) {
