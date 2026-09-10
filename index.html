@@ -8,7 +8,7 @@
     <meta http-equiv="Expires" content="0" data-page-node-id="YXlbOTFHU2Nr6SGRQHt7cy">
     <script>
         (function () {
-            var APP_VERSION = '20260910.9';
+            var APP_VERSION = '20260910.10';
             try {
                 var params = new URLSearchParams(location.search);
                 if (params.get('v') !== APP_VERSION) {
@@ -2397,9 +2397,10 @@
         function petStarText(exp) {
             const base = PET_STAGE_MIN[PET_STAGE_MIN.length - 1];
             const n = petStarCount(exp);
-            if (n >= PET_STAR_MAX) return '星辉圆满！你的伙伴已经是最传奇的伙伴了';
-            const next = base + (n + 1) * PET_STAR_STEP;
-            return '再攒 ' + (next - (exp || 0)) + ' 经验，就能点亮第 ' + (n + 1) + ' 颗星';
+            if (n >= PET_STAR_MAX) return '星辉圆满！你的伙伴已经是最棒的伙伴了';
+            const d = petDaysToNext();
+            if (d > 0 && d <= 60) return '再打卡 ' + d + ' 天，就能点亮第 ' + (n + 1) + ' 颗星';
+            return '继续每天喂它，就能点亮第 ' + (n + 1) + ' 颗星';
         }
 
         // ========== 成长日记（关键事件留痕，给成长档案用） ==========
@@ -2468,7 +2469,7 @@
         // 主动换一个学习伙伴（装扮和小屋会保留给新伙伴）
         function confirmChangePet() {
             const cur = state.pet ? state.pet.name : '';
-            const ok = window.confirm('确定要收养一个新的小伙伴吗？\n\n现在的「' + cur + '」会去宠物乐园休息，它会永远留在图鉴里。\n新伙伴从 0 经验开始长大。\n（已买到的装扮、小屋、金币都会保留）');
+            const ok = window.confirm('确定要收养一个新的小伙伴吗？\n\n现在的「' + cur + '」会去宠物乐园休息，它会永远留在图鉴里。\n新伙伴要从小宝宝重新长大。\n（已买到的装扮、小屋、金币都会保留）');
             if (!ok) return;
             showPetPicker(true);
         }
@@ -2693,7 +2694,7 @@
                         '<div class="pp-hero-emoji">' + (stage === 0 ? '🥚' : kind.emoji) +
                             (aura ? '✨' : '') + (isLegend ? '👑' : '') + '</div>' +
                         '<div class="pp-hero-name">' + (state.pet.name || kind.name) +
-                            '<span class="pet-stage">Lv.' + (stage + 1) + ' ' + PET_STAGE_NAME[stage] + '</span></div>' +
+                            '<span class="pet-stage">' + PET_STAGE_NAME[stage] + '</span></div>' +
                         '<div class="pp-hero-sub">' + kind.name + ' · 陪布丁 ' + petAgeDays() + ' 天' +
                             (scene ? ' · ' + scene.icon + scene.name : '') + '</div>' +
                         starHTML +
@@ -2808,7 +2809,7 @@
                         '</div>' +
                         '<div class="pet-side">' +
                             '<div class="pet-name">' + (state.pet.name || kind.name) +
-                                '<span class="pet-stage">Lv.' + (stage + 1) + ' ' + PET_STAGE_NAME[stage] + '</span>' + starLine +
+                                '<span class="pet-stage">' + PET_STAGE_NAME[stage] + '</span>' + starLine +
                             '</div>' +
                             '<div class="pet-mood">' + mood + '</div>' +
                             nutriRowHTML() +
@@ -2826,7 +2827,7 @@
                         '<button class="pet-profile-btn" onclick="showPetProfile()">📖 成长档案</button>' +
                         '<span class="pet-today-chip">' + (calcTodayPending().length === 0 ? '今天全做完啦 🎉' : '还剩 ' + calcTodayPending().length + ' 项') + '</span>' +
                     '</div>' +
-                    '<div class="pet-hint">👆 点它会说话 · 打卡时它也会回应你 · 金币买食物直接加经验</div>' +
+                    '<div class="pet-hint">👆 点它会说话 · 打卡时它也会回应你 · 金币买食物能让它长得更快</div>' +
                 '</div>';
         }
         function showPetPicker(cancelable) {
@@ -3039,7 +3040,7 @@
                 }, 1500);
                 if (after >= PET_STAGE_MIN.length - 1) {
                     setTimeout(function () {
-                        showToast('\uD83D\uDC51 传说阶段！继续攒经验可以点亮星辉之星，一直有目标哦', 'linear-gradient(135deg,#6C5CE7,#8E7CF3)');
+                        showToast('\uD83D\uDC51 星光勇士！继续每天打卡就能点亮星辉之星，一直有目标哦', 'linear-gradient(135deg,#6C5CE7,#8E7CF3)');
                     }, 3400);
                 }
             } else if (afterStar > beforeStar) {
@@ -4892,7 +4893,7 @@
             const typeName = { food: '🍽 好吃的 · 喂了就长大', decor: '🎀 装扮 · 买了就戴上', scene: '🏡 小家 · 给伙伴安个家' };
             let html = '';
             html += state.pet
-                ? '<div class="shop-group">\uD83C\uDF7D \u4eca\u5929\u6253\u5361\u8fd8\u80fd\u5582 <b>' + petFeedLeft() + '</b> \u70b9\u7ecf\u9a8c\uff08\u4e70\u98df\u7269\u4e0d\u53d7\u9650\u5236\uff09</div>'
+                ? '<div class="shop-group">\uD83C\uDF7D \u4eca\u5929\u6253\u5361\u8fd8\u80fd\u5582\u5b83 <b>' + petFeedLeft() + '</b> \u53e3\uff08\u4e70\u98df\u7269\u4e0d\u53d7\u9650\u5236\uff09</div>'
                 : '<div class="shop-group">\u26A0\uFE0F \u8fd8\u6ca1\u6709\u5b66\u4e60\u4f19\u4f34\uff0c\u5148\u53bb\u4e3b\u9875\u9009\u4e00\u4e2a\u5427\uff5e</div>';
             for (const tp of ['food', 'decor', 'scene']) {
                 const items = (state.shop || []).filter(function (x) { return x.type === tp; });
@@ -4905,7 +4906,7 @@
                     html += '<div class="reward-card' + (owned ? ' claimed' : '') + '">' +
                         '<div class="reward-icon">' + it.icon + '</div>' +
                         '<div class="reward-info">' +
-                            '<div class="reward-name">' + it.name + (isFood ? '<span class="shop-exp">经验 +' + it.exp + '</span>' : '') + '</div>' +
+                            '<div class="reward-name">' + it.name + (isFood ? '<span class="shop-exp">长大 +' + it.exp + '</span>' : '') + '</div>' +
                             '<div class="reward-desc">' + (it.desc || '') + '</div>' +
                         '</div>' +
                         '<div class="reward-cost">🪙' + it.cost + '</div>' +
@@ -4931,7 +4932,7 @@
                     const before = getPetStage(state.pet.exp || 0);
                     state.pet.exp = (state.pet.exp || 0) + it.exp;
                     const after = getPetStage(state.pet.exp);
-                    showToast('\u597d\u5403\uff01' + state.pet.name + ' \u7ecf\u9a8c +' + it.exp);
+                    showToast('\u597d\u5403\uff01' + state.pet.name + ' \u957f\u5927 +' + it.exp);
                     if (after > before) {
                         setTimeout(function () {
                             showToast('\uD83C\uDF89 ' + state.pet.name + ' \u8fdb\u5316\u6210\u300c' + PET_STAGE_NAME[after] + '\u300d\u5566\uff01');
