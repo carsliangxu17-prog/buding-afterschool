@@ -8,7 +8,7 @@
     <meta http-equiv="Expires" content="0" data-page-node-id="YXlbOTFHU2Nr6SGRQHt7cy">
     <script>
         (function () {
-            var APP_VERSION = '20260910.13';
+            var APP_VERSION = '20260910.14';
             try {
                 var params = new URLSearchParams(location.search);
                 if (params.get('v') !== APP_VERSION) {
@@ -446,6 +446,12 @@
         .medal-cell.got .medal-name { color:#2E9E6B; }
         .medal-prog { font-size:10px;color:#9AA5B1;margin-top:1px; }
         .medal-tip { font-size:11px;color:#9AA5B1;margin-top:10px;text-align:center; }
+        .medal-rule { font-size:11px;color:#9AA5B1;margin-top:7px;line-height:1.6; }
+        .medal-next { margin-top:11px;padding:10px 12px;background:#FFF9EC;border:1px dashed #F0DCB4;
+            border-radius:12px;font-size:12.5px;color:#8A6D3B;line-height:1.6; }
+        .medal-next b { color:#E08D1B; }
+        .medal-cell.justgot { opacity:1;filter:none;border-radius:14px;
+            background:#FFF6E3;box-shadow:0 0 0 2px #F5A623 inset; }
         @keyframes medalPop { 0%{transform:scale(.3);opacity:0} 60%{transform:scale(1.3)} 100%{transform:scale(1);opacity:1} }
         .medal-cell.justgot .medal-emoji { animation:medalPop .8s ease; }
         .float-star.golden { font-size:28px;filter:drop-shadow(0 0 8px rgba(255,201,60,.95)); }
@@ -470,6 +476,18 @@
             font-size: 14px; color: #4A5568;
         }
         .report-row b { color: #2E9E6B; }
+        .report-sep {
+            margin: 16px 0 4px; padding-top: 12px;
+            border-top: 1px solid #EAF0EC;
+            font-size: 13px; font-weight: 700; color: #8A6D3B;
+            letter-spacing: 0.5px;
+        }
+        .report-ask {
+            margin-top: 10px; padding: 11px 13px;
+            background: #FFF9EC; border-radius: 12px;
+            border: 1px dashed #F0DCB4;
+            font-size: 13px; color: #8A6D3B; line-height: 1.65;
+        }
         .report-tip {
             margin-top: 12px; padding: 11px 13px;
             background: #F2FBF7; border-radius: 12px;
@@ -794,6 +812,45 @@
             margin: 24px 0 16px;
             flex-wrap: wrap;
         }
+        /* ========== 寄语条 + 时间存钱罐 ========== */
+        .motto-bar {
+            background: linear-gradient(135deg, #FFF9EC 0%, #EAF7F0 100%);
+            border: 1.5px solid #F3E3C3;
+            border-radius: 18px;
+            padding: 13px 15px 10px;
+            margin: 0 0 14px;
+            box-shadow: 0 2px 10px rgba(46,158,107,0.07);
+        }
+        .motto-main {
+            font-size: 15.5px;
+            font-weight: 700;
+            color: #8A6D3B;
+            line-height: 1.5;
+            cursor: pointer;
+        }
+        .motto-main .q { font-size: 18px; margin-right: 5px; }
+        .motto-sub {
+            font-size: 12.5px;
+            color: #5F7A6E;
+            margin-top: 7px;
+            line-height: 1.55;
+        }
+        .motto-sub b { color: #2E9E6B; font-size: 13.5px; }
+        .motto-tap {
+            font-size: 10px;
+            color: #BCAE95;
+            margin-top: 5px;
+            text-align: right;
+        }
+        .motto-jar-hi { color: #E08D1B; font-weight: 700; }
+        .actions-group-label {
+            width: 100%;
+            font-size: 12px;
+            font-weight: 700;
+            color: #8A9AA5;
+            letter-spacing: 1px;
+            margin: 6px 0 -2px;
+        }
         .action-btn {
             flex: 1;
             min-width: 120px;
@@ -811,11 +868,6 @@
             gap: 6px;
         }
         .action-btn:active { transform: scale(0.95); }
-        .btn-newday {
-            background: linear-gradient(135deg, #74b9ff, #0984e3);
-            color: white;
-            box-shadow: 0 3px 10px rgba(9,132,227,0.3);
-        }
         .btn-rewards {
             background: linear-gradient(135deg, #FFD93D, #FFA502);
             color: white;
@@ -968,27 +1020,6 @@
             transition: all 0.2s;
         }
         .modal-close:hover { background: #eee; color: #666; }
-
-        /* ========== 导出/导入同步 ========== */
-        .action-btn.btn-sync-out { background: linear-gradient(135deg, #4facfe, #00c6fb); color: #fff; }
-        .action-btn.btn-sync-in  { background: linear-gradient(135deg, #43e97b, #38f9d7); color: #fff; }
-        .sync-tip { font-size: 13px; color: #888; line-height: 1.6; margin: 4px 0 16px; text-align: center; }
-        .sync-btn {
-            display: block; width: 100%; margin: 10px 0; padding: 14px;
-            border: none; border-radius: 14px; font-size: 16px; font-weight: 700;
-            background: #f0f4ff; color: #3457ff; cursor: pointer; transition: all 0.2s;
-        }
-        .sync-btn:hover { background: #e0e8ff; }
-        .sync-btn.secondary { background: #f5f5f5; color: #555; }
-        .sync-btn.secondary:hover { background: #eee; }
-        .sync-code-area {
-            width: 100%; min-height: 90px; border: 2px solid #e3e8ff; border-radius: 12px;
-            padding: 10px; font-size: 12px; font-family: monospace; resize: vertical;
-            box-sizing: border-box; margin: 8px 0;
-        }
-        .qr-box { text-align: center; margin: 12px 0; min-height: 20px; }
-        .qr-box img, .qr-box canvas { max-width: 200px; border-radius: 12px; }
-        .sync-error { color: #e74c3c; font-size: 13px; text-align: center; margin-top: 8px; min-height: 18px; }
 
         /* ========== 打卡日历 ========== */
         .cal-stats {
@@ -1629,6 +1660,9 @@
             <div id="cloudStatus" style="font-size:12px;margin-top:8px;font-weight:600;" data-page-node-id="lAO1HOEWGbpmjjCP8Y9tr6"></div>
         </div>
 
+        <!-- 寄语 + 时间存钱罐：放在头部正下方，每天打开第一眼就看到 -->
+        <div id="mottoBar" class="motto-bar"></div>
+
         <!-- 宠物养成区 -->
         <div id="petArea"></div>
 
@@ -1682,37 +1716,30 @@
             <div class="my-add-tip">自己定的目标，做起来更有劲 💪</div>
         </div>
 
-        <!-- 错题 / 难点本 -->
+        <!-- 勋章墙：连续坚持积出来的小勋章 -->
         <div id="medalArea"></div>
 
-        <!-- 操作按钮 -->
+        <!-- 操作按钮：按"谁来点"分两组，布丁的放前面 -->
         <div class="actions-bar" data-page-node-id="YY4jdGNnjdNZFdsSfyI0yE">
-            <button class="action-btn btn-newday" onclick="startNewDay()" data-page-node-id="RKCKH5MgDRdeuXPMoB9pWG">
-                🌅 新的一天
-            </button>
+            <div class="actions-group-label">🎒 布丁可以点这里</div>
             <button class="action-btn btn-rewards" onclick="showRewardShop()" data-page-node-id="0ddqMQH60vWtFPyT1sYsd1">
                 🎁 奖励商店
             </button>
             <button class="action-btn btn-calendar" onclick="showCalendarModal()" data-page-node-id="YAWRxPEf4P34cxdqYC3oxJ">
                 📅 打卡日历
             </button>
+            <button class="action-btn btn-bank" onclick="showBankModal()">
+                📚 词语库
+            </button>
+            <div class="actions-group-label">👀 家长区</div>
             <button class="action-btn btn-calendar" onclick="showWeeklyReport()" data-page-node-id="weeklyReportBtn">
                 📊 学习周报
             </button>
             <button class="action-btn btn-edit" onclick="showEditModal()" data-page-node-id="IxWYFIZAflH6UdDToiyaU7">
                 ✏️ 编辑任务
             </button>
-            <button class="action-btn btn-bank" onclick="showBankModal()">
-                📚 词语库
-            </button>
             <button class="action-btn btn-parent" onclick="showParentView()" data-page-node-id="2FU3Hp2DBTQNw0hCB5JEk7">
                 👀 家长视图
-            </button>
-            <button class="action-btn btn-sync-out" onclick="showExportModal()" data-page-node-id="0yDjl9YwYFJWk6vTS4UN6z">
-                📤 导出同步
-            </button>
-            <button class="action-btn btn-sync-in" onclick="showImportModal()" data-page-node-id="zqvYorUHZvTMqy7BnIgAzD">
-                📥 导入同步
             </button>
         </div>
 
@@ -3331,6 +3358,8 @@
                 category: t.category,
                 flag: (state.todayChecks[t.id] && state.todayChecks[t.id].flag) || 'ok',
             }));
+            // 时间侧：几点开始、几点做完、省下多少分钟（周报与成长档案要用，必须当天落库）
+            const dayTimes = calcDayTimes();
             // 如果同一天已有记录，更新而不是新增
             const existIdx = state.history.findIndex(h => h.date === state.todayDate);
             const record = {
@@ -3340,6 +3369,10 @@
                 stars: todayEarned,
                 allDone: completed.length === total && total > 0,
                 tasks: taskDetails,
+                firstAt: dayTimes.firstAt,
+                lastAt: dayTimes.lastAt,
+                doneAt: dayTimes.doneAt,
+                freeMin: dayTimes.freeMin,
             };
             if (existIdx >= 0) {
                 state.history[existIdx] = record;
@@ -3663,6 +3696,8 @@
             }
             return n;
         }
+        // 刚解锁的勋章 id（用于播放弹出动画；CSS .justgot 一直存在但从没被用上）
+        let justGotMedals = [];
         function checkMedals() {
             if (!state.medals) state.medals = [];
             const newly = [];
@@ -3672,7 +3707,9 @@
             });
             if (newly.length === 0) return;
             saveState();
+            justGotMedals = newly.map(function (m) { return m.id; });
             renderMedals();
+            setTimeout(function () { justGotMedals = []; renderMedals(); }, 3200);
             newly.forEach(function (m, i) {
                 setTimeout(function () {
                     showToast('\uD83C\uDFC5 \u83b7\u5f97\u65b0\u52cb\u7ae0\uff1a' + m.icon + ' ' + m.name + '\uff01' + m.desc, 'linear-gradient(135deg,#FFC93C,#F5A623)');
@@ -3685,20 +3722,36 @@
             if (!area) return;
             if (!state.medals) state.medals = [];
             let cells = '';
+            let nearest = null, nearestLeft = 9999;   // 离解锁最近的一枚
             MEDALS.forEach(function (m) {
                 const got = state.medals.indexOf(m.id) >= 0;
                 const cur = Math.min(contStreak(m.check), m.need);
-                cells += '<div class="medal-cell' + (got ? ' got' : '') + '" title="' + m.desc + '">' +
+                const left = m.need - cur;
+                // 未解锁不再只显示 "2/3"（孩子推不出“再做什么就能拿到”），改成还差几天
+                const prog = got ? '\u5df2\u5f97\u5230' : ('\u8fd8\u5dee ' + left + ' \u5929');
+                if (!got && left < nearestLeft) { nearestLeft = left; nearest = m; }
+                cells += '<div class="medal-cell' + (got ? ' got' : '') +
+                        (justGotMedals.indexOf(m.id) >= 0 ? ' justgot' : '') +
+                        '" title="' + m.desc + '">' +
                     '<div class="medal-emoji">' + m.icon + '</div>' +
                     '<div class="medal-name">' + m.name + '</div>' +
-                    '<div class="medal-prog">' + (got ? '\u5df2\u89e3\u9501' : cur + '/' + m.need) + '</div>' +
+                    '<div class="medal-prog">' + prog + '</div>' +
                 '</div>';
             });
+            // 只推一个最近的目标：孩子面对一堆目标会分散，一个才记得住
+            let nextTip = '';
+            if (nearest) {
+                nextTip = '<div class="medal-next">\uD83C\uDFAF \u518d\u575a\u6301 <b>' + nearestLeft + ' \u5929</b>\uff0c\u5c31\u80fd\u5f97\u5230 ' +
+                          nearest.icon + ' <b>' + nearest.name + '</b>\uff08' + nearest.desc + '\uff09</div>';
+            } else {
+                nextTip = '<div class="medal-next">\U0001F3C6 \u5168\u90e8\u52cb\u7ae0\u90fd\u5f97\u5230\u4e86\uff01\u4f60\u771f\u7684\u5f88\u80fd\u575a\u6301</div>';
+            }
             area.innerHTML = '<div class="medal-card">' +
                 '<div class="medal-head"><span>\uD83C\uDFC5 \u6211\u7684\u52cb\u7ae0</span>' +
                 '<span class="medal-count">' + state.medals.length + '/' + MEDALS.length + '</span></div>' +
+                '<div class="medal-rule">\u540c\u4e00\u4ef6\u4e8b\u8fde\u7eed\u505a\u5230\uff0c\u5c31\u5f97\u5230\u4e00\u679a\u52cb\u7ae0\u3002\u4e2d\u95f4\u65ad\u4e86\uff0c\u8fd9\u4e00\u679a\u5c31\u8981\u91cd\u65b0\u6570\u3002</div>' +
                 '<div class="medal-grid">' + cells + '</div>' +
-                '<div class="medal-tip">\u8fde\u7eed\u505a\u5230\uff0c\u5c31\u80fd\u89e3\u9501\u65b0\u52cb\u7ae0 \u2B50</div>' +
+                nextTip +
             '</div>';
         }
 
@@ -3716,6 +3769,8 @@
             mask.addEventListener('click', function (e) { if (e.target === mask) mask.remove(); });
         }
         function showWeeklyReport() {
+            // 先把今天的打卡归档，否则"这周"会少掉今天
+            if (calcTodayCompleted() > 0) { saveTodayToHistory(); saveState(); }
             const now = new Date(state.todayDate);
             const day = now.getDay();
             const monday = new Date(now);
@@ -3747,6 +3802,45 @@
             else if (rate >= 70) tip = '\u8fd9\u5468\u5b8c\u6210\u5f97\u4e0d\u9519\uff0c\u518d\u628a\u300c' + worst + '\u300d\u591a\u5173\u6ce8\u4e00\u4e0b\u5c31\u66f4\u597d\u4e86 \uD83D\uDCAA';
             else if (rate > 0) tip = '\u8fd9\u5468\u6709\u4e9b\u4efb\u52a1\u6f0f\u6389\u4e86\uff0c\u4e0b\u5468\u6211\u4eec\u4e00\u8d77\u52aa\u529b\uff0c\u5148\u653b\u300c' + worst + '\u300d\u5427 \uD83D\uDE4A';
             else tip = '\u8fd9\u5468\u8fd8\u6ca1\u6709\u8bb0\u5f55\uff0c\u4ece\u4eca\u5929\u5f00\u59cb\u5427 \uD83C\uDF31';
+            // ---- \u65f6\u95f4\u662f\u81ea\u5df1\u7684\uff1a\u628a\u5979\u81ea\u5df1\u7684\u65f6\u95f4\u6570\u636e\u8bf4\u56de\u7ed9\u5979\u542c ----
+            let savedMins = 0, savedDays = 0, earliest = null, sumHM = 0, cntHM = 0;
+            inWeek.forEach(function (h) {
+                if (typeof h.freeMin === 'number' && h.freeMin > 0) { savedMins += h.freeMin; savedDays++; }
+                if (h.doneAt) {
+                    const d = new Date(h.doneAt);
+                    sumHM += d.getHours() * 60 + d.getMinutes();
+                    cntHM++;
+                    if (!earliest || h.doneAt < earliest.doneAt) earliest = h;
+                }
+            });
+            let timeBlock = '<div class="report-sep">\u23F0 \u65f6\u95f4\u662f\u81ea\u5df1\u7684</div>';
+            if (savedMins > 0) {
+                timeBlock += '<div class="report-row"><span>\u8fd9\u5468\u6512\u4e0b</span><b>' + fmtDuration(savedMins) + '</b></div>';
+            }
+            if (earliest) {
+                timeBlock += '<div class="report-row"><span>\u6700\u65e9\u505a\u5b8c\u7684\u4e00\u5929</span><b>' +
+                             formatDateCN(earliest.date) + ' ' + fmtHM(earliest.doneAt) + '</b></div>';
+            }
+            if (cntHM > 1) {
+                const avg = Math.round(sumHM / cntHM);
+                timeBlock += '<div class="report-row"><span>\u5e73\u5747\u505a\u5b8c\u65f6\u95f4</span><b>' +
+                             Math.floor(avg / 60) + ':' + ('0' + (avg % 60)).slice(-2) + '</b></div>';
+            }
+            // \u5173\u952e\uff1a\u4e0d\u7ed9\u7ed3\u8bba\uff0c\u7ed9\u4e00\u4e2a\u5979\u7b54\u5f97\u51fa\u6765\u7684\u95ee\u9898\u2014\u2014\u8ba9\u5979\u81ea\u5df1\u603b\u7ed3\u51fa\u65b9\u6cd5
+            if (earliest && cntHM > 1) {
+                const avg = Math.round(sumHM / cntHM);
+                const ed = new Date(earliest.doneAt);
+                const diff = avg - (ed.getHours() * 60 + ed.getMinutes());
+                timeBlock += '<div class="report-ask">\uD83D\uDCAD ' + formatDateCN(earliest.date) + ' \u4f60 ' +
+                    fmtHM(earliest.doneAt) + ' \u5c31\u505a\u5b8c\u5566' +
+                    (diff > 5 ? '\uff0c\u6bd4\u8fd9\u5468\u5e73\u5747\u65e9\u4e86 ' + diff + ' \u5206\u949f' : '') +
+                    '\u2014\u2014\u90a3\u5929\u4f60\u662f\u600e\u4e48\u505a\u5230\u7684\uff1f</div>';
+            } else if (savedMins > 0) {
+                timeBlock += '<div class="report-ask">\uD83D\uDCAD \u4f60\u5df2\u7ecf\u6709"\u65e9\u505a\u5b8c"\u7684\u65e5\u5b50\u4e86\u2014\u2014\u60f3\u60f3\u770b\uff0c\u90a3\u5929\u4e3a\u4ec0\u4e48\u5feb\uff1f</div>';
+            } else {
+                timeBlock += '<div class="report-ask">\uD83D\uDCAF \u8fd9\u5468\u8fd8\u6ca1\u6709"\u5168\u90e8\u90fd\u505a\u5b8c"\u7684\u8bb0\u5f55\u3002\u4e0d\u7528\u6025\uff0c\u5148\u4ece\u4eca\u5929\u65e9\u4e00\u70b9\u70b9\u5f00\u59cb \U0001F331</div>';
+            }
+
             const inner =
                 '<div class="report-row"><span>\u6253\u5361\u5929\u6570</span><b>' + checkDays + ' / 7 \u5929</b></div>' +
                 '<div class="report-row"><span>\u4efb\u52a1\u5b8c\u6210\u7387</span><b>' + rate + '%</b></div>' +
@@ -3755,14 +3849,117 @@
                 '<div class="report-row"><span>\u6700\u62ff\u624b\u7684\u4e00\u9879</span><b>' + best + '</b></div>' +
                 '<div class="report-row"><span>\u9700\u8981\u52a0\u6cb9\u7684\u4e00\u9879</span><b>' + worst + '</b></div>' +
                 (state.pet ? '<div class="report-row"><span>' + state.pet.name + ' \u7b49\u7ea7</span><b>Lv.' + (getPetStage(state.pet.exp || 0) + 1) + ' ' + PET_STAGE_NAME[getPetStage(state.pet.exp || 0)] + '</b></div>' : '') +
+                timeBlock +
                 '<div class="report-tip">' + tip + '</div>';
             showModal('\uD83D\uDCCA \u672c\u5468\u5b66\u4e60\u5468\u62a5', inner);
+        }
+
+        // ========== 寄语条：把"做自己时间的主人"这件事，变成她每天看得到的一句话 ==========
+        // 为什么要轮换：同一句话天天看会变成墙纸；按日期轮换→每天换一句，
+        // 但同一天内稳定（刷新不乱跳）。点一下可以自己翻，增加一点互动。
+        const MOTTOS = [
+            { icon: '\u23F0', text: '\u65f6\u95f4\u662f\u4f60\u81ea\u5df1\u7684\uff0c\u4f60\u8bf4\u4e86\u7b97' },
+            { icon: '\uD83C\uDF88', text: '\u5148\u505a\u5b8c\u8be5\u505a\u7684\uff0c\u5269\u4e0b\u7684\u65f6\u95f4\u90fd\u5f52\u4f60' },
+            { icon: '\uD83C\uDF08', text: '\u4f1a\u5b89\u6392\u65f6\u95f4\u7684\u5c0f\u670b\u53cb\uff0c\u73a9\u5f97\u66f4\u75db\u5feb' },
+            { icon: '\u2600\uFE0F', text: '\u4eca\u5929\u7684\u4e8b\u4eca\u5929\u505a\u5b8c\uff0c\u660e\u5929\u5c31\u66f4\u8f7b\u677e' },
+            { icon: '\u2728', text: '\u65e9\u4e00\u70b9\u505a\u5b8c\uff0c\u5c31\u591a\u4e00\u70b9\u81ea\u5df1\u7684\u65f6\u95f4' },
+            { icon: '\uD83E\uDDED', text: '\u4f60\u60f3\u5148\u505a\u54ea\u4e00\u4ef6\uff1f\u4f60\u6765\u51b3\u5b9a' },
+            { icon: '\uD83D\uDC3E', text: '\u65f6\u95f4\u662f\u597d\u670b\u53cb\uff0c\u522b\u8ba9\u5b83\u5077\u5077\u6e9c\u8d70' }
+        ];
+        function mottoIndex() {
+            const today = state.todayDate || getTodayStr();
+            const p = state.mottoPick;
+            if (p && p.date === today) {
+                const len = MOTTOS.length;
+                return ((p.i % len) + len) % len;
+            }
+            // 按日期取模（稳定可预期，不用随机数避免刷新乱跳）
+            const ds = String(today);
+            let h = 0;
+            for (let i = 0; i < ds.length; i++) h = (h * 31 + ds.charCodeAt(i)) >>> 0;
+            return h % MOTTOS.length;
+        }
+        function nextMotto() {
+            state.mottoPick = { date: state.todayDate || getTodayStr(), i: mottoIndex() + 1 };
+            saveState();
+            renderMotto();
+            playSound('tap');
+        }
+        function renderMotto() {
+            const el = document.getElementById('mottoBar');
+            if (!el) return;
+            const m = MOTTOS[mottoIndex()];
+            const w = calcWeekSaved();
+            let jar;
+            if (w.mins > 0) {
+                jar = '\uD83E\uDED9 \u8fd9\u5468\u4f60\u5df2\u7ecf\u6512\u4e0b <b>' + fmtDuration(w.mins) +
+                      '</b> \u81ea\u5df1\u7684\u65f6\u95f4' +
+                      (w.days > 1 ? '\uff08' + w.days + ' \u5929\uff09' : '') + '\uff0c\u6512\u7740\u90fd\u662f\u4f60\u7684';
+            } else {
+                jar = '\uD83E\uDED9 \u65e9\u65e9\u505a\u5b8c\u8be5\u505a\u7684\uff0c\u7701\u4e0b\u7684\u65f6\u95f4\u5c31\u5b58\u8fdb\u4f60\u7684\u7f50\u5b50';
+            }
+            el.innerHTML =
+                '<div class="motto-main" onclick="nextMotto()"><span class="q">' + m.icon + '</span>' + m.text + '</div>' +
+                '<div class="motto-sub">' + jar + '</div>' +
+                '<div class="motto-tap">\u70b9\u4e00\u4e0b\uff0c\u6362\u4e00\u53e5 \u21BB</div>';
         }
 
         // ========== 她自己的时间：效率直接兑换"自由"，而不是兑换虚拟星星 ==========
         // 目标线：20:30 前做完"当天该做的事"（不含睡前任务）；早完成的部分就是她自己的自由时间。
         // 磨蹭的自然后果是自由时间变短 —— 自然结果，不是惩罚。
         const FREE_DEADLINE_MIN = 20 * 60 + 30;
+        // 当天的时间侧摘要：几点开始、几点做完、省下多少分钟（history 与周报要用）
+        function calcDayTimes() {
+            let firstAt = 0, lastAt = 0;
+            Object.keys(state.todayChecks || {}).forEach(function (id) {
+                const rec = state.todayChecks[id];
+                if (!rec || !rec.at) return;
+                if (!firstAt || rec.at < firstAt) firstAt = rec.at;
+                if (rec.at > lastAt) lastAt = rec.at;
+            });
+            const doneAt = calcFreeStartAt();      // 0 = 当天该做的还没全做完
+            const fm = calcFreeMinutes();          // null = 同上
+            return {
+                firstAt: firstAt || null,
+                lastAt: lastAt || null,
+                doneAt: doneAt || null,
+                freeMin: (fm === null ? null : fm)
+            };
+        }
+        // 把分钟数说成人话："1 小时 40 分" / "45 分钟"
+        function fmtDuration(mins) {
+            const m = Math.max(0, Math.round(mins || 0));
+            if (m < 60) return m + ' 分钟';
+            const h = Math.floor(m / 60), r = m % 60;
+            return r ? (h + ' 小时 ' + r + ' 分') : (h + ' 小时');
+        }
+        // 本周"攒下的自己的时间"（只统计真的省下 >0 的天）
+        function calcWeekSaved(baseDate) {
+            const now = new Date(baseDate || state.todayDate);
+            const dow = now.getDay();
+            const monday = new Date(now);
+            monday.setDate(now.getDate() + (dow === 0 ? -6 : 1 - dow));
+            const dates = [];
+            for (let i = 0; i < 7; i++) {
+                const d = new Date(monday);
+                d.setDate(monday.getDate() + i);
+                dates.push(fmtDate(d));
+            }
+            let mins = 0, days = 0;
+            let todayLogged = false;
+            (state.history || []).forEach(function (h) {
+                if (dates.indexOf(h.date) < 0) return;
+                if (h.date === state.todayDate) todayLogged = true;
+                if (typeof h.freeMin === 'number' && h.freeMin > 0) { mins += h.freeMin; days++; }
+            });
+            // 今天还没进 history → 用实时值补上，存钱罐才能"当场就涨"
+            if (!todayLogged && dates.indexOf(state.todayDate) >= 0) {
+                const t = calcDayTimes();
+                if (typeof t.freeMin === 'number' && t.freeMin > 0) { mins += t.freeMin; days++; }
+            }
+            return { mins: mins, days: days, dates: dates };
+        }
+
         // "当天该做的事"（不含睡前）= 放学后 / 晚间 / 周末类任务
         function freeTimeTasks() {
             return getActiveTasks().filter(function (t) { return t.category !== 'night'; });
@@ -3818,6 +4015,7 @@
 
             document.getElementById('todayStars').textContent = todayStars;
             document.getElementById('totalStars').textContent = state.totalStars;
+            renderMotto();   // 存钱罐里的时间要当场就涨
             document.getElementById('completedCount').textContent = `${completed}/${total}`;
 
             // 进度
@@ -4956,26 +5154,6 @@
         }
 
         // ========== 新的一天 ==========
-        function startNewDay() {
-            const today = getTodayStr();
-            // 同一天已有打卡记录，不允许重置（防止重复刷星星）
-            if (state.todayDate === today && calcTodayCompleted() > 0) {
-                showToast('今天已经打过卡了，明天再加油吧！💪');
-                return;
-            }
-            
-            if (calcTodayCompleted() > 0) {
-                saveTodayToHistory();
-            }
-            
-            state.todayDate = today;
-            state.todayChecks = {};
-            state.streak = calcStreak();
-            saveState();
-            renderAll();
-            showToast('🌅 新的一天开始了！加油哦！');
-        }
-
         // ========== 奖励商店 ==========
         function showRewardShop() {
             renderRewards();
@@ -5209,6 +5387,7 @@
         // ========== 全部渲染 ==========
         function renderAll() {
             renderHeader();
+            renderMotto();
             renderPet();
             renderCourses();
             renderStats();
@@ -5344,142 +5523,9 @@
             }
         }
 
-        // ========== 导出/导入同步（零云端，靠链接/文件在设备间传数据） ==========
-        function utf8ToB64(str) {
-            return btoa(unescape(encodeURIComponent(str)));
-        }
-        function b64ToUtf8(str) {
-            return decodeURIComponent(escape(atob(str)));
-        }
-        // 仅导出动态数据（任务/奖励是固定默认值，不导出，导入方用自身 DEFAULT 重建）
-        function buildSyncPayload() {
-            return {
-                t: 'buding-sync-v1',
-                history: state.history || [],
-                todayDate: state.todayDate || '',
-                todayChecks: state.todayChecks || {},
-                totalStars: state.totalStars || 0,
-                claimedRewards: state.claimedRewards || [],
-                summerStart: state.summerStart || ''
-            };
-        }
-        // 合并外部 payload 到本地（复用 mergeCloudIntoState 的防丢卡逻辑）
-        function applySyncPayload(obj) {
-            if (!obj || typeof obj !== 'object') throw new Error('数据格式无效');
-            mergeCloudIntoState(obj);
-            ensureValidState();
-            saveState();
-            renderAll();
-        }
-        function getBaseHref() {
-            const u = new URL(location.href);
-            u.searchParams.delete('import');
-            return u.toString();
-        }
-        function currentSyncCode() {
-            return utf8ToB64(JSON.stringify(buildSyncPayload()));
-        }
-        function openModal(id) { const el = document.getElementById(id); if (el) el.classList.add('active'); }
-        function closeModal(id) { const el = document.getElementById(id); if (el) el.classList.remove('active'); }
-
-        function showExportModal() {
-            const code = currentSyncCode();
-            const base = getBaseHref();
-            const sep = base.indexOf('?') >= 0 ? '&' : '?';
-            const importUrl = base + sep + 'import=' + encodeURIComponent(code);
-            const linkBox = document.getElementById('exportLinkText');
-            // 数据多时链接过长（base64 可能 3-4KB），微信分享易截断 → 引导用文件方式
-            if (importUrl.length > 1900) {
-                linkBox.value = '（打卡数据较多，链接过长易被微信截断。请改用下方「下载备份文件」方式同步）';
-                linkBox.style.color = '#e74c3c';
-            } else {
-                linkBox.value = importUrl;
-                linkBox.style.color = '';
-            }
-            document.getElementById('exportCodeArea').value = code;
-            openModal('exportModal');
-        }
-        function doExportLink() {
-            const t = document.getElementById('exportLinkText');
-            if (!/^https?:\/\//.test(t.value)) {
-                showToast('⚠️ 当前数据较多，请用「下载备份文件」方式同步');
-                return;
-            }
-            t.select();
-            let copied = false;
-            try { navigator.clipboard.writeText(t.value); copied = true; }
-            catch(e) { try { copied = document.execCommand('copy'); } catch(e2) {} }
-            showToast(copied ? '✅ 导入链接已复制，发到另一台设备点开即自动同步' : '⚠️ 自动复制失败，请手动长按选择复制');
-        }
-        function doExportFile() {
-            const payload = buildSyncPayload();
-            const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
-            const a = document.createElement('a');
-            const d = new Date();
-            const ymd = '' + d.getFullYear() + String(d.getMonth()+1).padStart(2,'0') + String(d.getDate()).padStart(2,'0');
-            a.href = URL.createObjectURL(blob);
-            a.download = '布丁打卡数据_' + ymd + '.json';
-            a.click();
-            setTimeout(() => URL.revokeObjectURL(a.href), 1000);
-            showToast('💾 备份文件已下载，可微信发到另一台设备导入');
-        }
-        function showImportModal() {
-            document.getElementById('importCodeArea').value = '';
-            document.getElementById('importError').textContent = '';
-            openModal('importModal');
-        }
-        function doImportFile(input) {
-            const f = input.files && input.files[0];
-            if (!f) return;
-            const reader = new FileReader();
-            reader.onload = function(e) {
-                try {
-                    const obj = JSON.parse(e.target.result);
-                    applySyncPayload(obj);
-                    showToast('🎉 导入成功！数据已合并');
-                    closeModal('importModal');
-                } catch(err) {
-                    document.getElementById('importError').textContent = '文件解析失败：' + err.message;
-                }
-            };
-            reader.readAsText(f);
-        }
-        function doImportCode() {
-            const area = document.getElementById('importCodeArea');
-            const code = (area.value || '').trim();
-            if (!code) { document.getElementById('importError').textContent = '请先粘贴导入码'; return; }
-            try {
-                const obj = JSON.parse(b64ToUtf8(code));
-                applySyncPayload(obj);
-                showToast('🎉 导入成功！数据已合并');
-                closeModal('importModal');
-            } catch(err) {
-                document.getElementById('importError').textContent = '导入码无效或已损坏：' + err.message;
-            }
-        }
-        // 启动时若 URL 带 import 参数（点导入链接），自动合并
-        function autoImportFromUrl() {
-            try {
-                const params = new URLSearchParams(location.search);
-                const code = params.get('import');
-                if (!code) return;
-                const obj = JSON.parse(b64ToUtf8(code));
-                mergeCloudIntoState(obj);
-                ensureValidState();
-                saveState();
-                const clean = new URL(location.href);
-                clean.searchParams.delete('import');
-                history.replaceState({}, '', clean.toString());
-                showToast('🎉 已从另一台设备同步数据！');
-            } catch(err) {
-                console.warn('自动导入失败', err);
-            }
-        }
-
         // ========== 初始化 ==========
         function init() {
             loadState();
-            autoImportFromUrl();   // 点导入链接时自动合并另一台设备的数据
             ensureValidState();
             renderAll(); // 先渲染本地已有数据，避免白屏等待
 
@@ -5514,37 +5560,6 @@
             });
         }, 1000);
 </script>
-
-    <!-- ===== 导出/导入同步弹窗（零云端依赖） ===== -->
-    <div class="modal-overlay" id="exportModal" data-page-node-id="fCv44mANGaaZE4qbmcqdKT">
-        <div class="modal-content" style="position:relative;" data-page-node-id="Ezh9U0KeAIXqxCBuelCPCc">
-            <button class="modal-close" onclick="closeModal('exportModal')" data-page-node-id="eH9lP0jtePnBDOAZe6AMcQ">&times;</button>
-            <div class="modal-title" data-page-node-id="aHHiBDBtpnnHalrnJ70uCw">📤 导出 / 同步数据</div>
-            <div class="sync-tip" data-page-node-id="bUgQlHeJRGvbhwA9hm8WSG">把布丁的打卡数据发到另一台设备：<br data-page-node-id="HXXLESRrXEefF1qgvDYcJe">① 点「复制导入链接」→ 微信发给自己 → 在另一台设备点开链接，自动合并<br data-page-node-id="CU4ARCGgAHgwVLjtvzFEJ6">② 或点「下载备份文件」→ 微信发文件 → 另一台设备用「导入同步」打开</div>
-            <button class="sync-btn" onclick="doExportLink()" data-page-node-id="ZmHrT3Vy103ORK7V0dRwrr">📋 复制导入链接</button>
-            <button class="sync-btn secondary" onclick="doExportFile()" data-page-node-id="pcnk6gK6fPKZ8oYd7weVBF">💾 下载备份文件</button>
-            <div style="margin-top:10px;font-size:12px;color:#aaa;" data-page-node-id="wVZMOPDCC6R5HvQli1Pl44">导入链接（可手动复制）：</div>
-            <textarea class="sync-code-area" id="exportLinkText" readonly></textarea>
-            <div style="margin-top:6px;font-size:12px;color:#aaa;" data-page-node-id="xEbktmUEzSUZPxwQlafzQ5">导入码（备用，可复制粘贴）：</div>
-            <textarea class="sync-code-area" id="exportCodeArea" readonly></textarea>
-        </div>
-    </div>
-
-    <div class="modal-overlay" id="importModal" data-page-node-id="FiFz5M8qEIGonbaZDj2R7Y">
-        <div class="modal-content" style="position:relative;" data-page-node-id="BYB1ZmMOPJ3MEws7zzdFRN">
-            <button class="modal-close" onclick="closeModal('importModal')" data-page-node-id="9AWcN3HAahVtKZ5n0LzYWI">&times;</button>
-            <div class="modal-title" data-page-node-id="FMTylARL0oEgQnUAzIGBcg">📥 导入数据</div>
-            <div class="sync-tip" data-page-node-id="6HW4BahtCEBEIPw7sYQOhc">选择另一台设备发来的备份文件，或粘贴导入码：</div>
-            <label class="sync-btn" style="text-align:center;cursor:pointer;" data-page-node-id="scwFO7q1UhFsKA7GAe9CQ9">
-                📁 选择备份文件
-                <input type="file" accept=".json,application/json" style="display:none;" onchange="doImportFile(this)" data-page-node-id="NTRFhv3GQ4YQGtoTC0SYjY">
-            </label>
-            <div style="margin-top:8px;font-size:12px;color:#aaa;" data-page-node-id="zXsjhtO262EgvfAe4YjSy4">或粘贴导入码：</div>
-            <textarea class="sync-code-area" id="importCodeArea" placeholder="在此粘贴另一台设备导出的导入码"></textarea>
-            <button class="sync-btn" onclick="doImportCode()" data-page-node-id="0vwc6vjnqnNJGr0BnSZNbo">✅ 导入并合并</button>
-            <div class="sync-error" id="importError" data-page-node-id="qBgX0weXVMWPvMUJDjUUgX"></div>
-        </div>
-    </div>
 
 </body>
 </html>
