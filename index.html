@@ -8,7 +8,7 @@
     <meta http-equiv="Expires" content="0" data-page-node-id="YXlbOTFHU2Nr6SGRQHt7cy">
     <script>
         (function () {
-            var APP_VERSION = '20260910.16';
+            var APP_VERSION = '20260910.17';
             try {
                 var params = new URLSearchParams(location.search);
                 if (params.get('v') !== APP_VERSION) {
@@ -2941,6 +2941,9 @@
         }
         function showPetPicker(cancelable) {
             const backup = state.pet;
+            // 防重：弹窗按钮用的是固定 id，同时存在两个时 getElementById 只认第一个，
+            // 后弹的那个会点不动。正常流程不会撞上，但网络慢/连点时有风险，这里先清干净。
+            document.querySelectorAll('.pet-pick-mask').forEach(function (m) { m.remove(); });
 
             const mask = document.createElement('div');
             mask.className = 'pet-pick-mask';
@@ -2978,7 +2981,10 @@
                     exp: 0,
                     bornAt: getTodayStr(),
                     nutri: { calcium: 0, wisdom: 0, energy: 0, peace: 0 },
-                    story: []
+                    story: [],
+                    // 换/选伙伴的时间戳：多端合并时「后选的赢」。
+                    // 绝不能按经验高低比——新伙伴 exp 恒为 0，永远打不过旧伙伴，旧伙伴会被云端拉回来"复活"。
+                    switchedAt: Date.now()
                 };
                 // 图鉴：收养过的伙伴永久点亮 —— 换伙伴不是"丢弃"，而是收集
                 if (!Array.isArray(state.petBook)) state.petBook = [];
@@ -5465,8 +5471,16 @@
             if (typeof data.totalStars === 'number') {
                 state.totalStars = Math.max(state.totalStars, data.totalStars);
             }
-            // 学习伙伴：取经验更高的那只（任一端为空都不会把另一端洗掉）
-            if (data.pet && (!state.pet || (data.pet.exp || 0) > (state.pet.exp || 0))) {
+            // 云端显式把伙伴设为 null（远程清空/重置）→ 本机跟着清，否则老宠物会在某一端"复活"
+            if (data.pet === null) state.pet = null;
+            // 学习伙伴：比「换伙伴时间戳」，后选的赢（任一端为空都不会把另一端洗掉）
+            // ⚠️ 不能比 exp：新选的伙伴 exp=0，永远打不过旧伙伴 → 旧伙伴会被合并回来，选新伙伴等于白选
+            // 老数据没有 switchedAt（按 0 处理），所以"显式选过的伙伴"一定能覆盖它；两端都没时间戳时回退比经验
+            const _petTs = function (p) { return (p && typeof p.switchedAt === 'number') ? p.switchedAt : 0; };
+            const _petWin = !!data.pet && (!state.pet
+                || _petTs(data.pet) > _petTs(state.pet)
+                || (_petTs(data.pet) === _petTs(state.pet) && (data.pet.exp || 0) > (state.pet.exp || 0)));
+            if (data.pet && _petWin) {
                 // 成长日记取并集（换伙伴/多端合并时不丢脚印）
                 const oldStory = (state.pet && Array.isArray(state.pet.story)) ? state.pet.story : [];
                 const newStory = Array.isArray(data.pet.story) ? data.pet.story : [];
