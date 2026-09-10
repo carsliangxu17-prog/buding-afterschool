@@ -8,7 +8,7 @@
     <meta http-equiv="Expires" content="0" data-page-node-id="YXlbOTFHU2Nr6SGRQHt7cy">
     <script>
         (function () {
-            var APP_VERSION = '20260910.7';
+            var APP_VERSION = '20260910.8';
             try {
                 var params = new URLSearchParams(location.search);
                 if (params.get('v') !== APP_VERSION) {
@@ -160,6 +160,143 @@
         .pet-profile-btn { background:linear-gradient(135deg,#6C5CE7,#8E7CF3); color:#fff; border:none; border-radius:12px; padding:7px 18px; font-size:13px; font-weight:700; cursor:pointer; }
         .pet-profile-btn:active { transform: scale(0.95); }
         .pet-hint { font-size:11px; color:#9AB0A7; margin-top:8px; position:relative; z-index:2; }
+        .pet-actions { display:flex; align-items:center; justify-content:center; gap:10px; }
+        .pet-today-chip { font-size:11.5px; font-weight:700; color:#2E9E6B; background:#fff; border:1.5px solid #D6F2E6; border-radius:11px; padding:5px 11px; }
+
+        /* ===== 宠物 v3：心情动画 / 气泡 / 光环 / 飘字 ===== */
+        .pet-avatar.pet-mood-normal { animation: petFloat 3s ease-in-out infinite; }
+        .pet-avatar.pet-mood-happy  { animation: petBounce 1.15s ease-in-out infinite; }
+        .pet-avatar.pet-mood-low    { animation: petSway 4.4s ease-in-out infinite; }
+        .pet-avatar.pet-mood-egg    { animation: petWobble 2.6s ease-in-out infinite; }
+        @keyframes petBounce {
+            0%,100% { transform: translateY(0) scale(1); }
+            25%     { transform: translateY(-13px) scale(1.07); }
+            50%     { transform: translateY(0) scale(0.96); }
+            70%     { transform: translateY(-6px) scale(1.03); }
+        }
+        @keyframes petSway {
+            0%,100% { transform: rotate(-3.5deg) translateY(0); }
+            50%     { transform: rotate(3.5deg) translateY(-3px); }
+        }
+        @keyframes petWobble {
+            0%,100% { transform: rotate(-7deg); }
+            50%     { transform: rotate(7deg); }
+        }
+        /* 进化动画放在最后，确保盖过心情动画 */
+        .pet-avatar.pet-evolve { animation: petEvolve 1.3s ease; }
+        .pet-avatar-holder { position: relative; display: inline-block; line-height: 1; }
+        .pet-ground {
+            position: absolute; bottom: -6px; left: 50%; transform: translateX(-50%);
+            width: 68px; height: 13px;
+            background: radial-gradient(ellipse, rgba(46,158,107,0.22), transparent 72%);
+            border-radius: 50%;
+        }
+        .pet-aura-spin {
+            position: absolute; top: -18px; left: 50%; font-size: 19px;
+            animation: auraSpin 3.6s linear infinite; display: inline-block;
+        }
+        @keyframes auraSpin {
+            0%   { transform: translateX(-50%) rotate(0deg) scale(1); }
+            50%  { transform: translateX(-50%) rotate(180deg) scale(1.2); }
+            100% { transform: translateX(-50%) rotate(360deg) scale(1); }
+        }
+        .pet-star-crown { position: absolute; top: -16px; left: 50%; transform: translateX(-50%); font-size: 17px; letter-spacing: -3px; white-space: nowrap; }
+        /* 对话气泡 */
+        .pet-bubble {
+            position: relative; margin: 12px auto 0; max-width: 86%;
+            background: #fff; border: 2px solid #D6F2E6; border-radius: 16px;
+            padding: 9px 15px; font-size: 13.5px; color: #3C5A4E; font-weight: 600; line-height: 1.5;
+            box-shadow: 0 5px 16px rgba(46,158,107,0.15);
+            opacity: 0; transform: translateY(7px) scale(0.95);
+            transition: opacity .3s ease, transform .3s ease; pointer-events: none;
+        }
+        .pet-bubble.show { opacity: 1; transform: translateY(0) scale(1); }
+        .pet-bubble::after {
+            content: ''; position: absolute; top: -10px; left: 50%; margin-left: -8px;
+            width: 0; height: 0; border-left: 8px solid transparent; border-right: 8px solid transparent;
+            border-bottom: 10px solid #D6F2E6;
+        }
+        .pet-bubble::before {
+            content: ''; position: absolute; top: -6px; left: 50%; margin-left: -6px; z-index: 1;
+            width: 0; height: 0; border-left: 6px solid transparent; border-right: 6px solid transparent;
+            border-bottom: 8px solid #fff;
+        }
+        /* 营养飘字 */
+        .pet-float-nutri {
+            position: fixed; font-size: 19px; font-weight: 800; color: #2E9E6B;
+            text-shadow: 0 2px 6px rgba(255,255,255,.95);
+            animation: nutriRise 1.5s ease-out forwards; pointer-events: none; z-index: 9999;
+        }
+        @keyframes nutriRise {
+            0%   { opacity: 0; transform: translateY(8px) scale(.7); }
+            20%  { opacity: 1; transform: translateY(-8px) scale(1.16); }
+            100% { opacity: 0; transform: translateY(-66px) scale(1); }
+        }
+        .pet-celebrate-glow {
+            position: fixed; inset: 0; pointer-events: none; z-index: 9998;
+            background: radial-gradient(circle at 50% 38%, rgba(255,214,102,.38), transparent 62%);
+            animation: cgFade 1.3s ease-out forwards;
+        }
+        @keyframes cgFade { 0%{opacity:0;} 35%{opacity:1;} 100%{opacity:0;} }
+        /* 星辉小条 */
+        .pet-starline { display: inline-flex; gap: 2px; margin-left: 5px; vertical-align: middle; }
+        .pet-starline i { font-style: normal; font-size: 12px; opacity: .28; }
+        .pet-starline i.on { opacity: 1; transform: scale(1.12); }
+
+        /* ===== 成长档案 2.0 ===== */
+        .pp-box { max-width: 430px; max-height: 86vh; overflow-y: auto; text-align: left; }
+        .pp-hero {
+            border-radius: 18px; padding: 16px 14px 14px; text-align: center; position: relative;
+            background: linear-gradient(160deg,#F2FBF7,#E3F5EC); overflow: hidden;
+            border: 2px solid #D6F2E6;
+        }
+        .pp-hero-emoji { font-size: 64px; line-height: 1; display: inline-block; animation: petFloat 3.2s ease-in-out infinite; filter: drop-shadow(0 5px 8px rgba(0,0,0,.13)); }
+        .pp-hero-name { font-size: 18px; font-weight: 800; color: #2E9E6B; margin-top: 8px; }
+        .pp-hero-sub  { font-size: 11.5px; color: #7E948B; margin-top: 3px; }
+        .pp-starline  { margin-top: 8px; font-size: 17px; letter-spacing: 1px; min-height: 22px; }
+        .pp-sec { font-size: 13px; font-weight: 800; color: #2E9E6B; margin: 15px 0 7px; display: flex; align-items: center; gap: 5px; }
+        .pp-sec small { font-weight: 500; color: #9AB0A7; font-size: 11px; }
+        /* 热力图 */
+        .pp-hot-wrap { display: grid; grid-template-columns: repeat(15, 1fr); gap: 4px; }
+        .pp-hot { padding-top: 100%; border-radius: 5px; background: #EDF3F0; display: block; }
+        .pp-hot.h1 { background: #CFEDDF; }
+        .pp-hot.h2 { background: #96DCBC; }
+        .pp-hot.h3 { background: #5CC79A; }
+        .pp-hot.h4 { background: #2E9E6B; }
+        .pp-hot-legend { display: flex; align-items: center; gap: 4px; justify-content: flex-end; margin-top: 6px; font-size: 10px; color: #9AB0A7; }
+        .pp-hot-legend span { width: 11px; height: 11px; border-radius: 3px; display: inline-block; }
+        /* 四维条 */
+        .pp-bar-row { display: flex; align-items: center; gap: 8px; margin-bottom: 7px; font-size: 12px; color: #4A5F57; }
+        .pp-bar-row .lb { width: 74px; flex: none; }
+        .pp-bar-out { flex: 1; height: 11px; background: #EDF3F0; border-radius: 7px; overflow: hidden; }
+        .pp-bar-in { height: 100%; border-radius: 7px; transition: width .5s ease; }
+        .pp-bar-row .vl { width: 62px; flex: none; text-align: right; font-weight: 700; font-size: 11px; }
+        /* 徽章墙 */
+        .pp-badges { display: grid; grid-template-columns: repeat(5, 1fr); gap: 7px; }
+        .pp-badge {
+            background: #F2FBF7; border: 1.5px solid #D6F2E6; border-radius: 12px;
+            padding: 7px 2px 6px; text-align: center; position: relative;
+        }
+        .pp-badge .bi { font-size: 20px; display: block; line-height: 1.15; }
+        .pp-badge .bn { font-size: 9px; color: #4A5F57; margin-top: 2px; line-height: 1.25; }
+        .pp-badge.lock { opacity: .42; filter: grayscale(1); background: #F4F7F5; }
+        .pp-badge.lock .bn { color: #9AB0A7; }
+        /* 图鉴 */
+        .pp-books { display: grid; grid-template-columns: repeat(9, 1fr); gap: 5px; }
+        .pp-book { text-align: center; font-size: 21px; line-height: 1; padding: 5px 0; border-radius: 10px; background: #F2FBF7; border: 1.5px solid #D6F2E6; }
+        .pp-book.lock { opacity: .3; filter: grayscale(1); background: #F4F7F5; }
+        /* 成长日记 */
+        .pp-story { border-left: 2px dashed #D6F2E6; padding-left: 12px; margin-left: 5px; }
+        .pp-story-item { position: relative; padding-bottom: 10px; font-size: 12px; color: #4A5F57; }
+        .pp-story-item::before {
+            content: ''; position: absolute; left: -17px; top: 4px; width: 8px; height: 8px;
+            border-radius: 50%; background: #7BE0B5; border: 2px solid #fff; box-shadow: 0 0 0 1.5px #D6F2E6;
+        }
+        .pp-story-item b { color: #2E9E6B; }
+        .pp-story-item i { font-style: normal; color: #9AB0A7; font-size: 10.5px; margin-left: 5px; }
+        .pp-empty { font-size: 11.5px; color: #9AB0A7; padding: 4px 0; }
+        .pp-note { background: #F2FBF7; border-radius: 12px; padding: 10px 12px; margin-top: 14px; font-size: 11.5px; color: #5A6B63; line-height: 1.75; }
+
         .pet-tl { display:flex; justify-content:space-between; margin:12px 0 2px; }
         .pet-tl-step { text-align:center; font-size:11px; color:#B7C6C0; flex:1; }
         .pet-tl-step .tl-emoji { font-size:22px; display:block; margin-bottom:2px; }
@@ -1721,7 +1858,7 @@
         let isParentMode = false;     // 家长模式（只读取，不写入）
 
         // 上传到云端的数据只包含动态打卡记录（任务/奖励用本地默认值）
-        const SYNC_FIELDS = ['todayChecks', 'todayDate', 'totalStars', 'streak', 'history', 'claimedRewards', 'pet', 'medals', 'poemLog', 'owned', 'leftovers'];
+        const SYNC_FIELDS = ['todayChecks', 'todayDate', 'totalStars', 'streak', 'history', 'claimedRewards', 'pet', 'medals', 'poemLog', 'owned', 'leftovers', 'petBook', 'maxExp', 'coinsEver', 'achv'];
 
         // 上传数据到 Supabase（upsert 固定 id，多端共用同一份；只更新提供的列，不覆盖其它列）
         function syncToCloud() {
@@ -1730,7 +1867,7 @@
                 const v = state[key];
                 // 关键：本地还没养伙伴 / 还没买装扮时不要上传空值，否则会把云端已有的养成进度洗掉
                 if (key === 'pet' && !v) return acc;
-                if ((key === 'owned' || key === 'medals') && (!Array.isArray(v) || v.length === 0)) return acc;
+                if ((key === 'owned' || key === 'medals' || key === 'petBook' || key === 'achv') && (!Array.isArray(v) || v.length === 0)) return acc;
                 acc[key] = v;
                 return acc;
             }, {});
@@ -2020,34 +2157,245 @@
             const used = (state.petExpDate === state.todayDate) ? (state.petExpToday || 0) : 0;
             return Math.max(0, 80 - used);
         }
+
+        // ========== 宠物语音包（预录 mp3，不依赖系统 TTS） ==========
+        const PET_VOICE_VER = '20260910p1';
+        const PET_VOICE = {
+            tap1:'pet_tap1.mp3', tap2:'pet_tap2.mp3', tap3:'pet_tap3.mp3',
+            tap4:'pet_tap4.mp3', tap5:'pet_tap5.mp3', tap6:'pet_tap6.mp3',
+            task_calcium:'pet_task_calcium.mp3', task_wisdom:'pet_task_wisdom.mp3',
+            task_energy:'pet_task_energy.mp3', task_peace:'pet_task_peace.mp3',
+            task_other:'pet_task_other.mp3',
+            golden:'pet_golden.mp3', allDone:'pet_allDone.mp3', evolve:'pet_evolve.mp3',
+            starUp:'pet_starUp.mp3', hungry1:'pet_hungry1.mp3', hungry2:'pet_hungry2.mp3',
+            egg:'pet_egg.mp3', hi_morning:'pet_hi_morning.mp3', hi_after:'pet_hi_after.mp3',
+            hi_evening:'pet_hi_evening.mp3', warn_calcium:'pet_warn_calcium.mp3',
+            warn_wisdom:'pet_warn_wisdom.mp3', warn_energy:'pet_warn_energy.mp3',
+            warn_peace:'pet_warn_peace.mp3', auraOn:'pet_auraOn.mp3',
+            achv:'pet_achv.mp3', collect:'pet_collect.mp3', streak:'pet_streak.mp3'
+        };
+        const PET_AUDIO = {};
+        Object.keys(PET_VOICE).forEach(function (k) {
+            const a = new Audio();
+            a.preload = 'auto';
+            a.src = 'audio/' + PET_VOICE[k] + '?v=' + PET_VOICE_VER;
+            PET_AUDIO[k] = a;
+        });
+
+        // 同一时刻只让宠物发一条声音，避免多段叠音
+        let _petLastAudio = null, _petBubbleTimer = null;
+        function petPlayVoice(key) {
+            const a = PET_AUDIO[key];
+            if (!a) return;
+            try {
+                if (_petLastAudio && _petLastAudio !== a) {
+                    _petLastAudio.pause();
+                    _petLastAudio.currentTime = 0;
+                }
+                a.currentTime = 0;
+                const p = a.play();
+                if (p && p.catch) p.catch(function () { /* 未交互时浏览器会拦，静默 */ });
+                _petLastAudio = a;
+            } catch (e) {}
+        }
+        // 宠物开口：气泡 + 语音
+        function petSpeak(key, text, opts) {
+            if (!state.pet) return;
+            opts = opts || {};
+            if (text) petShowBubble(text, opts.hold);
+            petPlayVoice(key);
+        }
+        function petShowBubble(text, hold) {
+            let b = document.getElementById('petBubble');
+            if (!b) {
+                // 卡片还没渲染出来（例如首次进入）→ 兜底用轻提示
+                showToast(text);
+                return;
+            }
+            b.textContent = text;
+            b.classList.add('show');
+            clearTimeout(_petBubbleTimer);
+            _petBubbleTimer = setTimeout(function () { b.classList.remove('show'); }, hold || 4600);
+        }
+        // 营养飘字（在宠物头顶升起 🌙+1）
+        function petFloatNutri(nutri, n, golden) {
+            const av = document.getElementById('petAvatar');
+            if (!av) return;
+            const r = av.getBoundingClientRect();
+            const ic = nutri ? (NUTRI_ICON[nutri] || '\uD83C\uDF5B') : '\u2B50';
+            const cnt = Math.max(1, Math.min(n || 1, 2));
+            for (let i = 0; i < cnt; i++) {
+                const d = document.createElement('div');
+                d.className = 'pet-float-nutri';
+                d.textContent = ic + '+' + (golden ? 2 : 1);
+                d.style.left = (r.left + r.width / 2 + (cnt > 1 ? (i ? 12 : -34) : -10)) + 'px';
+                d.style.top  = (r.top + r.height * 0.35) + 'px';
+                document.body.appendChild(d);
+                setTimeout(function () { if (d.parentNode) d.parentNode.removeChild(d); }, 1600);
+            }
+        }
+
+        // ========== 星辉等级：传说之后不再"到头"，每 300 经验点亮一颗星 ==========
+        const PET_STAR_STEP = 300;
+        const PET_STAR_MAX  = 5;
+        function petStarCount(exp) {
+            const base = PET_STAGE_MIN[PET_STAGE_MIN.length - 1];
+            if ((exp || 0) < base) return 0;
+            return Math.min(PET_STAR_MAX, Math.floor(((exp || 0) - base) / PET_STAR_STEP));
+        }
+        function petStarText(exp) {
+            const base = PET_STAGE_MIN[PET_STAGE_MIN.length - 1];
+            const n = petStarCount(exp);
+            if (n >= PET_STAR_MAX) return '星辉圆满！你的伙伴已经是最传奇的伙伴了';
+            const next = base + (n + 1) * PET_STAR_STEP;
+            return '再攒 ' + (next - (exp || 0)) + ' 经验，就能点亮第 ' + (n + 1) + ' 颗星';
+        }
+
+        // ========== 成长日记（关键事件留痕，给成长档案用） ==========
+        function addPetStory(icon, text) {
+            if (!state.pet) return;
+            state.pet.story = state.pet.story || [];
+            if (state.pet.story.length && state.pet.story[0].text === text) return;
+            state.pet.story.unshift({ d: state.todayDate, icon: icon, text: text });
+            if (state.pet.story.length > 40) state.pet.story = state.pet.story.slice(0, 40);
+        }
+
+        // ========== 成就墙：跨行为的长期目标（把"养宠物"升级为"布丁的成长记录"） ==========
+        const PET_ACHV = [
+            { id:'hatch',   icon:'\uD83E\uDD5A', name:'破壳而出', desc:'孵化伙伴',        got:function () { return (state.maxExp || 0) >= 100; } },
+            { id:'teen',    icon:'\uD83D\uDC3E', name:'少年伙伴', desc:'伙伴长到少年',    got:function () { return (state.maxExp || 0) >= 400; } },
+            { id:'adult',   icon:'\uD83C\uDF1F', name:'成年礼',   desc:'伙伴长到成年',    got:function () { return (state.maxExp || 0) >= 1200; } },
+            { id:'legend',  icon:'\uD83D\uDC51', name:'传说诞生', desc:'伙伴成为传说',    got:function () { return (state.maxExp || 0) >= 2400; } },
+            { id:'star1',   icon:'\u2B50',       name:'第一颗星', desc:'点亮第一颗星',    got:function () { return (state.maxExp || 0) >= 2700; } },
+            { id:'star5',   icon:'\uD83D\uDCAB', name:'星辉圆满', desc:'点亮全部 5 颗星', got:function () { return (state.maxExp || 0) >= 3900; } },
+            { id:'streak7', icon:'\uD83D\uDD25', name:'七日坚持', desc:'连续 7 天打卡',   got:function () { return contStreak(function (ids) { return Object.keys(ids).length > 0; }) >= 7; } },
+            { id:'streak30',icon:'\uD83D\uDC8E', name:'三十日之约', desc:'连续 30 天打卡', got:function () { return contStreak(function (ids) { return Object.keys(ids).length > 0; }) >= 30; } },
+            { id:'full10',  icon:'\u2705',       name:'满分十日', desc:'10 天全部完成',     got:function () { return (state.history || []).filter(function (h) { return h.allDone; }).length >= 10; } },
+            { id:'decor3',  icon:'\uD83C\uDF80', name:'打扮达人', desc:'拥有 3 件装扮',  got:function () { return petOwnedItems('decor').length >= 3; } },
+            { id:'book3',   icon:'\uD83C\uDFE1', name:'伙伴家族', desc:'养过 3 种伙伴',  got:function () { return (state.petBook || []).length >= 3; } },
+            { id:'medal3',  icon:'\uD83C\uDFC5', name:'勋章收藏家', desc:'集齐 3 枚勋章', got:function () { return (state.medals || []).length >= 3; } },
+            { id:'rich500', icon:'\uD83D\uDCB0', name:'小富翁',   desc:'累计赚到 500 金币', got:function () { return (state.coinsEver || 0) >= 500; } },
+            { id:'poem20',  icon:'\uD83C\uDF8B', name:'古诗二十首', desc:'完成 20 天今日一句', got:function () { return Object.keys(state.poemLog || {}).filter(function (k) { return state.poemLog[k]; }).length >= 20; } }
+        ];
+        function checkPetAchv(silent) {
+            if (!state.achv) state.achv = [];
+            const newly = PET_ACHV.filter(function (a) {
+                return state.achv.indexOf(a.id) < 0 && a.got();
+            });
+            if (!newly.length) return;
+            newly.forEach(function (a) { state.achv.push(a.id); });
+            saveState();
+            if (silent) return;
+            newly.forEach(function (a, i) {
+                setTimeout(function () {
+                    showToast('\uD83C\uDFC5 解锁成就：' + a.icon + ' ' + a.name + '\uFF01' + a.desc, 'linear-gradient(135deg,#FFC93C,#F5A623)');
+                    playSound('celebrate');
+                    petSpeak('achv', '哇，解锁新成就啦！快去成长档案看看！', { hold: 5000 });
+                }, 900 + i * 2400);
+            });
+        }
         // 主动换一个学习伙伴（装扮和小屋会保留给新伙伴）
         function confirmChangePet() {
             const cur = state.pet ? state.pet.name : '';
-            const ok = window.confirm('确定要换一个学习伙伴吗？\n\n现在的「' + cur + '」会离开，新伙伴从 0 经验重新开始。\n（已买到的装扮和小屋会保留）');
+            const ok = window.confirm('确定要收养一个新的小伙伴吗？\n\n现在的「' + cur + '」会去宠物乐园休息，它会永远留在图鉴里。\n新伙伴从 0 经验开始长大。\n（已买到的装扮、小屋、金币都会保留）');
             if (!ok) return;
             showPetPicker(true);
         }
-        // 点击宠物：跳一下 + 随状态说话
+        // 点击宠物：跳一下 + 气泡 + 【语音】（v3 修复：之前只有文字、没有声音）
         function petInteract() {
             if (!state.pet) return;
             const av = document.getElementById('petAvatar');
             if (av) {
+                av.classList.remove('pet-evolve');
+                void av.offsetWidth;   // 强制重排，让动画可重复播放
                 av.classList.add('pet-evolve');
-                setTimeout(function () { av.classList.remove('pet-evolve'); }, 1300);
+                setTimeout(function () { av.classList.remove('pet-evolve'); }, 1400);
             }
             playSound('praise');
             const tn = todayNutri();
             const done = calcTodayCompleted();
-            const pool = [];
-            if (getPetStage(state.pet.exp || 0) === 0) pool.push('我在蛋里听到你的声音啦，再打个卡我就出来！');
-            if (done === 0) { pool.push('今天还没喂我呢，去打个卡吧～', '有点想你了，快来打卡吧 🥺'); }
-            else {
-                const eaten = (tn.calcium || 0) + (tn.wisdom || 0) + (tn.energy || 0) + (tn.peace || 0);
-                pool.push('今天吃了 ' + eaten + ' 口饭，好满足～', '最喜欢和布丁一起努力啦！', '继续加油，我陪你！');
+            const stage = getPetStage(state.pet.exp || 0);
+
+            const chat = [];    // 纯陪伴话（[语音key, 文字]）
+            const guide = [];   // 有指向性的话：缺营养 / 饿肚子 / 蛋期
+            if (stage === 0) {
+                guide.push(['egg', '我在蛋里听到你的声音啦，再打个卡我就出来！']);
+            } else if (done === 0) {
+                guide.push(['hungry1', '今天还没喂我呢，去打个卡吧！'],
+                           ['hungry2', '有点想你了，快来打卡吧！']);
+            } else {
+                if (!tn.calcium) guide.push(['warn_calcium', '牛奶还没喝完，我的骨头有点软哦！']);
+                if (!tn.wisdom)  guide.push(['warn_wisdom', '想听你讲一个故事给我听！']);
+                if (!tn.energy)  guide.push(['warn_energy', '我们出去动一动好不好？']);
+                if (!tn.peace)   guide.push(['warn_peace', '早点洗漱，我们一起安心睡觉！']);
+                if (petAura())   guide.push(['auraOn', '四维全满啦，快看我头顶在发光！']);
+                chat.push(['tap1', '布丁，摸摸头！'],
+                          ['tap2', '嘿嘿，好舒服呀！'],
+                          ['tap3', '我一直都在等你哦！'],
+                          ['tap4', '和你在一起最开心啦！'],
+                          ['tap5', '今天也要一起加油哦！'],
+                          ['tap6', '你摸我的时候，我心里暖暖的！']);
             }
-            if (!tn.calcium && done > 0) pool.push('牛奶还没喝完，我骨头有点软…');
-            if (!tn.wisdom && done > 0) pool.push('想听你读一段《西游记》');
-            showToast(pool[Math.floor(Math.random() * pool.length)]);
+            // 有明确要提醒的事时，优先说那件事（否则孩子听不到有用信息）
+            let pick;
+            if (guide.length && (chat.length === 0 || Math.random() < 0.65)) {
+                pick = guide[Math.floor(Math.random() * guide.length)];
+            } else {
+                pick = chat[Math.floor(Math.random() * chat.length)];
+            }
+            petSpeak(pick[0], pick[1]);
+        }
+
+        // 打卡 → 宠物即时反应（与任务联动：刚补了哪一维，宠物就说哪一维）
+        function petReactToTask(task, golden) {
+            if (!state.pet) return;
+            if (getPetStage(state.pet.exp || 0) === 0) return;   // 蛋期不插话
+            const map = {
+                calcium: ['task_calcium', '早餐吃完啦，我的钙钙加一！'],
+                wisdom:  ['task_wisdom',  '读到好书啦，我的智慧加一！'],
+                energy:  ['task_energy',  '运动回来啦，我的活力加一！'],
+                peace:   ['task_peace',   '洗漱完成啦，我的安心加一！']
+            };
+            let key, text;
+            if (golden) {
+                key = 'golden'; text = '是金色星星！双倍营养，我吃饱啦！';
+            } else {
+                const m = map[task && task.nutri];
+                if (m) { key = m[0]; text = m[1]; }
+                else   { key = 'task_other'; text = '又完成一项，我好开心呀！'; }
+            }
+            petFloatNutri(task && task.nutri, 1, golden);
+            petSpeak(key, text);
+        }
+
+        // 宠物首次问候（早/放学/晚上，随当前时段；今天一次没打卡则改成撒娇）
+        function petGreetOnce() {
+            if (!state.pet) return;
+            if (state.petGreetDate === state.todayDate) return;
+            state.petGreetDate = state.todayDate;
+            saveState();
+            let key, text;
+            if (calcTodayCompleted() === 0) {
+                const c = Math.random() < 0.5;
+                key = c ? 'hungry1' : 'hungry2';
+                text = c ? '今天还没喂我呢，去打个卡吧！' : '有点想你了，快来打卡吧！';
+            } else {
+                const h = new Date().getHours();
+                if (h < 11)      { key = 'hi_morning'; text = '早上好布丁，新的一天开始啦！'; }
+                else if (h < 18) { key = 'hi_after';   text = '放学啦，我等你一整天了！'; }
+                else             { key = 'hi_evening'; text = '晚上好，我们一起把任务做完吧！'; }
+            }
+            petSpeak(key, text, { hold: 5200 });
+        }
+        // 浏览器会拦"未交互页面的自动播放"→ 挂到布丁第一次点击/触摸上，保证一定能出声
+        function armPetGreeting() {
+            const fire = function () {
+                document.removeEventListener('click', fire);
+                document.removeEventListener('touchstart', fire);
+                setTimeout(petGreetOnce, 400);
+            };
+            document.addEventListener('click', fire);
+            document.addEventListener('touchstart', fire);
         }
         // 成长档案：伙伴现在的完整状态
         function showPetProfile() {
@@ -2056,7 +2404,12 @@
             const exp = state.pet.exp || 0;
             const stage = getPetStage(exp);
             const n = state.pet.nutri || {};
+            const aura = petAura();
+            const stars = petStarCount(exp);
+            const isLegend = stage >= PET_STAGE_MIN.length - 1;
             const tlIcons = ['🥚', '🐣', '🐾', '🐕', '👑'];
+
+            // ① 成长时间线
             let tl = '';
             for (let i = 0; i < PET_STAGE_MIN.length; i++) {
                 tl += '<div class="pet-tl-step' + (i <= stage ? ' on' : '') + '">' +
@@ -2064,39 +2417,114 @@
                         (i > 0 ? '<br><small>' + PET_STAGE_MIN[i] + ' 经验</small>' : '') +
                       '</div>';
             }
-            let nu = '';
-            for (const k of ['calcium', 'wisdom', 'energy', 'peace']) {
-                const v = n[k] || 0, lv = nutriLevel(v);
-                nu += '<div class="pet-profile-row"><span>' + NUTRI_ICON[k] + ' ' + NUTRI_NAME[k] +
-                      '（累计 ' + v + ' 口）</span><b style="color:' + NUTRI_LV_COLOR[lv] + '">' + NUTRI_LV_NAME[lv] + '</b></div>';
+            // ② 星辉星条（传说之后的核心目标）
+            let starHTML = '';
+            if (isLegend) {
+                starHTML = '<div class="pp-starline">' + [0, 1, 2, 3, 4].map(function (i) {
+                    return i < stars ? '\u2B50' : '\u2606';
+                }).join('') + '</div>';
             }
+            // ③ 四维可视化（条形 + 等级色）
+            const maxN = Math.max(12, n.calcium || 0, n.wisdom || 0, n.energy || 0, n.peace || 0);
+            let nu = '';
+            ['calcium', 'wisdom', 'energy', 'peace'].forEach(function (k) {
+                const v = n[k] || 0, lv = nutriLevel(v);
+                nu += '<div class="pp-bar-row">' +
+                        '<span class="lb">' + NUTRI_ICON[k] + ' ' + NUTRI_NAME[k] + '</span>' +
+                        '<span class="pp-bar-out"><span class="pp-bar-in" style="width:' + Math.round(v / maxN * 100) + '%;background:' + NUTRI_LV_COLOR[lv] + ';"></span></span>' +
+                        '<span class="vl" style="color:' + NUTRI_LV_COLOR[lv] + '">' + NUTRI_LV_NAME[lv] + '</span>' +
+                      '</div>';
+            });
+            // ④ 近 30 天打卡热力图
+            const hmap = {};
+            (state.history || []).forEach(function (h) { hmap[h.date] = h; });
+            let heat = '';
+            for (let i = 29; i >= 0; i--) {
+                const d = new Date(state.todayDate + 'T00:00:00');
+                d.setDate(d.getDate() - i);
+                const ds = fmtDate(d);
+                let rec = hmap[ds];
+                if (ds === state.todayDate) rec = { completed: calcTodayCompleted(), total: getActiveTasks().length };
+                let cls = '';
+                if (rec && rec.total) {
+                    const r = rec.completed / rec.total;
+                    if (r >= 1) cls = 'h4'; else if (r >= 0.6) cls = 'h3'; else if (r >= 0.3) cls = 'h2'; else if (r > 0) cls = 'h1';
+                }
+                heat += '<span class="pp-hot ' + cls + '" title="' + ds + '"></span>';
+            }
+            // ⑤ 成就墙
+            const achvOwned = state.achv || [];
+            let badges = PET_ACHV.map(function (a) {
+                const on = achvOwned.indexOf(a.id) >= 0;
+                return '<div class="pp-badge' + (on ? '' : ' lock') + '" title="' + (on ? '已解锁：' : '未解锁：') + a.desc + '">' +
+                        '<span class="bi">' + (on ? a.icon : '\uD83D\uDD12') + '</span>' +
+                        '<span class="bn">' + a.name + '</span></div>';
+            }).join('');
+            // ⑥ 图鉴（收养过的伙伴永久点亮）
+            const book = state.petBook || [];
+            let books = PET_KINDS.map(function (k) {
+                const on = book.indexOf(k.id) >= 0;
+                return '<div class="pp-book' + (on ? '' : ' lock') + '" title="' + k.name + (on ? '（已收养）' : '（还没收养过）') + '">' + k.emoji + '</div>';
+            }).join('');
+            // ⑦ 成长日记
+            const story = state.pet.story || [];
+            const storyHTML = story.length
+                ? story.map(function (s) {
+                      return '<div class="pp-story-item">' + s.icon + ' ' + s.text + '<i>' + (s.d || '') + '</i></div>';
+                  }).join('')
+                : '<div class="pp-empty">还没有脚印，多陪它几天就会留下记录啦～</div>';
+            // ⑧ 已拥有的好东西
             const decorList = petOwnedItems('decor');
             const sceneList = petOwnedItems('scene');
             const scene = sceneList.length ? sceneList[sceneList.length - 1] : null;
-            const nextExp = stage >= PET_STAGE_MIN.length - 1 ? '已满级' : ('距下一阶段还差 ' + (PET_STAGE_MIN[stage + 1] - exp) + ' 经验');
+            const nextExp = isLegend
+                ? (stars >= PET_STAR_MAX ? '星辉圆满，已经是传奇伙伴' : ('距下一颗星还差 ' + (PET_STAGE_MIN[PET_STAGE_MIN.length - 1] + (stars + 1) * PET_STAR_STEP - exp) + ' 经验'))
+                : ('距下一阶段还差 ' + (PET_STAGE_MIN[stage + 1] - exp) + ' 经验');
+            const heroBg = scene ? (SCENE_BG[scene.id] || '') : '';
+            const fullDays = (state.history || []).filter(function (h) { return h.allDone; }).length;
+
             const mask = document.createElement('div');
             mask.className = 'pet-pick-mask';
             mask.innerHTML =
-                '<div class="pet-pick-box" style="text-align:left;max-width:420px;">' +
-                    '<div style="text-align:center;">' +
-                        '<div class="pet-avatar" style="font-size:' + PET_STAGE_SIZE[stage] + ';cursor:default;">' +
-                            (stage === 0 ? '🥚' : kind.emoji) + petAura() + (stage >= 4 ? '👑' : (stage >= 3 ? '🌟' : '')) + '</div>' +
-                        '<div class="pet-name" style="margin-top:10px;">' + (state.pet.name || kind.name) +
+                '<div class="pet-pick-box pp-box">' +
+                    '<div class="pp-hero"' + (heroBg ? ' style="background:' + heroBg + ';"' : '') + '>' +
+                        '<div class="pp-hero-emoji">' + (stage === 0 ? '🥚' : kind.emoji) +
+                            (aura ? '✨' : '') + (isLegend ? '👑' : '') + '</div>' +
+                        '<div class="pp-hero-name">' + (state.pet.name || kind.name) +
                             '<span class="pet-stage">Lv.' + (stage + 1) + ' ' + PET_STAGE_NAME[stage] + '</span></div>' +
-                        '<div style="font-size:12px;color:#8AA39A;margin-top:4px;">' + kind.name + ' · 陪布丁 ' + petAgeDays() + ' 天 · 总经验 ' + exp + '</div>' +
-                        '<div style="font-size:12px;color:#B8860B;margin-top:2px;">' + nextExp + (petAura() ? ' · ✨ 四维光环已点亮' : '') + '</div>' +
+                        '<div class="pp-hero-sub">' + kind.name + ' · 陪布丁 ' + petAgeDays() + ' 天 · 总经验 ' + exp +
+                            (scene ? ' · ' + scene.icon + scene.name : '') + '</div>' +
+                        starHTML +
+                        '<div class="pp-hero-sub" style="color:#B8860B;font-weight:700;margin-top:4px;">' + nextExp + '</div>' +
                     '</div>' +
-                    '<div style="height:1px;background:#E4EEE9;margin:12px 0;"></div>' +
-                    '<div style="font-size:13px;font-weight:700;color:#2E9E6B;margin-bottom:2px;">🌱 成长时间线</div>' +
+
+                    '<div class="pp-sec">🌱 成长时间线 <small>5 个阶段</small></div>' +
                     '<div class="pet-tl">' + tl + '</div>' +
-                    '<div style="font-size:13px;font-weight:700;color:#2E9E6B;margin:10px 0 2px;">🍚 四维营养（靠每天打卡吃进去）</div>' + nu +
-                    '<div style="font-size:13px;font-weight:700;color:#2E9E6B;margin:10px 0 2px;">🎀 已拥有的好东西</div>' +
+
+                    '<div class="pp-sec">📅 最近 30 天打卡 <small>颜色越深完成得越多</small></div>' +
+                    '<div class="pp-hot-wrap">' + heat + '</div>' +
+                    '<div class="pp-hot-legend">少 <span style="background:#EDF3F0"></span><span style="background:#CFEDDF"></span><span style="background:#96DCBC"></span><span style="background:#5CC79A"></span><span style="background:#2E9E6B"></span> 多</div>' +
+
+                    '<div class="pp-sec">🍚 四维营养 <small>靠每天打卡吃进去，四项都"不错"以上会亮 ✨</small></div>' + nu +
+
+                    '<div class="pp-sec">🏅 成就墙 <small>' + achvOwned.length + ' / ' + PET_ACHV.length + '（长按看条件）</small></div>' +
+                    '<div class="pp-badges">' + badges + '</div>' +
+
+                    '<div class="pp-sec">🏡 我的伙伴图鉴 <small>' + book.length + ' / ' + PET_KINDS.length + ' 种</small></div>' +
+                    '<div class="pp-books">' + books + '</div>' +
+
+                    '<div class="pp-sec">📖 成长日记 <small>共 ' + fullDays + ' 天全部完成</small></div>' +
+                    '<div class="pp-story">' + storyHTML + '</div>' +
+
+                    '<div class="pp-sec">🎀 已拥有的好东西</div>' +
                     '<div class="pet-profile-row"><span>装扮</span><b>' + (decorList.length ? decorList.map(function (d) { return d.icon + ' ' + d.name; }).join('　') : '还没有') + '</b></div>' +
                     '<div class="pet-profile-row"><span>小屋</span><b>' + (scene ? scene.icon + ' ' + scene.name : '还没有') + '</b></div>' +
-                    '<div style="background:#F2FBF7;border-radius:12px;padding:10px 12px;margin-top:12px;font-size:11.5px;color:#5A6B63;line-height:1.7;">' +
+
+                    '<div class="pp-note">' +
                         '📖 <b>成长逻辑：</b>每天打卡 = 喂它（四维营养 +1 口、经验 +5/星）；<br>' +
-                        '金币 = 打卡攒下的奖励，买食物<b>直接加经验</b>，买装扮小屋让它<b>更好看</b>；<br>' +
-                        '经验决定它长多大（五个阶段），四维决定状态好不好（四项都"不错"以上，头顶会亮 ✨）。' +
+                        '经验决定它长多大（蛋 → 宝宝 → 少年 → 成年 → 传说）；<br>' +
+                        '<b>传说不是终点</b>：之后再攒经验可以点亮 ⭐ 星辉 5 颗星，还能收集更多伙伴、集齐成就徽章；<br>' +
+                        '四维决定状态好不好（四项都"不错"以上，头顶会亮 ✨）。' +
                     '</div>' +
                     '<button class="pet-confirm" onclick="this.closest(\'.pet-pick-mask\').remove()">知道啦</button>' +
                 '</div>';
@@ -2114,41 +2542,72 @@
             const total = getActiveTasks().length;
             const percent = total > 0 ? Math.round(completed / total * 100) : 0;
             const mood = getPetMood(stage, percent, completed);
-            const avatar = (isEgg ? '🥚' : kind.emoji) + petAura();
-            const deco = stage >= 4 ? '👑' : (stage >= 3 ? '🌟' : '');
-            let expText, expPct;
-            if (stage >= PET_STAGE_MIN.length - 1) {
-                expPct = 100;
-                expText = '已满级，超厉害！';
+            const aura = petAura();
+            const stars = petStarCount(exp);
+            const isLegend = stage >= PET_STAGE_MIN.length - 1;
+            // 心情 → 动画（饿肚子时动作变慢、颜色略淡）
+            let moodCls = 'pet-mood-normal';
+            if (isEgg) moodCls = 'pet-mood-egg';
+            else if (completed === 0) moodCls = 'pet-mood-low';
+            else if (aura || (total > 0 && completed >= total)) moodCls = 'pet-mood-happy';
+            // 头顶装饰：星辉星 > 传说皇冠 > 四维光环
+            let crown = '';
+            if (isLegend) {
+                crown = '<div class="pet-star-crown">' + (stars > 0 ? '⭐'.repeat(stars) : '👑') + '</div>';
+            }
+            const auraHTML = aura ? '<span class="pet-aura-spin">✨</span>' : '';
+            const avatar = isEgg ? '🥚' : kind.emoji;
+            // 进度：普通阶段看经验，传说之后看星辉
+            let expText, expPct, expLabel;
+            if (isLegend) {
+                expPct = Math.round(stars / PET_STAR_MAX * 100);
+                expLabel = '⭐ 星辉 ' + stars + ' / ' + PET_STAR_MAX + ' · 总经验 ' + exp;
+                expText = petStarText(exp);
             } else {
                 const cur = PET_STAGE_MIN[stage], next = PET_STAGE_MIN[stage + 1];
                 expPct = Math.min(100, Math.round((exp - cur) / (next - cur) * 100));
-                expText = '经验 ' + exp + ' / ' + next;
+                expLabel = '经验 ' + exp + ' / ' + next;
+                expText = '今天打卡还能喂 ' + petFeedLeft() + ' 点';
             }
             const sceneList = petOwnedItems('scene');
             const decorList = petOwnedItems('decor');
             const scene = sceneList.length ? sceneList[sceneList.length - 1] : null;
             const bg = scene ? (SCENE_BG[scene.id] || '') : '';
+            const starLine = isLegend
+                ? '<span class="pet-starline">' + [0, 1, 2, 3, 4].map(function (i) {
+                      return '<i class="' + (i < stars ? 'on' : '') + '">\u2B50</i>';
+                  }).join('') + '</span>'
+                : '';
             area.innerHTML =
                 '<div class="pet-card"' + (bg ? ' style="background:' + bg + ';"' : '') + '>' +
                     '<button class="pet-change-btn" onclick="confirmChangePet()" title="换一个伙伴">🔄</button>' +
                     (scene ? '<div class="pet-scene">🏡 ' + scene.name + '</div>' : '') +
                     '<div class="pet-main">' +
-                        '<div class="pet-avatar" id="petAvatar" style="font-size:' + PET_STAGE_SIZE[stage] + ';cursor:pointer;" onclick="petInteract()" title="摸摸它">' + avatar + deco + '</div>' +
+                        '<div class="pet-avatar-holder">' +
+                            crown + auraHTML +
+                            '<div class="pet-avatar ' + moodCls + '" id="petAvatar" style="font-size:' + PET_STAGE_SIZE[stage] + ';cursor:pointer;" onclick="petInteract()" title="摸摸它">' + avatar + '</div>' +
+                            '<div class="pet-ground"></div>' +
+                        '</div>' +
                         '<div class="pet-side">' +
                             '<div class="pet-name">' + (state.pet.name || kind.name) +
-                                '<span class="pet-stage">Lv.' + (stage + 1) + ' ' + PET_STAGE_NAME[stage] + '</span></div>' +
+                                '<span class="pet-stage">Lv.' + (stage + 1) + ' ' + PET_STAGE_NAME[stage] + '</span>' + starLine +
+                            '</div>' +
                             '<div class="pet-mood">' + mood + '</div>' +
                             nutriRowHTML() +
                             '<div class="pet-exp-wrap"><div class="pet-exp-fill" style="width:' + expPct + '%;"></div></div>' +
-                            '<div class="pet-exp-text">' + expText + ' · 今天打卡还能喂 ' + petFeedLeft() + ' 点</div>' +
+                            '<div class="pet-exp-text">' + expLabel + '</div>' +
+                            '<div class="pet-exp-text">' + expText + '</div>' +
                         '</div>' +
                     '</div>' +
+                    '<div class="pet-bubble" id="petBubble"></div>' +
                     (decorList.length ? '<div class="pet-decor-row">' +
                         decorList.map(function (d) { return '<span class="pet-decor" title="' + d.name + '">' + d.icon + '</span>'; }).join('') +
                         '</div>' : '') +
-                    '<div class="pet-actions"><button class="pet-profile-btn" onclick="showPetProfile()">📖 成长档案</button></div>' +
-                    '<div class="pet-hint">👆 点它会说话 · 四维营养靠每天打卡 · 金币买食物直接加经验</div>' +
+                    '<div class="pet-actions">' +
+                        '<button class="pet-profile-btn" onclick="showPetProfile()">📖 成长档案</button>' +
+                        '<span class="pet-today-chip">今日 ' + completed + '/' + total + '</span>' +
+                    '</div>' +
+                    '<div class="pet-hint">👆 点它会说话 · 打卡时它也会回应你 · 金币买食物直接加经验</div>' +
                 '</div>';
         }
         function showPetPicker(cancelable) {
@@ -2189,11 +2648,25 @@
                     name: (nameInput.value || '').trim() || kind.name,
                     exp: 0,
                     bornAt: getTodayStr(),
+                    nutri: { calcium: 0, wisdom: 0, energy: 0, peace: 0 },
+                    story: []
                 };
+                // 图鉴：收养过的伙伴永久点亮 —— 换伙伴不是"丢弃"，而是收集
+                if (!Array.isArray(state.petBook)) state.petBook = [];
+                const isNewKind = state.petBook.indexOf(sel) < 0;
+                if (isNewKind) state.petBook.push(sel);
+                addPetStory('\uD83C\uDF81', '「' + state.pet.name + '」来到我们家');
+                checkPetAchv(true);
                 saveState();
                 mask.remove();
                 renderPet();
                 showToast('\u6b22\u8fce ' + state.pet.name + ' \u52a0\u5165\uff01\u5f00\u59cb\u6253\u5361\u5582\u517b\u5b83\u5427');
+                setTimeout(function () {
+                    const many = (state.petBook || []).length > 1;
+                    petSpeak((isNewKind && many) ? 'collect' : 'tap1',
+                             (isNewKind && many) ? '又有新伙伴来我们家啦！' : ('我是' + state.pet.name + '，请多关照！'),
+                             { hold: 5400 });
+                }, 800);
             });
             if (cancelable) {
                 const cancelBtn = document.getElementById('petCancelBtn');
@@ -2275,6 +2748,7 @@
             const gain = golden ? stars * 2 : stars;
             state.todayChecks[task.id] = { stars: gain, flag: flag, nutri: task.nutri, at: Date.now(), golden: golden };
             state.totalStars += gain;
+            state.coinsEver = (state.coinsEver || 0) + gain;
             if (task.id === 'm_break') state.breakfastFast = (flag === 'ok');
             if (flag === 'leftover') {
                 state.leftovers = state.leftovers || [];
@@ -2288,6 +2762,8 @@
             playSound('check');
             showPraise();
             feedPet(gain);
+            // 与打卡任务联动：等鼓励语播完（约2秒）宠物再开口回应，两段声音不重叠
+            setTimeout(function () { petReactToTask(task, golden); }, 2200);
             if (state.timers) delete state.timers[task.id];
             saveState();
             saveTodayToHistory();
@@ -2305,7 +2781,13 @@
             checkMedals();
             if (calcTodayCompleted() === getActiveTasks().length) {
                 setTimeout(function () { triggerCelebration(); }, 600);
+                setTimeout(function () {
+                    addPetStory('\uD83C\uDFC6', '完成了当天全部任务');
+                    saveState();
+                    petSpeak('allDone', '今天全部完成啦，你太厉害啦！', { hold: 5200 });
+                }, 3600);
             }
+            checkPetAchv();
         }
         function feedPet(stars) {
             if (!state.pet) return;
@@ -2314,20 +2796,43 @@
             const real = Math.min(stars * 5, room);
             if (real <= 0) return;
             state.petExpToday = (state.petExpToday || 0) + real;
-            const before = getPetStage(state.pet.exp || 0);
-            state.pet.exp = (state.pet.exp || 0) + real;
+            const beforeExp = state.pet.exp || 0;
+            const before = getPetStage(beforeExp);
+            state.pet.exp = beforeExp + real;
             const after = getPetStage(state.pet.exp);
+            const beforeStar = petStarCount(beforeExp), afterStar = petStarCount(state.pet.exp);
+            if (state.pet.exp > (state.maxExp || 0)) state.maxExp = state.pet.exp;
             saveState();
             renderPet();
             if (after > before) {
                 const av = document.getElementById('petAvatar');
                 if (av) {
                     av.classList.add('pet-evolve');
-                    setTimeout(function () { av.classList.remove('pet-evolve'); }, 1300);
+                    setTimeout(function () { av.classList.remove('pet-evolve'); }, 1400);
                 }
                 showToast('\uD83C\uDF89 ' + state.pet.name + ' \u8fdb\u5316\u6210\u300c' + PET_STAGE_NAME[after] + '\u300d\u5566\uff01');
                 playSound('celebrate');
+                addPetStory('\uD83C\uDF1F', '进化为「' + PET_STAGE_NAME[after] + '」');
+                saveState();
+                setTimeout(function () {
+                    petSpeak('evolve', '我长大啦！谢谢你每天喂我！', { hold: 5400 });
+                }, 1500);
+                if (after >= PET_STAGE_MIN.length - 1) {
+                    setTimeout(function () {
+                        showToast('\uD83D\uDC51 传说阶段！继续攒经验可以点亮星辉之星，一直有目标哦', 'linear-gradient(135deg,#6C5CE7,#8E7CF3)');
+                    }, 3400);
+                }
+            } else if (afterStar > beforeStar) {
+                // 传说之后每 300 经验点亮一颗星 —— 让游戏不会"到头"
+                addPetStory('\u2B50', '点亮第 ' + afterStar + ' 颗星');
+                saveState();
+                showToast('\u2B50 \u661f\u8f89\u7b2c ' + afterStar + ' \u9897\u661f\u70b9\u4eae\uff01', 'linear-gradient(135deg,#FFC93C,#F5A623)');
+                playSound('celebrate');
+                setTimeout(function () {
+                    petSpeak('starUp', '我的皇冠上又多了一颗星星！', { hold: 5400 });
+                }, 1500);
             }
+            checkPetAchv();
         }
 
         let state = {
@@ -2343,6 +2848,11 @@
             streak: 0,
             pet: null,
             medals: [],
+            petBook: [],
+            maxExp: 0,
+            coinsEver: 0,
+            achv: [],
+            petGreetDate: '',
             poemLog: {},
             poemLibVer: 0,
             dictationBank: null,
@@ -2468,6 +2978,19 @@
             if (state.dictationLibVer !== DICTATION_LIB_VER) {
                 state.dictationLearned = 45;
                 state.dictationLibVer = DICTATION_LIB_VER;
+            }
+            // ===== 宠物 v3 迁移：老数据补齐新字段（无感升级，不清任何进度） =====
+            if (!Array.isArray(state.petBook)) state.petBook = [];
+            if (typeof state.maxExp !== 'number') state.maxExp = 0;
+            if (typeof state.coinsEver !== 'number') state.coinsEver = Math.max(0, state.totalStars || 0);
+            if (!Array.isArray(state.achv)) state.achv = [];
+            if (state.pet) {
+                if (!Array.isArray(state.pet.story)) state.pet.story = [];
+                if (!state.pet.nutri) state.pet.nutri = { calcium: 0, wisdom: 0, energy: 0, peace: 0 };
+                const pe = state.pet.exp || 0;
+                if (pe > state.maxExp) state.maxExp = pe;
+                // 已养的伙伴自动点亮图鉴
+                if (state.pet.kind && state.petBook.indexOf(state.pet.kind) < 0) state.petBook.push(state.pet.kind);
             }
         }
 
@@ -2741,7 +3264,7 @@
         function togglePoem() {
             const done = !state.poemLog[state.todayDate];
             state.poemLog[state.todayDate] = done;
-            if (done) { state.totalStars += 2; feedPet(2); playSound('check'); showToast('\u2728 真棒！+2星，' + (state.pet ? state.pet.name : '\u5ba0\u7269') + ' 也长大啦'); }
+            if (done) { state.totalStars += 2; state.coinsEver = (state.coinsEver || 0) + 2; feedPet(2); playSound('check'); showToast('\u2728 真棒！+2星，' + (state.pet ? state.pet.name : '\u5ba0\u7269') + ' 也长大啦'); }
             else { state.totalStars = Math.max(0, state.totalStars - 2); deductPet(2); playSound('uncheck'); }
             saveState();
             saveTodayToHistory();
@@ -3117,7 +3640,7 @@
             box.style.display = 'block';
         }
         function finishDictation() {
-            if (!state.todayChecks['a_dictation']) { state.totalStars += 2; feedPet(2); }
+            if (!state.todayChecks['a_dictation']) { state.totalStars += 2; state.coinsEver = (state.coinsEver || 0) + 2; feedPet(2); }
             state.todayChecks['a_dictation'] = { stars: 2, nutri: 'wisdom', golden: false };
             saveState(); saveTodayToHistory(); saveState();
             renderTasks(); renderStats(); renderPet();
@@ -4076,7 +4599,16 @@
             }
             // 学习伙伴：取经验更高的那只（任一端为空都不会把另一端洗掉）
             if (data.pet && (!state.pet || (data.pet.exp || 0) > (state.pet.exp || 0))) {
-                state.pet = data.pet;
+                // 成长日记取并集（换伙伴/多端合并时不丢脚印）
+                const oldStory = (state.pet && Array.isArray(state.pet.story)) ? state.pet.story : [];
+                const newStory = Array.isArray(data.pet.story) ? data.pet.story : [];
+                const seenS = new Set();
+                state.pet = Object.assign({}, data.pet);
+                state.pet.story = oldStory.concat(newStory).filter(function (s) {
+                    const k = (s.d || '') + '|' + (s.text || '');
+                    if (seenS.has(k)) return false;
+                    seenS.add(k); return true;
+                }).sort(function (a, b) { return (b.d || '').localeCompare(a.d || ''); }).slice(0, 40);
             }
             // 已买到的装扮 / 小屋：并集（只增不减）
             if (Array.isArray(data.owned)) {
@@ -4103,6 +4635,11 @@
             if (data.poemLog && typeof data.poemLog === 'object') {
                 state.poemLog = Object.assign({}, state.poemLog || {}, data.poemLog);
             }
+            // 宠物 v3：图鉴 / 成就（并集）、累计值（取大）——只增不减
+            if (Array.isArray(data.petBook)) state.petBook = Array.from(new Set([...(state.petBook || []), ...data.petBook]));
+            if (Array.isArray(data.achv))    state.achv    = Array.from(new Set([...(state.achv || []), ...data.achv]));
+            if (typeof data.maxExp === 'number')    state.maxExp    = Math.max(state.maxExp || 0, data.maxExp);
+            if (typeof data.coinsEver === 'number') state.coinsEver = Math.max(state.coinsEver || 0, data.coinsEver);
             // 已兑换奖励合并去重
             if (Array.isArray(data.claimedRewards)) {
                 state.claimedRewards = Array.from(
@@ -4275,6 +4812,10 @@
             });
         }
         init();
+        // 宠物首次问候：挂到布丁第一次点击/触摸上，避免浏览器拦截自动播放导致"没声音"
+        armPetGreeting();
+        // 静默补一次成就判定（老用户已满足条件的成就直接点亮，不弹提示）
+        setTimeout(function () { checkPetAchv(true); }, 2500);
             setInterval(function () {
             const chips = document.querySelectorAll('.timer-chip.run');
             if (!chips.length) return;
