@@ -8,7 +8,7 @@
     <meta http-equiv="Expires" content="0" data-page-node-id="YXlbOTFHU2Nr6SGRQHt7cy">
     <script>
         (function () {
-            var APP_VERSION = '20260910.10';
+            var APP_VERSION = '20260910.11';
             try {
                 var params = new URLSearchParams(location.search);
                 if (params.get('v') !== APP_VERSION) {
@@ -1900,7 +1900,7 @@
         let isParentMode = false;     // 家长模式（只读取，不写入）
 
         // 上传到云端的数据只包含动态打卡记录（任务/奖励用本地默认值）
-        const SYNC_FIELDS = ['todayChecks', 'todayDate', 'totalStars', 'streak', 'history', 'claimedRewards', 'pet', 'medals', 'poemLog', 'owned', 'leftovers', 'petBook', 'maxExp', 'coinsEver', 'achv', 'petWish', 'petWishDate', 'petWishDone'];
+        const SYNC_FIELDS = ['todayChecks', 'todayDate', 'totalStars', 'streak', 'history', 'claimedRewards', 'pet', 'medals', 'poemLog', 'owned', 'leftovers', 'petBook', 'maxExp', 'coinsEver', 'achv', 'petWish', 'petWishDate', 'petWishDone', 'resetAt', 'todayDate'];
 
         // 上传数据到 Supabase（upsert 固定 id，多端共用同一份；只更新提供的列，不覆盖其它列）
         function syncToCloud() {
@@ -3078,6 +3078,7 @@
             petWishDate: '',
             petWishDone: false,
             freeSettledDate: '', 
+            resetAt: '', 
             poemLog: {},
             poemLibVer: 0,
             dictationBank: null,
@@ -4339,13 +4340,29 @@
             document.getElementById('parentModal').classList.add('active');
             refreshParentView();
         }
-        // 清空本地 + 清空云端（只清本地不够：history 在云端合并时是并集，会把旧记录拉回来）
+        // 清空打卡记录 + 落一条「底线日期」到云端。
+        // 只清本地不够：history 在云端是并集合并，会把旧记录拉回来；
+        // 也不能直接 removeItem 整个 localStorage，那会连带清掉听写进度和错词本（确认框没承诺删这些）。
         function hardReset() {
-            if (!window.confirm('确定要清空所有打卡记录、重新开始吗？\n\n会删掉：打卡记录、星星、宠物、成就、装扮。\n任务设置会保留。\n\n清空后统计从今天重新开始。')) return;
-            try { localStorage.removeItem('buding-afterschool-app'); } catch (e) {}
+            if (!window.confirm('确定要清空所有打卡记录、重新开始吗？\n\n会删掉：打卡记录、星星、宠物、成就、装扮。\n会保留：听写进度、错词本、任务设置。\n\n清空后统计从今天重新开始。')) return;
+
+            const FRESH = {
+                todayChecks: {}, totalStars: 0, streak: 0, history: [], claimedRewards: [],
+                pet: null, medals: [], petBook: [], maxExp: 0, coinsEver: 0, achv: [],
+                poemLog: {}, owned: [], leftovers: [], petWish: '', petWishDate: '',
+                petWishDone: false, freeSettledDate: '', breakfastFast: '', petGreetDate: ''
+            };
+            Object.keys(FRESH).forEach(function (k) { state[k] = FRESH[k]; });
+            // 底线日期：其它设备下次同步时跟着丢弃更早的记录，假数据不会再被并集拉回来
+            state.resetAt = state.todayDate;
+            state.todayDate = getTodayStr();
+
             const done = function () { window.location.reload(); };
+            try { localStorage.setItem('buding-afterschool-app', JSON.stringify(state)); } catch (e) {}
+            if (typeof fetch !== 'function') { done(); return; }
+            // 云端整体覆写为干净数据（含底线日期）
             try {
-                fetch(SB_API + '/afterschool_sync?id=eq.pudding-afterschool-2026', {
+                fetch(SB_API + '/afterschool_sync?id=eq.' + SYNC_OBJECT_ID, {
                     method: 'PATCH',
                     headers: {
                         'apikey': SB.anonKey,
@@ -4353,7 +4370,10 @@
                         'Content-Type': 'application/json',
                         'Prefer': 'return=minimal'
                     },
-                    body: JSON.stringify({ payload: {} })
+                    body: JSON.stringify({
+                        payload: { resetAt: state.resetAt, todayDate: state.todayDate,
+                                   history: [], todayChecks: {}, totalStars: 0, streak: 0 }
+                    })
                 }).then(done, done);
                 setTimeout(done, 2500);   // 网络不通也要让本地清空生效
             } catch (e) { done(); }
@@ -5131,6 +5151,36 @@
             return merged;
         }
         function mergeCloudIntoState(data) {
+            // 「清空记录、重新开始」的底线日期（resetAt）：
+            // 只要有任何一端清空过，比底线更早的记录一律丢弃；否则旧设备的 history
+            // 会被下面的并集合并重新拉回来，测试数据就"复活"了。
+            const _lb = String(state.resetAt || '');
+            const _rb = String(data.resetAt || '');
+            const floor = _rb > _lb ? _rb : _lb;
+            if (_rb > _lb) {
+                // 本机底线比云端旧 → 本机没参与那次清空，累计类数据一律作废，只保留云端那份
+                state.pet = null; state.owned = []; state.achv = []; state.medals = [];
+                state.petBook = []; state.history = []; state.leftovers = []; state.poemLog = {};
+                state.claimedRewards = []; state.totalStars = 0; state.streak = 0;
+                state.coinsEver = 0; state.maxExp = 0; state.todayChecks = {};
+                state.petWish = ''; state.petWishDate = ''; state.petWishDone = false;
+                state.freeSettledDate = '';
+            }
+            if (floor) {
+                state.resetAt = floor;
+                const _keep = function (d) { return String(d || '') >= floor; };
+                const _prune = function (arr, f) {
+                    return Array.isArray(arr) ? arr.filter(function (x) { return x && _keep(f(x)); }) : arr;
+                };
+                state.history = _prune(state.history, function (h) { return h.date; });
+                state.leftovers = _prune(state.leftovers, function (h) { return h.date; });
+                data.history = _prune(data.history, function (h) { return h.date; });
+                data.leftovers = _prune(data.leftovers, function (h) { return h.date; });
+                if (state.pet && Array.isArray(state.pet.story)) {
+                    state.pet.story = state.pet.story.filter(function (x) { return x && _keep(x.d); });
+                }
+            }
+
             // 历史记录：按 date 合并去重，保留更完整的当天记录
             if (Array.isArray(data.history)) {
                 const byDate = new Map();
