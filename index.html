@@ -8,7 +8,7 @@
     <meta http-equiv="Expires" content="0" data-page-node-id="YXlbOTFHU2Nr6SGRQHt7cy">
     <script>
         (function () {
-            var APP_VERSION = '20260910.2';
+            var APP_VERSION = '20260910.3';
             try {
                 var params = new URLSearchParams(location.search);
                 if (params.get('v') !== APP_VERSION) {
@@ -1579,6 +1579,10 @@
         <div class="modal-content" style="position:relative;max-width:520px;">
             <button class="modal-close" onclick="closeDictation()">&times;</button>
             <div class="modal-title">✍️ 词语听写</div>
+            <div id="dictTtsHint" style="display:none;text-align:center;font-size:12px;color:#888;margin:-8px 0 12px 0;line-height:1.6;">
+                🔇 听不到声音？点右下喇叭可重试<br>
+                <span style="color:#aaa;font-size:11px;">若多次重试都无声：iPhone 设置→辅助功能→朗读内容→下载"中文"语音；Android 希沃/手机 需系统安装中文 TTS 引擎</span>
+            </div>
             <div class="dict-progress" id="dictWordNum">1/10</div>
             <div id="dictStage">
                 <div class="dict-stage">
@@ -2920,19 +2924,70 @@
         let dictQueue = [], dictIdx = 0, dictWrong = [];
         let synth = window.speechSynthesis;
         let zhVoice = null;
+        let voicesReady = false;
         function initVoices() {
             if (!synth) return;
             const vs = synth.getVoices();
-            zhVoice = vs.find(v => /zh|chinese|中文|普通话|cmn/i.test((v.lang||'') + (v.name||''))) || null;
+            // 多层级中文 voice fallback（覆盖更广）
+            const zhRegex = /(zh-Hans-CN|zh-CN|zh-Hans|zh-TW|zh-HK|zh|cmn-Hans-CN|cmn|yue)/i;
+            const nameHint = /(chinese|中文|普通话|国语|粤语|微软|晓晓|婷婷|小红|云希|yunxi|yunyang|xiao|xiaoxiao|tingting|yaoyao|kangkang|huihui|hanhan|meijia)/i;
+            zhVoice =
+                vs.find(v => zhRegex.test(v.lang) && nameHint.test(v.name)) ||
+                vs.find(v => zhRegex.test(v.lang)) ||
+                vs.find(v => nameHint.test(v.name)) ||
+                vs.find(v => zhRegex.test((v.lang||'') + ' ' + (v.name||''))) ||
+                null;
+            if (zhVoice || vs.length > 0) voicesReady = true;
         }
-        if (synth) { initVoices(); synth.onvoiceschanged = initVoices; }
-        function speak(text) {
-            if (!synth) { showToast('当前设备不支持语音朗读，请用文字模式'); return; }
+        if (synth) {
+            initVoices();
+            synth.onvoiceschanged = initVoices;
+            // 部分浏览器（尤其移动端）首次 getVoices() 为空，
+            // 等 1.5 秒再试一次确保抓到中文 voice
+            setTimeout(initVoices, 800);
+            setTimeout(initVoices, 1500);
+        }
+        // 上一次 speak 的回调，便于错误时显示具体原因
+        let _lastSpeakErr = null;
+        function speak(text, opts) {
+            opts = opts || {};
+            if (!synth) {
+                showToast('当前设备不支持语音朗读，请用文字模式');
+                return;
+            }
             try { synth.cancel(); } catch(e){}
             const u = new SpeechSynthesisUtterance(text);
-            u.lang = 'zh-CN'; u.rate = 0.9; u.pitch = 1.0;
-            if (zhVoice) u.voice = zhVoice;
+            u.lang = opts.lang || 'zh-CN';
+            u.rate = opts.rate || 0.9;
+            u.pitch = opts.pitch || 1.0;
+            u.volume = opts.volume != null ? opts.volume : 1;
+            // 优先级：调用方指定 voice > 已缓存 zhVoice > 系统默认（按 lang）
+            if (opts.voice) u.voice = opts.voice;
+            else if (zhVoice) u.voice = zhVoice;
+            let started = false;
+            u.onstart = function() { started = true; _lastSpeakErr = null; };
+            u.onerror = function(ev) {
+                // 'canceled' 是我们自己 cancel 触发的，忽略
+                if (ev && ev.error && ev.error !== 'canceled' && ev.error !== 'interrupted') {
+                    _lastSpeakErr = ev.error;
+                }
+            };
+            u.onend = function() { /* nothing */ };
             synth.speak(u);
+            // 兜底：1.5 秒后还没 onstart，可能是引擎没装/系统 TTS 不可用
+            setTimeout(function() {
+                if (!started && !_lastSpeakErr) {
+                    // 不弹 toast，避免和文字模式降级 toast 冲突；让听写弹窗自己显示
+                }
+            }, 1500);
+            return u;
+        }
+        // 检测当前是否能正常播放中文 TTS
+        function isTtsWorking() {
+            if (!synth) return false;
+            const vs = synth.getVoices ? synth.getVoices() : [];
+            if (zhVoice) return true;
+            return vs.some(v => /zh|chinese|中文|cmn/i.test((v.lang||'') + ' ' + (v.name||'')));
         }
         function gradeTermLabel(g, t) { return g + '年级' + t; }
         function splitWords(s) {
@@ -2968,7 +3023,11 @@
                 for (const w of normalPool) { if (q.length >= 10) break; q.push(w); }
                 if (q.length === 0) { showToast('词语库还是空的，请先在「词语库」里添加已学词语'); return; }
             }
-            if (!synth) showToast('本设备不支持语音朗读，已切换为文字模式（看词书写即可）');
+            if (!synth) {
+                showToast('本设备不支持语音朗读，已切换为文字模式');
+            } else if (!isTtsWorking()) {
+                showToast('未检测到中文语音引擎，已切换为文字模式', 4000);
+            }
             dictQueue = q; dictIdx = 0; dictWrong = [];
             document.getElementById('dictationModal').classList.add('active');
             document.getElementById('dictSummary').style.display = 'none';
@@ -2985,6 +3044,9 @@
             ans.style.display = 'none';
             const wm = document.getElementById('dictWrongMark');
             wm.textContent = (state.wrongWords && state.wrongWords[w]) ? ('⚠️ 之前错过 ×' + state.wrongWords[w]) : '';
+            // 提示条：仅当系统无中文 TTS 时显示
+            const hint = document.getElementById('dictTtsHint');
+            if (hint) hint.style.display = isTtsWorking() ? 'none' : '';
             speak(w);
         }
         function dictPlay() { const w = dictQueue[dictIdx]; if (w) speak(w); }
@@ -3920,6 +3982,20 @@
 
             // 鼓励音效（自包含合成音，无需外部音频文件）
             playSound('praise');
+
+            // 朗读鼓励话语（移动端需系统支持中文 TTS）
+            try {
+                if (synth) {
+                    synth.cancel();
+                    const u = new SpeechSynthesisUtterance(p.text);
+                    u.lang = 'zh-CN';
+                    u.rate = 1.0;
+                    u.pitch = 1.15;  // 略高，更亲切
+                    u.volume = 1;
+                    if (zhVoice) u.voice = zhVoice;
+                    synth.speak(u);
+                }
+            } catch(e){}
 
             // 1.2秒后渐隐
             clearTimeout(window._praiseTimer);
