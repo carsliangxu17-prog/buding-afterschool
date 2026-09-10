@@ -8,7 +8,7 @@
     <meta http-equiv="Expires" content="0" data-page-node-id="YXlbOTFHU2Nr6SGRQHt7cy">
     <script>
         (function () {
-            var APP_VERSION = '20260910.17';
+            var APP_VERSION = '20260910.18';
             try {
                 var params = new URLSearchParams(location.search);
                 if (params.get('v') !== APP_VERSION) {
@@ -808,8 +808,16 @@
         /* ========== 操作按钮 ========== */
         .actions-bar {
             display: flex;
-            gap: 10px;
+            gap: 14px;
             margin: 24px 0 16px;
+            flex-wrap: wrap;
+            align-items: flex-start;
+        }
+        /* 两组按钮：窄屏上下堆叠，宽屏（≥768px）左右分栏 —— 见图下方媒体查询 */
+        .actions-group { flex: 1 1 100%; min-width: 0; }
+        .actions-row {
+            display: flex;
+            gap: 8px;
             flex-wrap: wrap;
         }
         /* ========== 寄语条 + 时间存钱罐 ========== */
@@ -844,12 +852,13 @@
         }
         .motto-jar-hi { color: #E08D1B; font-weight: 700; }
         .actions-group-label {
+            display: block;
             width: 100%;
             font-size: 12px;
             font-weight: 700;
             color: #8A9AA5;
             letter-spacing: 1px;
-            margin: 6px 0 -2px;
+            margin: 0 0 7px;
         }
         .action-btn {
             flex: 1;
@@ -868,6 +877,14 @@
             gap: 6px;
         }
         .action-btn:active { transform: scale(0.95); }
+        /* 分组内按钮：一行三个、等分且可收缩，文字不换行也不互相压住（比 .action-btn 优先级高） */
+        .actions-row .action-btn {
+            flex: 1 1 92px;
+            min-width: 0;
+            padding: 12px 6px;
+            font-size: clamp(12.5px, 3.4vw, 16px);
+            white-space: nowrap;
+        }
         .btn-rewards {
             background: linear-gradient(135deg, #FFD93D, #FFA502);
             color: white;
@@ -1506,18 +1523,17 @@
                 margin-left: auto;
                 margin-right: auto;
             }
-            /* 操作按钮栏：与分类网格左右对齐 */
+            /* 操作按钮栏：与分类网格左右对齐（两组各占一行，≥1024px 才左右分栏） */
             .actions-bar {
                 width: 100%;
-                flex-wrap: nowrap;
-                gap: 12px;
+                gap: 14px;
             }
-            .action-btn {
-                flex: 1;
+            .actions-row { gap: 12px; }
+            .actions-row .action-btn {
+                flex: 1 1 0;
                 min-width: 0;
                 padding: 14px 10px;
                 font-size: 15px;
-                white-space: nowrap;
                 border-radius: 16px;
             }
             .header-title { font-size: 32px; }
@@ -1527,11 +1543,9 @@
             .stat-card { padding: 16px 14px; }
             .stat-value { font-size: 26px; }
             .stat-label { font-size: 13px; }
-            .action-btn { padding: 14px 22px; font-size: 16px; border-radius: 16px; }
             .course-card { padding: 16px 22px; font-size: 16px; }
             .progress-bar { height: 18px; border-radius: 12px; }
             .modal-content { max-width: 640px !important; }
-            .actions-bar { gap: 12px; }
 
             /* ★ 分类网格 — 双列铺满 ★ */
             #categoriesContainer {
@@ -1571,9 +1585,14 @@
                 max-width: 700px;
             }
             .actions-bar {
-                gap: 14px;
+                gap: 22px;
+                flex-wrap: nowrap;   /* 空间够宽了，两组左右分栏 */
             }
-            .action-btn {
+            .actions-group { flex: 1 1 0; }
+            .actions-row { gap: 12px; }
+            .actions-row .action-btn {
+                flex: 1 1 0;
+                min-width: 0;
                 padding: 16px 12px;
                 font-size: 16px;
             }
@@ -1728,26 +1747,34 @@
 
         <!-- 操作按钮：按"谁来点"分两组，布丁的放前面 -->
         <div class="actions-bar" data-page-node-id="YY4jdGNnjdNZFdsSfyI0yE">
-            <div class="actions-group-label">🎒 布丁可以点这里</div>
-            <button class="action-btn btn-rewards" onclick="showRewardShop()" data-page-node-id="0ddqMQH60vWtFPyT1sYsd1">
-                🎁 奖励商店
-            </button>
-            <button class="action-btn btn-calendar" onclick="showCalendarModal()" data-page-node-id="YAWRxPEf4P34cxdqYC3oxJ">
-                📅 打卡日历
-            </button>
-            <button class="action-btn btn-bank" onclick="showBankModal()">
-                📚 词语库
-            </button>
-            <div class="actions-group-label">👀 家长区</div>
-            <button class="action-btn btn-calendar" onclick="showWeeklyReport()" data-page-node-id="weeklyReportBtn">
-                📊 学习周报
-            </button>
-            <button class="action-btn btn-edit" onclick="showEditModal()" data-page-node-id="IxWYFIZAflH6UdDToiyaU7">
-                ✏️ 编辑任务
-            </button>
-            <button class="action-btn btn-parent" onclick="showParentView()" data-page-node-id="2FU3Hp2DBTQNw0hCB5JEk7">
-                👀 家长视图
-            </button>
+            <div class="actions-group">
+                <div class="actions-group-label">🎒 布丁可以点这里</div>
+                <div class="actions-row">
+                    <button class="action-btn btn-rewards" onclick="showRewardShop()" data-page-node-id="0ddqMQH60vWtFPyT1sYsd1">
+                        🎁 奖励商店
+                    </button>
+                    <button class="action-btn btn-calendar" onclick="showCalendarModal()" data-page-node-id="YAWRxPEf4P34cxdqYC3oxJ">
+                        📅 打卡日历
+                    </button>
+                    <button class="action-btn btn-bank" onclick="showBankModal()">
+                        📚 词语库
+                    </button>
+                </div>
+            </div>
+            <div class="actions-group">
+                <div class="actions-group-label">👀 家长区</div>
+                <div class="actions-row">
+                    <button class="action-btn btn-calendar" onclick="showWeeklyReport()" data-page-node-id="weeklyReportBtn">
+                        📊 学习周报
+                    </button>
+                    <button class="action-btn btn-edit" onclick="showEditModal()" data-page-node-id="IxWYFIZAflH6UdDToiyaU7">
+                        ✏️ 编辑任务
+                    </button>
+                    <button class="action-btn btn-parent" onclick="showParentView()" data-page-node-id="2FU3Hp2DBTQNw0hCB5JEk7">
+                        👀 家长视图
+                    </button>
+                </div>
+            </div>
         </div>
 
         <!-- 历史记录 -->
@@ -2080,7 +2107,7 @@
         const DEFAULT_TASKS = [
             // 早晨 6:50-7:45
             { id:'m_listen',  name:'英语熏听 30 分钟',            icon:'\uD83C\uDFA7', category:'morning', stars:1, nutri:'wisdom' },
-            { id:'m_break',   name:'早餐 10 分钟内吃完',           icon:'\u23F1\uFE0F', category:'morning', stars:3, nutri:'calcium', timer:600 },
+            { id:'m_break',   name:'早餐 15 分钟内吃完',           icon:'\u23F1\uFE0F', category:'morning', stars:3, nutri:'calcium', timer:900 },
             { id:'m_milk',    name:'牛奶喝完 1 盒',                icon:'\uD83E\uDD5B', category:'morning', stars:2, nutri:'calcium', plate:true },
             { id:'m_egg',     name:'炒蛋吃完 1 个',                icon:'\uD83C\uDF73', category:'morning', stars:1, nutri:'calcium', plate:true },
             { id:'m_read_cn', name:'晨读 10 分钟 · 语文《金波四季美文》', icon:'\uD83D\uDCD6', category:'morning', stars:2, nutri:'wisdom', days:[1,3,5],   lock:'m_break' },
@@ -3040,7 +3067,9 @@
         }
         function timerLeft(task) {
             if (!state.timers || !state.timers[task.id]) return null;
-            const limit = (isWeekend() && task.timer === 600) ? 900 : task.timer;
+            // 限时统一取任务自身的 timer（早餐 15 分钟 = 900 秒）。
+            // 注：旧代码对"周末 600 秒"额外放宽到 900 秒，现默认值就是 900，规则已并入默认值。
+            const limit = task.timer;
             return limit - Math.floor((Date.now() - state.timers[task.id]) / 1000);
         }
         function fmtTime(sec) {
@@ -3289,6 +3318,21 @@
             DEFAULT_TASKS.forEach(d => { if (!ids.has(d.id)) state.tasks.push({ ...d }); });
         }
 
+        // 一次性任务参数校准（ensureValidState 里调用，只跑一遍）
+        const TASK_PATCH_VER = 1;
+        function applyTaskPatches() {
+            if ((state.taskPatchVer || 0) >= TASK_PATCH_VER) return;
+            if (!Array.isArray(state.tasks)) state.tasks = [];
+            const t = state.tasks.find(x => x && x.id === 'm_break');
+            if (t) {
+                if (t.timer === 600) t.timer = 900;   // 早餐限时：10 分钟 → 15 分钟
+                if (typeof t.name === 'string' && t.name.indexOf('10 分钟') >= 0) {
+                    t.name = t.name.replace('10 分钟', '15 分钟');
+                }
+            }
+            state.taskPatchVer = TASK_PATCH_VER;
+        }
+
         // 确保状态数据有效（防止云端/本地缓存损坏导致任务丢失）
         function ensureValidState() {
             if (!Array.isArray(state.tasks) || state.tasks.length === 0) {
@@ -3322,6 +3366,9 @@
                 state.dictationLearned = 45;
                 state.dictationLibVer = DICTATION_LIB_VER;
             }
+            // 任务参数与默认值同步（一次性校准：tasks 只存本地、不随云端同步，
+            // 所以改 DEFAULT_TASKS 对已装设备无效，必须在这里显式迁移一次）
+            applyTaskPatches();
             // ===== 宠物 v5 迁移：自由时间结算标记 =====
             if (typeof state.freeSettledDate !== 'string') state.freeSettledDate = '';
             // ===== 宠物 v5 迁移：今日心愿字段 =====
@@ -3669,7 +3716,7 @@
         const MEDALS = [
             { id:'milk3',  name:'牛奶勋章',   icon:'\uD83E\uDD5B', need:3, desc:'连续 3 天把牛奶喝光光',
               check:function(ids){ return !!(ids['m_milk'] && ids['m_milk'].flag !== 'leftover'); } },
-            { id:'fast5',  name:'闪电早餐',   icon:'\u26A1',      need:5, desc:'连续 5 天 10 分钟内吃完早餐',
+            { id:'fast5',  name:'闪电早餐',   icon:'\u26A1',      need:5, desc:'连续 5 天 15 分钟内吃完早餐',
               check:function(ids){ return !!(ids['m_break'] && ids['m_break'].flag === 'ok'); } },
             { id:'read5',  name:'小书虫',     icon:'\uD83D\uDC1B', need:5, desc:'连续 5 天读书',
               check:function(ids){ return !!(ids['e_read'] || ids['m_read_cn'] || ids['m_read_en']); } },
