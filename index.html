@@ -8,7 +8,7 @@
     <meta http-equiv="Expires" content="0" data-page-node-id="YXlbOTFHU2Nr6SGRQHt7cy">
     <script>
         (function () {
-            var APP_VERSION = '20260910.8';
+            var APP_VERSION = '20260910.9';
             try {
                 var params = new URLSearchParams(location.search);
                 if (params.get('v') !== APP_VERSION) {
@@ -162,6 +162,40 @@
         .pet-hint { font-size:11px; color:#9AB0A7; margin-top:8px; position:relative; z-index:2; }
         .pet-actions { display:flex; align-items:center; justify-content:center; gap:10px; }
         .pet-today-chip { font-size:11.5px; font-weight:700; color:#2E9E6B; background:#fff; border:1.5px solid #D6F2E6; border-radius:11px; padding:5px 11px; }
+        .pending-hint { font-size:12.5px; color:#5B7A6E; margin-top:8px; text-align:center; font-weight:600; }
+        .pending-hint.done { color:#2E9E6B; }
+        .free-hint { font-size:12.5px; color:#4A6B8A; margin-top:6px; text-align:center; font-weight:600; }
+        .free-hint b { color:#2E6FA8; }
+        .free-hint.done { color:#2E9E6B; }
+        .free-hint.done b { color:#1F7A52; }
+        .task-order { display:flex; flex-direction:column; gap:4px; margin-left:6px; }
+        .task-order button { width:30px; height:24px; border:1.5px solid #D6F2E6; background:#fff; color:#7E948B;
+                             border-radius:8px; font-size:10px; line-height:1; cursor:pointer; padding:0; }
+        .task-order button:active { background:#EBFAF2; }
+        .my-add-row { text-align:center; margin:14px 0 4px; }
+        .my-add-btn { padding:11px 22px; border:2px dashed #A9E3C9; background:#F6FDFA; color:#2E9E6B;
+                      border-radius:14px; font-size:14px; font-weight:700; cursor:pointer; }
+        .my-add-btn:active { background:#EBFAF2; }
+        .my-add-tip { font-size:11px; color:#9AB0A7; margin-top:6px; }
+        .my-label { font-size:12.5px; font-weight:700; color:#5B7A6E; margin:12px 0 6px; }
+        .my-input { width:100%; box-sizing:border-box; padding:11px 13px; border:2px solid #D6F2E6; border-radius:12px;
+                    font-size:15px; color:#2C3E36; outline:none; }
+        .my-input:focus { border-color:#5CC79A; }
+        .my-chips { display:flex; flex-wrap:wrap; gap:7px; }
+        .my-chip { padding:7px 12px; border:2px solid #E3EFE9; border-radius:11px; font-size:12.5px; color:#6B807A;
+                   background:#fff; cursor:pointer; }
+        .my-chip.on { border-color:#5CC79A; background:#EBFAF2; color:#2E9E6B; font-weight:700; }
+        .pet-wish { position:relative; z-index:2; margin-top:8px; text-align:center; font-size:12px; font-weight:700;
+                    color:#8A6D3B; background:linear-gradient(135deg,#FFF8E6,#FFEFC9); border:1.5px dashed #F0D9A0;
+                    border-radius:11px; padding:6px 10px; }
+        .pet-wish.done { color:#2E9E6B; background:linear-gradient(135deg,#EBFAF2,#D6F2E6); border-color:#A9E3C9; border-style:solid; }
+        .nutri-pill.off { opacity:.62; }
+        .nutri-pill.pulse { animation: nutriPulse .55s ease 2; }
+        @keyframes nutriPulse {
+            0%   { transform: scale(1); }
+            45%  { transform: scale(1.22); box-shadow: 0 0 0 5px rgba(92,199,154,.28); }
+            100% { transform: scale(1); }
+        }
 
         /* ===== 宠物 v3：心情动画 / 气泡 / 光环 / 飘字 ===== */
         .pet-avatar.pet-mood-normal { animation: petFloat 3s ease-in-out infinite; }
@@ -1622,6 +1656,8 @@
             <div class="progress-bar" data-page-node-id="UKmVCSyIFy0Rm5vufjkmCV">
                 <div class="progress-fill" id="progressFill" style="width: 0%" data-page-node-id="4TGyFOHj6VOd7hAC69t9cU"></div>
             </div>
+            <div id="pendingHint" class="pending-hint"></div>
+            <div id="freeHint" class="free-hint"></div>
         </div>
 
         <!-- 今日课程 -->
@@ -1635,6 +1671,12 @@
 
         <!-- 任务分类区域 -->
         <div id="categoriesContainer" data-page-node-id="JRTb15BlbkOm0UHJ2bGdec"></div>
+
+        <!-- 布丁可以自己加任务：自己定的目标才叫自己的目标 -->
+        <div class="my-add-row">
+            <button class="my-add-btn" onclick="showAddMyTask()">＋ 我想加一项</button>
+            <div class="my-add-tip">自己定的目标，做起来更有劲 💪</div>
+        </div>
 
         <!-- 错题 / 难点本 -->
         <div id="medalArea"></div>
@@ -1858,7 +1900,7 @@
         let isParentMode = false;     // 家长模式（只读取，不写入）
 
         // 上传到云端的数据只包含动态打卡记录（任务/奖励用本地默认值）
-        const SYNC_FIELDS = ['todayChecks', 'todayDate', 'totalStars', 'streak', 'history', 'claimedRewards', 'pet', 'medals', 'poemLog', 'owned', 'leftovers', 'petBook', 'maxExp', 'coinsEver', 'achv'];
+        const SYNC_FIELDS = ['todayChecks', 'todayDate', 'totalStars', 'streak', 'history', 'claimedRewards', 'pet', 'medals', 'poemLog', 'owned', 'leftovers', 'petBook', 'maxExp', 'coinsEver', 'achv', 'petWish', 'petWishDate', 'petWishDone'];
 
         // 上传数据到 Supabase（upsert 固定 id，多端共用同一份；只更新提供的列，不覆盖其它列）
         function syncToCloud() {
@@ -1872,6 +1914,7 @@
                 return acc;
             }, {});
             if (!Object.keys(payload).length) return;
+            if (typeof fetch !== 'function') return;   // 环境无 fetch（老 WebView 等）→ 本地照常打卡，只是不同步
             const body = {
                 id: SYNC_OBJECT_ID,
                 payload: payload,
@@ -1888,7 +1931,7 @@
 
         // 从 Supabase 下载数据（只读取动态打卡记录，任务/奖励保留本地）
         function syncFromCloud(callback) {
-            if (!cloudReady) { callback(null); return; }
+            if (!cloudReady || typeof fetch !== 'function') { callback(null); return; }
             fetch(`${SB_API}/${SB_TABLE}?select=*&id=eq.${SYNC_OBJECT_ID}`, {
                 headers: sbHeaders()
             })
@@ -1947,6 +1990,7 @@
                 alert('还没开启云端同步，暂时发不了远程提醒。\n配置好云端后就能用啦～');
                 return;
             }
+            if (typeof fetch !== 'function') { alert('当前环境不支持云端同步'); return; }
             const body = {
                 id: SYNC_OBJECT_ID,
                 parent_message: { text: text, time: Date.now() },
@@ -2076,7 +2120,9 @@
             { id:'frog',    emoji:'\uD83D\uDC38', name:'\u5c0f\u9752\u86d9' },
         ];
         const PET_STAGE_MIN  = [0, 100, 400, 1200, 2400];
-        const PET_STAGE_NAME = ['\u86cb', '\u5b9d\u5b9d', '\u5c11\u5e74', '\u6210\u5e74', '\u4f20\u8bf4'];
+        // 阶段名：全换成 7 岁孩子能理解、且会向往的名字（原「传说」是成人奇幻概念，抽象度过高）
+        // 与后面「点亮皇冠星星」的机制顺滑衔接：成为星光勇士 → 攒星星
+        const PET_STAGE_NAME = ['蛋宝宝', '小奶团', '小机灵', '大勇士', '星光勇士'];
         const PET_STAGE_SIZE = ['52px','58px','66px','74px','82px'];
 
         const NUTRI_NAME = { calcium: '钙钙', wisdom: '智慧', energy: '活力', peace: '安心' };
@@ -2100,10 +2146,12 @@
             for (const k of ['calcium', 'wisdom', 'energy', 'peace']) {
                 const lv = nutriLevel(n[k]);
                 const ate = today[k] > 0;
-                html += '<span class="nutri-pill' + (ate ? '' : ' low') + '" title="' + NUTRI_NAME[k] + ' 累计 ' + (n[k] || 0) + ' 口">' +
+                // 今天还有机会吃到 → 才提示"还没吃"；今天压根没这类任务 → 显示"今天不用"（不给孩子无效压力）
+                const canEat = ate || hasPendingNutri(k);
+                html += '<span class="nutri-pill' + (ate ? '' : (canEat ? ' low' : ' off')) + '" data-nutri="' + k + '" title="' + NUTRI_NAME[k] + ' 累计 ' + (n[k] || 0) + ' 口">' +
                         NUTRI_ICON[k] + ' ' + (n[k] || 0) +
                         '<i class="nutri-lv" style="background:' + NUTRI_LV_COLOR[lv] + '">' + NUTRI_LV_NAME[lv] + '</i>' +
-                        (ate ? '' : '<b class="nutri-today">今天没吃</b>') +
+                        (ate ? '' : (canEat ? '<b class="nutri-today">今天还没吃</b>' : '<b class="nutri-today">今天不用</b>')) +
                         '</span>';
             }
             return html + '</div>';
@@ -2119,12 +2167,8 @@
         function getPetMood(stage, percent, done) {
             if (stage === 0) return '还在蛋里，完成 1 个任务就孵化啦 🥚';
             if (done > 0) {
-                const tn = todayNutri();
-                const miss = [];
-                if (!tn.calcium) miss.push('早餐(钙钙)');
-                if (!tn.wisdom)  miss.push('阅读(智慧)');
-                if (!tn.energy)  miss.push('运动(活力)');
-                if (!tn.peace)   miss.push('洗漱(安心)');
+                // 只在"今天还有机会补上"时才说还差什么 —— 不提做不到的事
+                const miss = pendingNutriList();
                 if (miss.length) return '今天还差：' + miss.join('、');
                 if (percent >= 100) return '今天吃全了，开心得转圈圈！💃';
                 if (percent >= 60) return '营养全吃到了，继续加油！🌟';
@@ -2159,20 +2203,79 @@
         }
 
         // ========== 宠物语音包（预录 mp3，不依赖系统 TTS） ==========
-        const PET_VOICE_VER = '20260910p1';
+        const PET_VOICE_VER = '20260910p2';
+        // 台词表：key -> 文字（与 audio/pet_<key>.mp3 一一对应）—— 语音与气泡文案的唯一来源
+        const PET_LINE = {
+            "achv": "哇，解锁新成就啦！快去成长档案看看！",
+            "allDone": "今天全部完成啦，你太厉害啦！",
+            "auraOn": "四维全满啦，快看我头顶在发光！",
+            "cheer1": "布丁，你今天已经很努力啦！",
+            "cheer2": "累了就休息一下，我一直陪着你！",
+            "cheer3": "慢慢来，不着急的，我等你！",
+            "collect": "又有新伙伴来我们家啦！",
+            "comfort": "没做完也没关系，明天我们再一起加油！",
+            "company1": "我陪你一起做完吧！",
+            "company2": "一起加油，我在这儿陪着你！",
+            "egg": "我在蛋里听到你的声音啦，再打个卡我就出来！",
+            "evolve": "我长大啦！谢谢你每天喂我！",
+            "freedom": "快做完吧，剩下的时间都是你自己的啦！",
+            "golden": "是金色星星！双倍营养，我吃饱啦！",
+            "hi_after": "放学啦，我等你一整天了！",
+            "hi_evening": "晚上好，我们一起把任务做完吧！",
+            "hi_morning": "早上好布丁，新的一天开始啦！",
+            "hungry1": "今天还没喂我呢，去打个卡吧！",
+            "hungry2": "有点想你了，快来打卡吧！",
+            "nearEvolve": "再坚持几天，我就能长大啦！",
+            "remember": "我记得你昨天也很努力哦！",
+            "starUp": "我的皇冠上又多了一颗星星！",
+            "streak": "我们已经连续打卡好多天啦，好棒！",
+            "tap1": "布丁，摸摸头！",
+            "tap10": "抱抱我好不好呀？",
+            "tap2": "嘿嘿，好舒服呀！",
+            "tap3": "我一直都在等你哦！",
+            "tap4": "和你在一起最开心啦！",
+            "tap5": "今天也要一起加油哦！",
+            "tap6": "你摸我的时候，我心里暖暖的！",
+            "tap7": "再摸摸嘛，我最喜欢啦！",
+            "tap8": "布丁布丁，你叫我名字好不好？",
+            "tap9": "我最喜欢和你玩了！",
+            "task_calcium1": "早餐吃完啦，我的钙钙加一！",
+            "task_calcium2": "喝了好喝的牛奶，我的骨头变结实啦！",
+            "task_energy1": "运动回来啦，我的活力加一！",
+            "task_energy2": "出了一身汗，好舒服呀！",
+            "task_other1": "又完成一项，我好开心呀！",
+            "task_other2": "你做得真棒，我给你鼓掌！",
+            "task_peace1": "洗漱完成啦，我的安心加一！",
+            "task_peace2": "今天也安安心心地过完啦！",
+            "task_wisdom1": "读到好书啦，我的智慧加一！",
+            "task_wisdom2": "哇，你又变聪明一点点啦！",
+            "warn_calcium": "牛奶还没喝完，我的骨头有点软哦！",
+            "warn_energy": "我们出去动一动好不好？",
+            "warn_peace": "早点洗漱，我们一起安心睡觉！",
+            "warn_wisdom": "想听你讲一个故事给我听！",
+            "wish_calcium": "我今天最想吃钙钙，喝完牛奶我就能长高高！",
+            "wish_done": "我的心愿实现啦！今天真是太好了！",
+            "wish_energy": "我今天最想吃活力，我们一起去运动吧！",
+            "wish_peace": "我今天最想吃安心，早点洗漱我们一起睡个好觉！",
+            "wish_wisdom": "我今天最想吃智慧，读读书给我听好不好？",
+            "witness": "你刚才做得又快又好，我都看到啦！"
+        };
+        // 语音文件表（软萌女孩音 zh-CN-XiaoyiNeural，已预录）
         const PET_VOICE = {
-            tap1:'pet_tap1.mp3', tap2:'pet_tap2.mp3', tap3:'pet_tap3.mp3',
-            tap4:'pet_tap4.mp3', tap5:'pet_tap5.mp3', tap6:'pet_tap6.mp3',
-            task_calcium:'pet_task_calcium.mp3', task_wisdom:'pet_task_wisdom.mp3',
-            task_energy:'pet_task_energy.mp3', task_peace:'pet_task_peace.mp3',
-            task_other:'pet_task_other.mp3',
-            golden:'pet_golden.mp3', allDone:'pet_allDone.mp3', evolve:'pet_evolve.mp3',
-            starUp:'pet_starUp.mp3', hungry1:'pet_hungry1.mp3', hungry2:'pet_hungry2.mp3',
-            egg:'pet_egg.mp3', hi_morning:'pet_hi_morning.mp3', hi_after:'pet_hi_after.mp3',
-            hi_evening:'pet_hi_evening.mp3', warn_calcium:'pet_warn_calcium.mp3',
-            warn_wisdom:'pet_warn_wisdom.mp3', warn_energy:'pet_warn_energy.mp3',
-            warn_peace:'pet_warn_peace.mp3', auraOn:'pet_auraOn.mp3',
-            achv:'pet_achv.mp3', collect:'pet_collect.mp3', streak:'pet_streak.mp3'
+            'achv':'pet_achv.mp3', 'allDone':'pet_allDone.mp3', 'auraOn':'pet_auraOn.mp3', 'cheer1':'pet_cheer1.mp3',
+            'cheer2':'pet_cheer2.mp3', 'cheer3':'pet_cheer3.mp3', 'collect':'pet_collect.mp3', 'comfort':'pet_comfort.mp3',
+            'company1':'pet_company1.mp3', 'company2':'pet_company2.mp3', 'egg':'pet_egg.mp3', 'evolve':'pet_evolve.mp3',
+            'freedom':'pet_freedom.mp3', 'golden':'pet_golden.mp3', 'hi_after':'pet_hi_after.mp3', 'hi_evening':'pet_hi_evening.mp3',
+            'hi_morning':'pet_hi_morning.mp3', 'hungry1':'pet_hungry1.mp3', 'hungry2':'pet_hungry2.mp3', 'nearEvolve':'pet_nearEvolve.mp3',
+            'remember':'pet_remember.mp3', 'starUp':'pet_starUp.mp3', 'streak':'pet_streak.mp3', 'tap1':'pet_tap1.mp3',
+            'tap10':'pet_tap10.mp3', 'tap2':'pet_tap2.mp3', 'tap3':'pet_tap3.mp3', 'tap4':'pet_tap4.mp3',
+            'tap5':'pet_tap5.mp3', 'tap6':'pet_tap6.mp3', 'tap7':'pet_tap7.mp3', 'tap8':'pet_tap8.mp3',
+            'tap9':'pet_tap9.mp3', 'task_calcium1':'pet_task_calcium1.mp3', 'task_calcium2':'pet_task_calcium2.mp3', 'task_energy1':'pet_task_energy1.mp3',
+            'task_energy2':'pet_task_energy2.mp3', 'task_other1':'pet_task_other1.mp3', 'task_other2':'pet_task_other2.mp3', 'task_peace1':'pet_task_peace1.mp3',
+            'task_peace2':'pet_task_peace2.mp3', 'task_wisdom1':'pet_task_wisdom1.mp3', 'task_wisdom2':'pet_task_wisdom2.mp3', 'warn_calcium':'pet_warn_calcium.mp3',
+            'warn_energy':'pet_warn_energy.mp3', 'warn_peace':'pet_warn_peace.mp3', 'warn_wisdom':'pet_warn_wisdom.mp3', 'wish_calcium':'pet_wish_calcium.mp3',
+            'wish_done':'pet_wish_done.mp3', 'wish_energy':'pet_wish_energy.mp3', 'wish_peace':'pet_wish_peace.mp3', 'wish_wisdom':'pet_wish_wisdom.mp3',
+            'witness':'pet_witness.mp3'
         };
         const PET_AUDIO = {};
         Object.keys(PET_VOICE).forEach(function (k) {
@@ -2205,6 +2308,10 @@
             if (text) petShowBubble(text, opts.hold);
             petPlayVoice(key);
         }
+        // 台词直接查表（PET_LINE），调用处不用再重复写一遍文案
+        function petSay(key, opts) {
+            petSpeak(key, PET_LINE[key] || '', opts);
+        }
         function petShowBubble(text, hold) {
             let b = document.getElementById('petBubble');
             if (!b) {
@@ -2217,6 +2324,19 @@
             clearTimeout(_petBubbleTimer);
             _petBubbleTimer = setTimeout(function () { b.classList.remove('show'); }, hold || 4600);
         }
+        // 营养条当场跳动一下 —— 让"我做了什么 → 它得到了什么"看得见
+        function petPulseNutri(k) {
+            if (!k) return;
+            setTimeout(function () {
+                const el = document.querySelector('.nutri-pill[data-nutri="' + k + '"]');
+                if (!el) return;
+                el.classList.remove('pulse');
+                void el.offsetWidth;
+                el.classList.add('pulse');
+                setTimeout(function () { el.classList.remove('pulse'); }, 1200);
+            }, 2400);   // 等鼓励语和宠物的回应说完，不抢声音也不抢注意力
+        }
+
         // 营养飘字（在宠物头顶升起 🌙+1）
         function petFloatNutri(nutri, n, golden) {
             const av = document.getElementById('petAvatar');
@@ -2235,7 +2355,38 @@
             }
         }
 
-        // ========== 星辉等级：传说之后不再"到头"，每 300 经验点亮一颗星 ==========
+        // ========== 把"还差多少经验"翻译成孩子能理解的话：还要几天 ==========
+        // 用近 14 天真实完成情况估算日均成长值（每完成一项约 9 点）；数据不足时按今天满额打八折
+        function petAvgExpPerDay() {
+            const h = (state.history || []).slice(0, 14);
+            const days = h.filter(function (x) { return (x.completed || 0) > 0; });
+            if (days.length >= 3) {
+                let tot = 0;
+                days.forEach(function (x) { tot += (x.completed || 0); });
+                return Math.max(15, (tot / days.length) * 9);
+            }
+            const full = getActiveTasks().reduce(function (s, t) { return s + (t.stars || 1); }, 0);
+            return Math.max(20, full * 9 * 0.8);
+        }
+        function petDaysToNext() {
+            if (!state.pet) return 0;
+            const exp = state.pet.exp || 0;
+            const stage = getPetStage(exp);
+            const isLast = stage >= PET_STAGE_MIN.length - 1;
+            const stars = petStarCount(exp);
+            let target;
+            if (isLast) {
+                if (stars >= PET_STAR_MAX) return 0;
+                target = PET_STAGE_MIN[PET_STAGE_MIN.length - 1] + (stars + 1) * PET_STAR_STEP;
+            } else {
+                target = PET_STAGE_MIN[stage + 1];
+            }
+            const gap = target - exp;
+            if (gap <= 0) return 0;
+            return Math.max(1, Math.ceil(gap / petAvgExpPerDay()));
+        }
+
+        // ========== 皇冠星星：成为星光勇士之后不再"到头"，每 300 成长值点亮一颗星 ==========
         const PET_STAR_STEP = 300;
         const PET_STAR_MAX  = 5;
         function petStarCount(exp) {
@@ -2265,9 +2416,9 @@
             { id:'hatch',   icon:'\uD83E\uDD5A', name:'破壳而出', desc:'孵化伙伴',        got:function () { return (state.maxExp || 0) >= 100; } },
             { id:'teen',    icon:'\uD83D\uDC3E', name:'少年伙伴', desc:'伙伴长到少年',    got:function () { return (state.maxExp || 0) >= 400; } },
             { id:'adult',   icon:'\uD83C\uDF1F', name:'成年礼',   desc:'伙伴长到成年',    got:function () { return (state.maxExp || 0) >= 1200; } },
-            { id:'legend',  icon:'\uD83D\uDC51', name:'传说诞生', desc:'伙伴成为传说',    got:function () { return (state.maxExp || 0) >= 2400; } },
+                        { id:'legend',  icon:'👑', name:'星光勇士', desc:'伙伴成为星光勇士', got:function () { return (state.maxExp || 0) >= 2400; } },
             { id:'star1',   icon:'\u2B50',       name:'第一颗星', desc:'点亮第一颗星',    got:function () { return (state.maxExp || 0) >= 2700; } },
-            { id:'star5',   icon:'\uD83D\uDCAB', name:'星辉圆满', desc:'点亮全部 5 颗星', got:function () { return (state.maxExp || 0) >= 3900; } },
+                        { id:'star5',   icon:'💫', name:'满冠星光', desc:'皇冠点亮全部 5 颗星', got:function () { return (state.maxExp || 0) >= 3900; } },
             { id:'streak7', icon:'\uD83D\uDD25', name:'七日坚持', desc:'连续 7 天打卡',   got:function () { return contStreak(function (ids) { return Object.keys(ids).length > 0; }) >= 7; } },
             { id:'streak30',icon:'\uD83D\uDC8E', name:'三十日之约', desc:'连续 30 天打卡', got:function () { return contStreak(function (ids) { return Object.keys(ids).length > 0; }) >= 30; } },
             { id:'full10',  icon:'\u2705',       name:'满分十日', desc:'10 天全部完成',     got:function () { return (state.history || []).filter(function (h) { return h.allDone; }).length >= 10; } },
@@ -2294,6 +2445,26 @@
                 }, 900 + i * 2400);
             });
         }
+        // ========== 今日心愿：宠物主动提出一个"今天真能做到"的小愿望 ==========
+        // 关键：只从"今天尚未完成的维度"里挑，保证布丁今天有办法满足它（不可执行的请求一律不提）
+        function petWishToday() {
+            if (!state.pet) return '';
+            if (state.petWishDate !== state.todayDate) {
+                const pend = calcTodayPending().filter(function (t) { return t.nutri; });
+                const pool = Array.from(new Set(pend.map(function (t) { return t.nutri; })));
+                const tn = todayNutri();
+                const prefer = pool.filter(function (k) { return !tn[k]; });
+                const cands = prefer.length ? prefer : pool;
+                state.petWish = cands.length ? cands[Math.floor(Math.random() * cands.length)] : '';
+                state.petWishDone = false;
+                state.petWishDate = state.todayDate;
+                const w = state.petWish;
+                saveState();
+                if (w) addPetStory('💭', '今天的心愿：想吃' + NUTRI_NAME[w]);
+            }
+            return state.petWish || '';
+        }
+
         // 主动换一个学习伙伴（装扮和小屋会保留给新伙伴）
         function confirmChangePet() {
             const cur = state.pet ? state.pet.name : '';
@@ -2313,59 +2484,79 @@
             }
             playSound('praise');
             const tn = todayNutri();
-            const done = calcTodayCompleted();
+            const pending = calcTodayPending();
             const stage = getPetStage(state.pet.exp || 0);
 
-            const chat = [];    // 纯陪伴话（[语音key, 文字]）
-            const guide = [];   // 有指向性的话：缺营养 / 饿肚子 / 蛋期
-            if (stage === 0) {
-                guide.push(['egg', '我在蛋里听到你的声音啦，再打个卡我就出来！']);
-            } else if (done === 0) {
-                guide.push(['hungry1', '今天还没喂我呢，去打个卡吧！'],
-                           ['hungry2', '有点想你了，快来打卡吧！']);
-            } else {
-                if (!tn.calcium) guide.push(['warn_calcium', '牛奶还没喝完，我的骨头有点软哦！']);
-                if (!tn.wisdom)  guide.push(['warn_wisdom', '想听你讲一个故事给我听！']);
-                if (!tn.energy)  guide.push(['warn_energy', '我们出去动一动好不好？']);
-                if (!tn.peace)   guide.push(['warn_peace', '早点洗漱，我们一起安心睡觉！']);
-                if (petAura())   guide.push(['auraOn', '四维全满啦，快看我头顶在发光！']);
-                chat.push(['tap1', '布丁，摸摸头！'],
-                          ['tap2', '嘿嘿，好舒服呀！'],
-                          ['tap3', '我一直都在等你哦！'],
-                          ['tap4', '和你在一起最开心啦！'],
-                          ['tap5', '今天也要一起加油哦！'],
-                          ['tap6', '你摸我的时候，我心里暖暖的！']);
+            // 蛋期：只说蛋的话
+            if (stage === 0) { petSay('egg'); return; }
+
+            // 今天全做完了 → 见证 + 记得（不说空泛的"你好棒"，说具体的事）
+            if (pending.length === 0) {
+                const pool = ['allDone', 'witness', 'remember', 'cheer2'];
+                if (petAura()) pool.push('auraOn');
+                const k = pool[Math.floor(Math.random() * pool.length)];
+                petSay(k, { hold: 5200 });
+                return;
             }
-            // 有明确要提醒的事时，优先说那件事（否则孩子听不到有用信息）
-            let pick;
-            if (guide.length && (chat.length === 0 || Math.random() < 0.65)) {
-                pick = guide[Math.floor(Math.random() * guide.length)];
+
+            // 还有没做完的 → 分组随机：心愿 / 陪伴 / 可补的营养提醒 / 随机陪伴话
+            const wish = petWishToday();
+            const warnPool = [];
+            if (!tn.calcium && hasPendingNutri('calcium')) warnPool.push('warn_calcium');
+            if (!tn.wisdom  && hasPendingNutri('wisdom'))  warnPool.push('warn_wisdom');
+            if (!tn.energy  && hasPendingNutri('energy'))  warnPool.push('warn_energy');
+            if (!tn.peace   && hasPendingNutri('peace'))   warnPool.push('warn_peace');
+
+            const kinds = [];
+            if (wish && !state.petWishDone) kinds.push('wish');
+            kinds.push('company');
+            if (warnPool.length) kinds.push('warn');
+            kinds.push('chat', 'chat');          // 随机陪伴话权重加倍
+            const kind = kinds[Math.floor(Math.random() * kinds.length)];
+
+            if (kind === 'wish') {
+                petSay('wish_' + wish, { hold: 5400 });
+            } else if (kind === 'company') {
+                // 把"还剩几项"说清楚 —— 孩子能理解"还有多少事"，理解不了百分比
+                const k = Math.random() < 0.6 ? 'company1' : 'company2';
+                petSpeak(k, '还剩 ' + pending.length + ' 项，' + PET_LINE[k], { hold: 5400 });
+            } else if (kind === 'warn') {
+                petSay(warnPool[Math.floor(Math.random() * warnPool.length)]);
             } else {
-                pick = chat[Math.floor(Math.random() * chat.length)];
+                const chatPool = ['tap1', 'tap2', 'tap3', 'tap4', 'tap5', 'tap6', 'tap7', 'tap8', 'tap9', 'tap10'];
+                petSay(chatPool[Math.floor(Math.random() * chatPool.length)]);
             }
-            petSpeak(pick[0], pick[1]);
         }
 
         // 打卡 → 宠物即时反应（与任务联动：刚补了哪一维，宠物就说哪一维）
         function petReactToTask(task, golden) {
             if (!state.pet) return;
             if (getPetStage(state.pet.exp || 0) === 0) return;   // 蛋期不插话
-            const map = {
-                calcium: ['task_calcium', '早餐吃完啦，我的钙钙加一！'],
-                wisdom:  ['task_wisdom',  '读到好书啦，我的智慧加一！'],
-                energy:  ['task_energy',  '运动回来啦，我的活力加一！'],
-                peace:   ['task_peace',   '洗漱完成啦，我的安心加一！']
-            };
-            let key, text;
-            if (golden) {
-                key = 'golden'; text = '是金色星星！双倍营养，我吃饱啦！';
-            } else {
-                const m = map[task && task.nutri];
-                if (m) { key = m[0]; text = m[1]; }
-                else   { key = 'task_other'; text = '又完成一项，我好开心呀！'; }
+            const nutri = task && task.nutri;
+            petFloatNutri(nutri, 1, golden);      // 头顶飘出 🌙+1，让"我做了什么 → 它得到了什么"当场可见
+            petPulseNutri(nutri);                  // 营养条当场跳一下
+
+            // 今日心愿达成 → 优先级最高，用心愿达成的专属反应替代普通反应
+            if (nutri && petWishToday() === nutri && !state.petWishDone) {
+                state.petWishDone = true;
+                state.totalStars += 2;
+                state.coinsEver = (state.coinsEver || 0) + 2;
+                addPetStory('💖', '实现了今天的心愿：' + NUTRI_NAME[nutri]);
+                saveState();
+                renderPet();
+                petShowBubble('💖 ' + PET_LINE.wish_done, 5400);
+                petPlayVoice('wish_done');
+                return;
             }
-            petFloatNutri(task && task.nutri, 1, golden);
-            petSpeak(key, text);
+
+            let key;
+            if (golden) {
+                key = 'golden';
+            } else {
+                const v = Math.random() < 0.5 ? '1' : '2';
+                key = nutri ? ('task_' + nutri + v) : ('task_other' + v);
+            }
+            petSay(key);
         }
 
         // 宠物首次问候（早/放学/晚上，随当前时段；今天一次没打卡则改成撒娇）
@@ -2375,15 +2566,23 @@
             state.petGreetDate = state.todayDate;
             saveState();
             let key, text;
+            const stage = getPetStage(state.pet.exp || 0);
+            const wish = petWishToday();
             if (calcTodayCompleted() === 0) {
-                const c = Math.random() < 0.5;
-                key = c ? 'hungry1' : 'hungry2';
-                text = c ? '今天还没喂我呢，去打个卡吧！' : '有点想你了，快来打卡吧！';
+                // 第一句不说"你怎么还没打卡"——说"我需要你"，或"我陪你开始"
+                if (wish && stage > 0) {
+                    key = 'wish_' + wish;
+                    text = PET_LINE[key];
+                } else {
+                    key = 'company1';
+                    text = '今天有 ' + getActiveTasks().length + ' 项，' + PET_LINE.company1;
+                }
             } else {
                 const h = new Date().getHours();
-                if (h < 11)      { key = 'hi_morning'; text = '早上好布丁，新的一天开始啦！'; }
-                else if (h < 18) { key = 'hi_after';   text = '放学啦，我等你一整天了！'; }
-                else             { key = 'hi_evening'; text = '晚上好，我们一起把任务做完吧！'; }
+                if (h < 11)      { key = 'hi_morning'; }
+                else if (h < 18) { key = 'hi_after'; }
+                else             { key = 'hi_evening'; }
+                text = PET_LINE[key];
             }
             petSpeak(key, text, { hold: 5200 });
         }
@@ -2407,14 +2606,14 @@
             const aura = petAura();
             const stars = petStarCount(exp);
             const isLegend = stage >= PET_STAGE_MIN.length - 1;
-            const tlIcons = ['🥚', '🐣', '🐾', '🐕', '👑'];
+            const tlIcons = ['🥚', '🐣', '🐾', '🦸', '👑'];
 
             // ① 成长时间线
             let tl = '';
             for (let i = 0; i < PET_STAGE_MIN.length; i++) {
                 tl += '<div class="pet-tl-step' + (i <= stage ? ' on' : '') + '">' +
                         '<span class="tl-emoji">' + tlIcons[i] + '</span>' + PET_STAGE_NAME[i] +
-                        (i > 0 ? '<br><small>' + PET_STAGE_MIN[i] + ' 经验</small>' : '') +
+                        (i > 0 ? '<br><small>第 ' + i + ' 步</small>' : '<br><small>起点</small>') +
                       '</div>';
             }
             // ② 星辉星条（传说之后的核心目标）
@@ -2477,9 +2676,12 @@
             const decorList = petOwnedItems('decor');
             const sceneList = petOwnedItems('scene');
             const scene = sceneList.length ? sceneList[sceneList.length - 1] : null;
+            const _dl = petDaysToNext();
             const nextExp = isLegend
-                ? (stars >= PET_STAR_MAX ? '星辉圆满，已经是传奇伙伴' : ('距下一颗星还差 ' + (PET_STAGE_MIN[PET_STAGE_MIN.length - 1] + (stars + 1) * PET_STAR_STEP - exp) + ' 经验'))
-                : ('距下一阶段还差 ' + (PET_STAGE_MIN[stage + 1] - exp) + ' 经验');
+                ? (stars >= PET_STAR_MAX
+                    ? '👑 皇冠上已经缀满 5 颗星星，是布丁最厉害的伙伴'
+                    : ('再一起打卡 ' + _dl + ' 天左右，就能点亮下一颗 ⭐'))
+                : ('再一起打卡 ' + _dl + ' 天左右，就能长成「' + PET_STAGE_NAME[stage + 1] + '」啦');
             const heroBg = scene ? (SCENE_BG[scene.id] || '') : '';
             const fullDays = (state.history || []).filter(function (h) { return h.allDone; }).length;
 
@@ -2492,7 +2694,7 @@
                             (aura ? '✨' : '') + (isLegend ? '👑' : '') + '</div>' +
                         '<div class="pp-hero-name">' + (state.pet.name || kind.name) +
                             '<span class="pet-stage">Lv.' + (stage + 1) + ' ' + PET_STAGE_NAME[stage] + '</span></div>' +
-                        '<div class="pp-hero-sub">' + kind.name + ' · 陪布丁 ' + petAgeDays() + ' 天 · 总经验 ' + exp +
+                        '<div class="pp-hero-sub">' + kind.name + ' · 陪布丁 ' + petAgeDays() + ' 天' +
                             (scene ? ' · ' + scene.icon + scene.name : '') + '</div>' +
                         starHTML +
                         '<div class="pp-hero-sub" style="color:#B8860B;font-weight:700;margin-top:4px;">' + nextExp + '</div>' +
@@ -2521,9 +2723,10 @@
                     '<div class="pet-profile-row"><span>小屋</span><b>' + (scene ? scene.icon + ' ' + scene.name : '还没有') + '</b></div>' +
 
                     '<div class="pp-note">' +
-                        '📖 <b>成长逻辑：</b>每天打卡 = 喂它（四维营养 +1 口、经验 +5/星）；<br>' +
-                        '经验决定它长多大（蛋 → 宝宝 → 少年 → 成年 → 传说）；<br>' +
-                        '<b>传说不是终点</b>：之后再攒经验可以点亮 ⭐ 星辉 5 颗星，还能收集更多伙伴、集齐成就徽章；<br>' +
+                        '📖 <b>成长逻辑：</b>每天打卡 = 喂它（四维营养 +1 口、成长值 +5/颗星）；<br>' +
+                        '成长值决定它长多大（蛋宝宝 → 小奶团 → 小机灵 → 大勇士 → 星光勇士）；<br>' +
+                        '<b>星光勇士不是终点</b>：之后再攒可以点亮皇冠上的 ⭐ 5 颗星，还能收集更多伙伴、集齐成就徽章；<br>' +
+                        '💭 每天它还有一个小小心愿，完成了它会亲口道谢；<br>' +
                         '四维决定状态好不好（四项都"不错"以上，头顶会亮 ✨）。' +
                     '</div>' +
                     '<button class="pet-confirm" onclick="this.closest(\'.pet-pick-mask\').remove()">知道啦</button>' +
@@ -2557,17 +2760,24 @@
             }
             const auraHTML = aura ? '<span class="pet-aura-spin">✨</span>' : '';
             const avatar = isEgg ? '🥚' : kind.emoji;
-            // 进度：普通阶段看经验，传说之后看星辉
+            // 进度：对孩子只说"还要几天能长大"，不出现任何成人的数值指标
+            const daysLeft = petDaysToNext();
             let expText, expPct, expLabel;
             if (isLegend) {
                 expPct = Math.round(stars / PET_STAR_MAX * 100);
-                expLabel = '⭐ 星辉 ' + stars + ' / ' + PET_STAR_MAX + ' · 总经验 ' + exp;
-                expText = petStarText(exp);
+                expLabel = (stars >= PET_STAR_MAX)
+                    ? '👑 皇冠上有 ' + PET_STAR_MAX + ' 颗星星啦'
+                    : '👑 皇冠上有 ' + stars + ' / ' + PET_STAR_MAX + ' 颗星星';
+                expText = (stars >= PET_STAR_MAX)
+                    ? '它已经是最厉害的伙伴了'
+                    : (daysLeft > 0 ? '再一起打卡 ' + daysLeft + ' 天左右，就能点亮下一颗 ⭐' : '很快就能点亮下一颗 ⭐ 啦');
             } else {
                 const cur = PET_STAGE_MIN[stage], next = PET_STAGE_MIN[stage + 1];
                 expPct = Math.min(100, Math.round((exp - cur) / (next - cur) * 100));
-                expLabel = '经验 ' + exp + ' / ' + next;
-                expText = '今天打卡还能喂 ' + petFeedLeft() + ' 点';
+                expLabel = '🌱 长大进度';
+                expText = (daysLeft > 0)
+                    ? '再一起打卡 ' + daysLeft + ' 天左右，我就能长成「' + PET_STAGE_NAME[stage + 1] + '」'
+                    : '就快长大啦';
             }
             const sceneList = petOwnedItems('scene');
             const decorList = petOwnedItems('decor');
@@ -2577,6 +2787,14 @@
                 ? '<span class="pet-starline">' + [0, 1, 2, 3, 4].map(function (i) {
                       return '<i class="' + (i < stars ? 'on' : '') + '">\u2B50</i>';
                   }).join('') + '</span>'
+                : '';
+            const wish = petWishToday();
+            const wishHTML = wish
+                ? '<div class="pet-wish' + (state.petWishDone ? ' done' : '') + '">' +
+                    (state.petWishDone
+                        ? '💖 今天的心愿实现啦'
+                        : '💭 ' + (state.pet.name || 'TA') + '今天想吃：' + NUTRI_ICON[wish] + ' ' + NUTRI_NAME[wish]) +
+                  '</div>'
                 : '';
             area.innerHTML =
                 '<div class="pet-card"' + (bg ? ' style="background:' + bg + ';"' : '') + '>' +
@@ -2600,12 +2818,13 @@
                         '</div>' +
                     '</div>' +
                     '<div class="pet-bubble" id="petBubble"></div>' +
+                    wishHTML +
                     (decorList.length ? '<div class="pet-decor-row">' +
                         decorList.map(function (d) { return '<span class="pet-decor" title="' + d.name + '">' + d.icon + '</span>'; }).join('') +
                         '</div>' : '') +
                     '<div class="pet-actions">' +
                         '<button class="pet-profile-btn" onclick="showPetProfile()">📖 成长档案</button>' +
-                        '<span class="pet-today-chip">今日 ' + completed + '/' + total + '</span>' +
+                        '<span class="pet-today-chip">' + (calcTodayPending().length === 0 ? '今天全做完啦 🎉' : '还剩 ' + calcTodayPending().length + ' 项') + '</span>' +
                     '</div>' +
                     '<div class="pet-hint">👆 点它会说话 · 打卡时它也会回应你 · 金币买食物直接加经验</div>' +
                 '</div>';
@@ -2779,12 +2998,13 @@
                 }, 700);
             }
             checkMedals();
+            settleFreeTime();      // 当天该做的事全做完 → 当场把省下的时间还给她
             if (calcTodayCompleted() === getActiveTasks().length) {
                 setTimeout(function () { triggerCelebration(); }, 600);
                 setTimeout(function () {
                     addPetStory('\uD83C\uDFC6', '完成了当天全部任务');
                     saveState();
-                    petSpeak('allDone', '今天全部完成啦，你太厉害啦！', { hold: 5200 });
+                    petSay('allDone', { hold: 5200 });
                 }, 3600);
             }
             checkPetAchv();
@@ -2853,6 +3073,10 @@
             coinsEver: 0,
             achv: [],
             petGreetDate: '',
+            petWish: '',
+            petWishDate: '',
+            petWishDone: false,
+            freeSettledDate: '', 
             poemLog: {},
             poemLibVer: 0,
             dictationBank: null,
@@ -2979,6 +3203,12 @@
                 state.dictationLearned = 45;
                 state.dictationLibVer = DICTATION_LIB_VER;
             }
+            // ===== 宠物 v5 迁移：自由时间结算标记 =====
+            if (typeof state.freeSettledDate !== 'string') state.freeSettledDate = '';
+            // ===== 宠物 v5 迁移：今日心愿字段 =====
+            if (typeof state.petWish !== 'string') state.petWish = '';
+            if (typeof state.petWishDate !== 'string') state.petWishDate = '';
+            if (typeof state.petWishDone !== 'boolean') state.petWishDone = false;
             // ===== 宠物 v3 迁移：老数据补齐新字段（无感升级，不清任何进度） =====
             if (!Array.isArray(state.petBook)) state.petBook = [];
             if (typeof state.maxExp !== 'number') state.maxExp = 0;
@@ -3058,6 +3288,43 @@
         function calcTodayCompleted() {
             const activeTasks = getActiveTasks();
             return activeTasks.filter(t => state.todayChecks[t.id]).length;
+        }
+
+        // ========== 时段感知：只把"现在做得了的事"算给孩子看 ==========
+        // 各分类的起始时间（分钟）；未列出的分类（如 weekend）视为全天有效
+        const PERIOD_START_MIN = { morning: 6 * 60 + 50, after: 16 * 60, evening: 19 * 60, night: 21 * 60 };
+        function periodStarted(cat) {
+            const st = PERIOD_START_MIN[cat];
+            if (st === undefined) return true;
+            const n = new Date();
+            return (n.getHours() * 60 + n.getMinutes()) >= st;
+        }
+        // 已经"到点"的激活任务（睡前任务在 21:00 前不计入，白天不会被误判成没完成）
+        function calcDueTasks() {
+            return getActiveTasks().filter(function (t) { return periodStarted(t.category); });
+        }
+        function calcDueCompleted() {
+            return calcDueTasks().filter(function (t) { return state.todayChecks[t.id]; }).length;
+        }
+        // 今天还剩几项（含还没到时间的）
+        function calcTodayPending() {
+            return getActiveTasks().filter(function (t) { return !state.todayChecks[t.id]; });
+        }
+        function calcPendingDue() {
+            return calcDueTasks().filter(function (t) { return !state.todayChecks[t.id]; }).length;
+        }
+        // 今天是否还有该营养维度的未完成任务 —— 只有"还能做到"的才提醒
+        function hasPendingNutri(k) {
+            return calcTodayPending().some(function (t) { return t.nutri === k; });
+        }
+        // 今天还差哪几维（只在"还有机会补上"时才列出来）
+        function pendingNutriList() {
+            const tn = todayNutri();
+            const out = [];
+            ['calcium', 'wisdom', 'energy', 'peace'].forEach(function (k) {
+                if (!tn[k] && hasPendingNutri(k)) out.push(NUTRI_ICON[k] + NUTRI_NAME[k]);
+            });
+            return out;
         }
         function calcStreak() {
             // 连续打卡：当天只要完成 1 项就算数，降低门槛，孩子更容易坚持
@@ -3413,10 +3680,62 @@
             showModal('\uD83D\uDCCA \u672c\u5468\u5b66\u4e60\u5468\u62a5', inner);
         }
 
+        // ========== 她自己的时间：效率直接兑换"自由"，而不是兑换虚拟星星 ==========
+        // 目标线：20:30 前做完"当天该做的事"（不含睡前任务）；早完成的部分就是她自己的自由时间。
+        // 磨蹭的自然后果是自由时间变短 —— 自然结果，不是惩罚。
+        const FREE_DEADLINE_MIN = 20 * 60 + 30;
+        // "当天该做的事"（不含睡前）= 放学后 / 晚间 / 周末类任务
+        function freeTimeTasks() {
+            return getActiveTasks().filter(function (t) { return t.category !== 'night'; });
+        }
+        // 这些任务全部完成的时刻；没全完成返回 0
+        function calcFreeStartAt() {
+            const need = freeTimeTasks();
+            if (!need.length) return 0;
+            let last = 0;
+            for (let i = 0; i < need.length; i++) {
+                const rec = state.todayChecks[need[i].id];
+                if (!rec) return 0;
+                if (rec.at && rec.at > last) last = rec.at;
+            }
+            return last;
+        }
+        // 省下的分钟数；还没全完成返回 null
+        function calcFreeMinutes() {
+            const at = calcFreeStartAt();
+            if (!at) return null;
+            const d = new Date(at);
+            return FREE_DEADLINE_MIN - (d.getHours() * 60 + d.getMinutes());
+        }
+        function fmtHM(ms) {
+            const d = new Date(ms);
+            return d.getHours() + ':' + ('0' + d.getMinutes()).slice(-2);
+        }
+        // 结算：当天该做的事全部做完的那一刻，把"省下来的时间"当场还给她
+        function settleFreeTime() {
+            if (state.freeSettledDate === state.todayDate) return;
+            const at = calcFreeStartAt();
+            if (!at) return;
+            state.freeSettledDate = state.todayDate;
+            const mins = calcFreeMinutes();
+            saveState();
+            if (mins > 0) {
+                addPetStory('🎈', '省下 ' + mins + ' 分钟自己的时间');
+                saveState();
+                showToast('🎈 ' + fmtHM(at) + ' 就做完了，省下 ' + mins + ' 分钟，这段时间都是你自己的！');
+                setTimeout(function () { petSay('allDone', { hold: 5600 }); }, 1500);
+                renderStats();
+            } else {
+                showToast('今天的都做完啦！明天试试早一点，就能多出自己的时间 ⏰',
+                          'linear-gradient(135deg,#7FB8E8,#4A90D9)');
+            }
+        }
+
         function renderStats() {
             const todayStars = calcTodayStars();
-            const completed = calcTodayCompleted();
-            const total = getActiveTasks().length;
+            // 时段口径：只把"现在已经到点"的任务算进进度，避免孩子白天看到"完成度很低"
+            const completed = calcDueCompleted();
+            const total = calcDueTasks().length;
 
             document.getElementById('todayStars').textContent = todayStars;
             document.getElementById('totalStars').textContent = state.totalStars;
@@ -3428,6 +3747,45 @@
             const fill = document.getElementById('progressFill');
             fill.style.width = `${percent}%`;
             fill.className = 'progress-fill' + (percent === 100 ? ' complete' : '');
+
+            // 用"还剩几项"代替百分比 —— 孩子理解"还有多少事"，理解不了"完成度 62%"
+            const hint = document.getElementById('pendingHint');
+            if (hint) {
+                const pendingDue = calcPendingDue();
+                const pendingAll = calcTodayPending().length;
+                if (pendingDue === 0 && pendingAll === 0) {
+                    hint.textContent = '🎉 今天的任务全部完成啦！';
+                    hint.className = 'pending-hint done';
+                } else if (pendingDue === 0) {
+                    hint.textContent = '✅ 现在该做的都做完啦，晚一点还有 ' + pendingAll + ' 项';
+                    hint.className = 'pending-hint done';
+                } else {
+                    hint.textContent = '现在还剩 ' + pendingDue + ' 项，一样一样来 🙂';
+                    hint.className = 'pending-hint';
+                }
+            }
+
+            // 「她自己的时间」：让效率有看得见、摸得着的去处
+            const fh = document.getElementById('freeHint');
+            if (fh) {
+                const mins = calcFreeMinutes();
+                const left = freeTimeTasks().filter(function (t) { return !state.todayChecks[t.id]; }).length;
+                if (mins === null) {
+                    if (left > 0) {
+                        fh.innerHTML = '⏰ <b>20:30 前</b>做完，省下的时间都归你';
+                        fh.className = 'free-hint';
+                    } else {
+                        fh.innerHTML = '🏠 今天该做的都做完啦';
+                        fh.className = 'free-hint done';
+                    }
+                } else if (mins > 0) {
+                    fh.innerHTML = '🎈 省下 <b>' + mins + ' 分钟</b>，都是你自己的时间！';
+                    fh.className = 'free-hint done';
+                } else {
+                    fh.innerHTML = '今天做完啦～明天早一点，能多出自己的时间';
+                    fh.className = 'free-hint';
+                }
+            }
 
             // 连续打卡（常驻显示，给孩子即时反馈）
             const streak = calcStreak();
@@ -3705,6 +4063,83 @@
         }
 
         // ========== 渲染任务 ==========
+        // ========== 自主权：顺序她自己定 ==========
+        // 时段框架不变（早晨/放学后/晚间/睡前），但"框里先做哪个"由布丁说了算
+        function moveTask(taskId, dir) {
+            const arr = state.tasks;
+            const i = arr.findIndex(function (t) { return t.id === taskId; });
+            if (i < 0) return;
+            const cat = arr[i].category;
+            let j = i + dir;
+            while (j >= 0 && j < arr.length && arr[j].category !== cat) j += dir;
+            if (j < 0 || j >= arr.length) return;
+            const tmp = arr[i]; arr[i] = arr[j]; arr[j] = tmp;
+            saveState();
+            renderTasks();
+        }
+
+        // ========== 自主权：她自己加任务 ==========
+        let _myTaskCat = 'after', _myTaskNutri = 'wisdom';
+        const MY_CAT_OPTS = [
+            ['morning', '🌅 早晨'], ['after', '🎒 放学后'], ['evening', '🌙 晚间'], ['night', '😴 睡前']
+        ];
+        function pickMyChip(el) {
+            const kind = el.getAttribute('data-kind');
+            const val = el.getAttribute('data-val');
+            if (kind === 'cat') _myTaskCat = val; else _myTaskNutri = val;
+            Array.prototype.forEach.call(el.parentNode.children, function (c) { c.classList.remove('on'); });
+            el.classList.add('on');
+        }
+        function showAddMyTask() {
+            _myTaskCat = 'after'; _myTaskNutri = 'wisdom';
+            const mask = document.createElement('div');
+            mask.className = 'pet-pick-mask';
+            mask.id = 'myTaskMask';
+            const catChips = MY_CAT_OPTS.map(function (o, idx) {
+                return '<span class="my-chip' + (idx === 1 ? ' on' : '') + '" data-kind="cat" data-val="' + o[0] + '" onclick="pickMyChip(this)">' + o[1] + '</span>';
+            }).join('');
+            const nuChips = ['calcium', 'wisdom', 'energy', 'peace'].map(function (k, idx) {
+                return '<span class="my-chip' + (idx === 1 ? ' on' : '') + '" data-kind="nutri" data-val="' + k + '" onclick="pickMyChip(this)">' + NUTRI_ICON[k] + ' ' + NUTRI_NAME[k] + '</span>';
+            }).join('');
+            mask.innerHTML =
+                '<div class="pet-pick-box" style="max-width:340px;">' +
+                    '<div class="pet-pick-title">✏️ 我想加一项</div>' +
+                    '<div class="pet-pick-sub">自己定的目标，做起来更有劲！</div>' +
+                    '<div style="text-align:left;margin:14px 0 4px;">' +
+                        '<div class="my-label">要做什么？</div>' +
+                        '<input id="myTaskName" class="my-input" maxlength="16" placeholder="比如：跳绳 100 个">' +
+                        '<div class="my-label">放在什么时候？</div>' +
+                        '<div class="my-chips">' + catChips + '</div>' +
+                        '<div class="my-label">做完它会补到哪一样？</div>' +
+                        '<div class="my-chips">' + nuChips + '</div>' +
+                    '</div>' +
+                    '<button class="pet-confirm" onclick="submitMyTask()">加进来</button>' +
+                    '<button class="pet-confirm" style="margin-top:8px;background:linear-gradient(135deg,#B9C6C0,#8AA39A);" onclick="document.getElementById(' + "'myTaskMask'" + ').remove()">先算了</button>' +
+                '</div>';
+            document.body.appendChild(mask);
+        }
+        function submitMyTask() {
+            const el = document.getElementById('myTaskName');
+            const name = ((el && el.value) || '').trim();
+            if (!name) { showToast('先给它起个名字吧 🙂'); return; }
+            state.tasks.push({
+                id: 'my_' + Date.now(),
+                name: name,
+                icon: '⭐',
+                category: _myTaskCat,
+                stars: 1,
+                nutri: _myTaskNutri,
+                byBuding: true
+            });
+            saveState();
+            const m = document.getElementById('myTaskMask');
+            if (m) m.remove();
+            renderTasks();
+            renderStats();
+            showToast('加好啦！这一项是你自己定的 💪');
+            playSound('celebrate');
+        }
+
         function renderTasks() {
             const container = document.getElementById('categoriesContainer');
             const weekend = isWeekend();
@@ -3758,6 +4193,10 @@
                                     ${task.timer ? timerChip(task) : ''}
                                     ${task.nutri ? '<span class="nutri-tag n-' + task.nutri + '">' + NUTRI_NAME[task.nutri] + '</span>' : ''}
                                 </div>
+                            </div>
+                            <div class="task-order" title="先做哪个你说了算">
+                                <button onclick="event.stopPropagation();moveTask('${task.id}',-1)">▲</button>
+                                <button onclick="event.stopPropagation();moveTask('${task.id}',1)">▼</button>
                             </div>
                         </div>`;
                 }
@@ -3837,11 +4276,88 @@
             document.getElementById('calendarModal').classList.remove('active');
         }
         // ========== 家长视图 ==========
+        // ========== 家长侧：月度达标看板（只事后看，不事前追） ==========
+        function calcMonthStats(data) {
+            const today = data.todayDate || getTodayStr();
+            const ym = String(today).slice(0, 7);
+            const hist = (data.history || []).filter(function (h) { return String(h.date || '').indexOf(ym) === 0; });
+            const daySet = {};
+            let done = 0, all = 0;
+            hist.forEach(function (h) {
+                if ((h.completed || 0) > 0) daySet[h.date] = 1;
+                done += (h.completed || 0);
+                all += (h.total || 0);
+            });
+            const tDone = Object.keys(data.todayChecks || {}).length;
+            if (tDone > 0 && !daySet[today]) {
+                daySet[today] = 1;
+                done += tDone;
+                all += Math.max(tDone, (data.tasks || DEFAULT_TASKS).filter(function (t) { return !t.weekendOnly; }).length);
+            }
+            const elapsed = new Date(today).getDate() || 1;
+            const checkDays = Object.keys(daySet).length;
+            return {
+                elapsed: elapsed,
+                checkDays: checkDays,
+                dayRate: Math.round(checkDays / elapsed * 100),
+                taskRate: all > 0 ? Math.round(done / all * 100) : 0
+            };
+        }
+
+        // ========== 家长侧：本周给你的一句话（具体的看见，不是报表） ==========
+        function parentWeeklyLine(data) {
+            const today = data.todayDate || getTodayStr();
+            const d = new Date(today);
+            const dow = d.getDay();
+            const monday = new Date(d);
+            monday.setDate(d.getDate() + (dow === 0 ? -6 : 1 - dow));
+            const days = [];
+            for (let i = 0; i < 7; i++) { const x = new Date(monday); x.setDate(monday.getDate() + i); days.push(fmtDate(x)); }
+            const week = (data.history || []).filter(function (h) { return days.indexOf(h.date) >= 0; });
+            const checkDays = week.filter(function (h) { return (h.completed || 0) > 0; }).length;
+            if (!checkDays) return '本周还没有记录。先从"让她知道每天要做什么"开始，别急着追完成率。';
+            const stat = {};
+            week.forEach(function (h) {
+                (h.tasks || []).forEach(function (t) {
+                    if (!stat[t.id]) stat[t.id] = { name: t.name, done: 0 };
+                    stat[t.id].done++;
+                });
+            });
+            const list = Object.keys(stat).map(function (k) { return stat[k]; });
+            list.sort(function (a, b) { return b.done - a.done; });
+            const top = list[0];
+            const missing = DEFAULT_TASKS.filter(function (t) { return !stat[t.id]; }).slice(0, 3).map(function (t) { return t.name; });
+            let s = '这周有 ' + checkDays + ' 天打了卡。';
+            if (top) s += '「' + top.name + '」出现最多（' + top.done + ' 次）—— 可以说"我看到你这周一直在做这件事"。';
+            if (missing.length) s += '「' + missing.join('」「') + '」这周没出现过，可以问问她：是有点难，还是不喜欢？';
+            return s;
+        }
+
         function showParentView() {
             isParentMode = true; // 进入家长模式，禁止写入云端
             document.getElementById('parentModal').classList.add('active');
             refreshParentView();
         }
+        // 清空本地 + 清空云端（只清本地不够：history 在云端合并时是并集，会把旧记录拉回来）
+        function hardReset() {
+            if (!window.confirm('确定要清空所有打卡记录、重新开始吗？\n\n会删掉：打卡记录、星星、宠物、成就、装扮。\n任务设置会保留。\n\n清空后统计从今天重新开始。')) return;
+            try { localStorage.removeItem('buding-afterschool-app'); } catch (e) {}
+            const done = function () { window.location.reload(); };
+            try {
+                fetch(SB_API + '/afterschool_sync?id=eq.pudding-afterschool-2026', {
+                    method: 'PATCH',
+                    headers: {
+                        'apikey': SB.anonKey,
+                        'Authorization': 'Bearer ' + SB.anonKey,
+                        'Content-Type': 'application/json',
+                        'Prefer': 'return=minimal'
+                    },
+                    body: JSON.stringify({ payload: {} })
+                }).then(done, done);
+                setTimeout(done, 2500);   // 网络不通也要让本地清空生效
+            } catch (e) { done(); }
+        }
+
         function closeParentView() {
             isParentMode = false; // 退出家长模式
             document.getElementById('parentModal').classList.remove('active');
@@ -3882,6 +4398,40 @@
                 <div style="font-size:28px;font-weight:700;margin:8px 0;">${completedTasks.length} / ${activeTasks.length}</div>
                 <div style="font-size:13px;opacity:0.85;">今日完成任务</div>
                 <div style="margin-top:10px;font-size:16px;">⭐ 今日获得：<b>${todayStars}</b> 颗　累计：<b>${totalStars}</b> 颗</div>
+            </div>`;
+
+            // 月度达标看板（天姝定的 80% / 70% —— 只事后看，不事前追）
+            const ms = calcMonthStats(data);
+            const dayOk = ms.dayRate >= 80;
+            const taskOk = ms.taskRate >= 70;
+            html += `<div style="background:#fff;border-radius:16px;padding:16px;margin-bottom:16px;box-shadow:0 2px 10px rgba(0,0,0,.06);">
+                <div style="font-size:14px;font-weight:700;color:#333;margin-bottom:10px;">📈 本月达标看板 <span style="font-size:11px;color:#999;font-weight:400;">（本月前 ${ms.elapsed} 天）</span></div>
+                <div style="display:flex;gap:10px;">
+                    <div style="flex:1;background:${dayOk ? '#EBFAF2' : '#FFF6E5'};border-radius:12px;padding:12px;text-align:center;">
+                        <div style="font-size:22px;font-weight:700;color:${dayOk ? '#2E9E6B' : '#BA7517'};">${ms.dayRate}%</div>
+                        <div style="font-size:11px;color:#888;margin-top:4px;">打卡天数覆盖</div>
+                        <div style="font-size:11px;color:#aaa;">目标 80%　${ms.checkDays}/${ms.elapsed} 天</div>
+                    </div>
+                    <div style="flex:1;background:${taskOk ? '#EBFAF2' : '#FFF6E5'};border-radius:12px;padding:12px;text-align:center;">
+                        <div style="font-size:22px;font-weight:700;color:${taskOk ? '#2E9E6B' : '#BA7517'};">${ms.taskRate}%</div>
+                        <div style="font-size:11px;color:#888;margin-top:4px;">任务完成度</div>
+                        <div style="font-size:11px;color:#aaa;">目标 70%</div>
+                    </div>
+                </div>
+                <div style="font-size:11px;color:#B0873A;margin-top:10px;line-height:1.6;">⚠️ 这两个数字建议<b>一个月看一次</b>，用来判断方向，不要每周盯着追——盯太紧会不自觉加强催促，孩子反而更依赖提醒。</div>
+            </div>`;
+
+            // 本周给你的一句话（具体的看见，不是报表）
+            html += `<div style="background:linear-gradient(135deg,#FFF8E6,#FFEFC9);border-radius:16px;padding:16px;margin-bottom:16px;">
+                <div style="font-size:14px;font-weight:700;color:#8A6D3B;margin-bottom:8px;">💬 本周给你的一句话</div>
+                <div style="font-size:13px;color:#6B5527;line-height:1.8;">${parentWeeklyLine(data)}</div>
+            </div>`;
+
+            // 清空测试数据 / 重新开始
+            html += `<div style="background:#FFF1F0;border:1px solid #FFD6D2;border-radius:16px;padding:16px;margin-bottom:16px;">
+                <div style="font-size:13px;font-weight:700;color:#B33A3A;margin-bottom:6px;">🔄 清空记录、重新开始</div>
+                <div style="font-size:11px;color:#A05A55;line-height:1.7;margin-bottom:10px;">如果前面是测试用的记录，清空后统计从今天重新算。任务设置会保留。</div>
+                <button onclick="hardReset()" style="width:100%;padding:11px;border:none;border-radius:11px;background:linear-gradient(135deg,#E56B5E,#C0392B);color:#fff;font-size:14px;font-weight:700;">清空所有打卡记录</button>
             </div>`;
 
             // 今日任务详情
@@ -4640,6 +5190,14 @@
             if (Array.isArray(data.achv))    state.achv    = Array.from(new Set([...(state.achv || []), ...data.achv]));
             if (typeof data.maxExp === 'number')    state.maxExp    = Math.max(state.maxExp || 0, data.maxExp);
             if (typeof data.coinsEver === 'number') state.coinsEver = Math.max(state.coinsEver || 0, data.coinsEver);
+            // 今日心愿：同一天的才合并；"已完成"一旦为真就不再被重置（避免多端互洗）
+            if (data.petWishDate && data.petWishDate === state.todayDate) {
+                if (!state.petWishDate || state.petWishDate !== state.todayDate) {
+                    state.petWish = data.petWish || '';
+                    state.petWishDate = data.petWishDate;
+                }
+                if (data.petWishDone) state.petWishDone = true;
+            }
             // 已兑换奖励合并去重
             if (Array.isArray(data.claimedRewards)) {
                 state.claimedRewards = Array.from(
