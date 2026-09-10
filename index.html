@@ -8,7 +8,7 @@
     <meta http-equiv="Expires" content="0" data-page-node-id="YXlbOTFHU2Nr6SGRQHt7cy">
     <script>
         (function () {
-            var APP_VERSION = '20260910.15';
+            var APP_VERSION = '20260910.16';
             try {
                 var params = new URLSearchParams(location.search);
                 if (params.get('v') !== APP_VERSION) {
@@ -4653,8 +4653,12 @@
                         'Prefer': 'return=minimal'
                     },
                     body: JSON.stringify({
-                        payload: { resetAt: state.resetAt, todayDate: state.todayDate,
-                                   history: [], todayChecks: {}, totalStars: 0, streak: 0 }
+                        // 整份 FRESH 覆写到云端：只写 history/todayChecks 是不够的——
+                        // 云端残留的 pet/medals/achv 会在本机清空后又被并集合并拉回来（宠物"复活"）
+                        payload: Object.assign({}, FRESH, {
+                            resetAt: state.resetAt,
+                            todayDate: state.todayDate
+                        })
                     })
                 }).then(done, done);
                 setTimeout(done, 2500);   // 网络不通也要让本地清空生效
