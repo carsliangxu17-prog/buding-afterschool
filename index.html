@@ -8,7 +8,7 @@
     <meta http-equiv="Expires" content="0" data-page-node-id="YXlbOTFHU2Nr6SGRQHt7cy">
     <script>
         (function () {
-            var APP_VERSION = '20260910.11';
+            var APP_VERSION = '20260910.13';
             try {
                 var params = new URLSearchParams(location.search);
                 if (params.get('v') !== APP_VERSION) {
@@ -191,6 +191,10 @@
         .pet-wish.done { color:#2E9E6B; background:linear-gradient(135deg,#EBFAF2,#D6F2E6); border-color:#A9E3C9; border-style:solid; }
         .nutri-pill.off { opacity:.62; }
         .nutri-pill.pulse { animation: nutriPulse .55s ease 2; }
+        /* 已达标的维度描个金边；下方给唯一的一句判断，不让孩子比四条长短 */
+        .nutri-pill.on { box-shadow: 0 0 0 1.5px #F5A623 inset; }
+        .nutri-verdict { text-align: center; font-size: 11.5px; color: #8A6D3B; margin-top: 6px; }
+        .nutri-verdict.done { color: #2E9E6B; font-weight: 700; }
         @keyframes nutriPulse {
             0%   { transform: scale(1); }
             45%  { transform: scale(1.22); box-shadow: 0 0 0 5px rgba(92,199,154,.28); }
@@ -304,7 +308,7 @@
         .pp-bar-row .lb { width: 74px; flex: none; }
         .pp-bar-out { flex: 1; height: 11px; background: #EDF3F0; border-radius: 7px; overflow: hidden; }
         .pp-bar-in { height: 100%; border-radius: 7px; transition: width .5s ease; }
-        .pp-bar-row .vl { width: 62px; flex: none; text-align: right; font-weight: 700; font-size: 11px; }
+        .pp-bar-row .vl { width: 92px; flex: none; text-align: right; font-weight: 700; font-size: 11px; }
         /* 徽章墙 */
         .pp-badges { display: grid; grid-template-columns: repeat(5, 1fr); gap: 7px; }
         .pp-badge {
@@ -1900,7 +1904,7 @@
         let isParentMode = false;     // 家长模式（只读取，不写入）
 
         // 上传到云端的数据只包含动态打卡记录（任务/奖励用本地默认值）
-        const SYNC_FIELDS = ['todayChecks', 'todayDate', 'totalStars', 'streak', 'history', 'claimedRewards', 'pet', 'medals', 'poemLog', 'owned', 'leftovers', 'petBook', 'maxExp', 'coinsEver', 'achv', 'petWish', 'petWishDate', 'petWishDone', 'resetAt', 'todayDate'];
+        const SYNC_FIELDS = ['todayChecks', 'todayDate', 'totalStars', 'streak', 'history', 'claimedRewards', 'pet', 'medals', 'poemLog', 'owned', 'leftovers', 'petBook', 'maxExp', 'coinsEver', 'achv', 'petWish', 'petWishDate', 'petWishDone', 'resetAt', 'fourFullDate', 'todayDate'];
 
         // 上传数据到 Supabase（upsert 固定 id，多端共用同一份；只更新提供的列，不覆盖其它列）
         function syncToCloud() {
@@ -2135,26 +2139,79 @@
             }
             return today;
         }
+        // ===== 四维口径：今日达成率（不再用累计口数比较四条长短） =====
+        // 旧口径是"累计口数 + 绝对阈值 12/8/4"，四维每日容量天然不等：
+        // 智慧 8-10 项/天、安心只有 1-2 项 → 少的维度永远"要补一补"，
+        // 孩子把安心两项都做完了却收到负面反馈，是虚假惩罚信号。
+        // 新口径：分母 = 今天"该做"的该维任务数（已到时段 + 已解锁），分子 = 今天完成的项数。
+        function nutriToday(k) {
+            const due = calcDueTasks().filter(function (t) { return t.nutri === k; });
+            let done = 0;
+            due.forEach(function (t) { if (state.todayChecks[t.id]) done++; });
+            return { done: done, total: due.length };
+        }
+        // 每维达标线不同：四维容量天然不等，同一个阈值会让"四项全达标"数学上不可达
+        const NUTRI_GOAL = { calcium: 0.66, wisdom: 0.6, energy: 1, peace: 1 };
+        // true=已达 / false=未达 / null=今天没有这类任务（不判定，更不算"没做到"）
+        function nutriReached(k) {
+            const st = nutriToday(k);
+            if (!st.total) return null;
+            if (NUTRI_GOAL[k] >= 1) return st.done > 0;   // 安心 / 活力：门槛是"有没有"，不是"多少"
+            return st.done / st.total >= NUTRI_GOAL[k];
+        }
+        // 今天参与判定的维度（有任务才算）；今天没有该类任务 → 不判定，也不算"没做到"
+        function nutriJudged() {
+            return ['calcium', 'wisdom', 'energy', 'peace'].filter(function (k) { return nutriToday(k).total > 0; });
+        }
+        // 四维全满：四个方向今天都有任务，且全部达标。
+        // 活力任务只在周一/二/六/日有 → 全满天然只发生在周末或周一二，这是周节奏不是缺陷
+        function nutriAllFull() {
+            const judged = nutriJudged();
+            if (judged.length < 4) return false;
+            return judged.every(function (k) { return nutriReached(k) === true; });
+        }
         function nutriLevel(n) { return (n || 0) >= 12 ? 3 : (n || 0) >= 8 ? 2 : (n || 0) >= 4 ? 1 : 0; }
         const NUTRI_LV_NAME = ['要补一补', '还行', '不错', '超棒'];
         const NUTRI_LV_COLOR = ['#B9C9C2', '#9FD9BE', '#3AA17E', '#F5A623'];
+        // 今日档位：按"今天做完的比例"分档，与任务总数无关；-1 = 今天不用
+        function nutriTodayLevel(k) {
+            const st = nutriToday(k);
+            if (!st.total) return -1;
+            if (!st.done) return 0;
+            const r = st.done / st.total;
+            return st.done === st.total ? 3 : (r >= 0.67 ? 2 : (r >= 0.34 ? 1 : 0));
+        }
+        // 「今天够了吗」——只给孩子一个判断，不让她去比四条长短
+        function nutriVerdictHTML() {
+            const ks = ['calcium', 'wisdom', 'energy', 'peace'];
+            const judged = ks.filter(function (k) { return nutriToday(k).total > 0; });
+            if (!judged.length) return '';
+            const miss = judged.filter(function (k) { return nutriReached(k) === false; });
+            if (!miss.length) {
+                return '<div class="nutri-verdict done">今天够啦！营养全吃到了 🌟</div>';
+            }
+            const names = miss.map(function (k) { return NUTRI_ICON[k] + NUTRI_NAME[k]; });
+            return '<div class="nutri-verdict">今天还差：' + names.join('、') + '</div>';
+        }
         function nutriRowHTML() {
             if (!state.pet) return '';
             const n = state.pet.nutri || { calcium: 0, wisdom: 0, energy: 0, peace: 0 };
-            const today = todayNutri();
             let html = '<div class="nutri-row">';
             for (const k of ['calcium', 'wisdom', 'energy', 'peace']) {
-                const lv = nutriLevel(n[k]);
-                const ate = today[k] > 0;
-                // 今天还有机会吃到 → 才提示"还没吃"；今天压根没这类任务 → 显示"今天不用"（不给孩子无效压力）
-                const canEat = ate || hasPendingNutri(k);
-                html += '<span class="nutri-pill' + (ate ? '' : (canEat ? ' low' : ' off')) + '" data-nutri="' + k + '" title="' + NUTRI_NAME[k] + ' 累计 ' + (n[k] || 0) + ' 口">' +
-                        NUTRI_ICON[k] + ' ' + (n[k] || 0) +
-                        '<i class="nutri-lv" style="background:' + NUTRI_LV_COLOR[lv] + '">' + NUTRI_LV_NAME[lv] + '</i>' +
-                        (ate ? '' : (canEat ? '<b class="nutri-today">今天还没吃</b>' : '<b class="nutri-today">今天不用</b>')) +
+                const st = nutriToday(k);
+                const lv = nutriTodayLevel(k);
+                const reached = nutriReached(k);
+                const lvHTML = lv < 0 ? '' :
+                    '<i class="nutri-lv" style="background:' + NUTRI_LV_COLOR[lv] + '">' + NUTRI_LV_NAME[lv] + '</i>';
+                const tail = lv < 0 ? '<b class="nutri-today">今天不用</b>'
+                                    : (st.done ? '' : '<b class="nutri-today">今天还没吃</b>');
+                html += '<span class="nutri-pill' + (lv < 0 ? ' off' : (lv >= 2 ? '' : ' low')) +
+                        (reached === true ? ' on' : '') + '" data-nutri="' + k + '" title="' + NUTRI_NAME[k] +
+                        ' 今天 ' + st.done + '/' + st.total + '，累计 ' + (n[k] || 0) + ' 口">' +
+                        NUTRI_ICON[k] + ' ' + st.done + '/' + st.total + lvHTML + tail +
                         '</span>';
             }
-            return html + '</div>';
+            return html + '</div>' + nutriVerdictHTML();
         }
         const NUTRI_ICON = { calcium: '\uD83E\uDD5B', wisdom: '\uD83D\uDCDA', energy: '\u26A1', peace: '\uD83C\uDF19' };
 
@@ -2176,12 +2233,15 @@
             }
             return '有点想你了，快来打卡喂我吧 🥺';
         }
+        // 光环：今日"该做的维度"全部达标 → 亮。旧版要求四项累计都 >=8，
+        // 安心每天最多 +2、活力无任务的日子 +0，长期不可达，光环等于装饰。
+        // 今天没有该类任务时不参与判定（不把"今天没有"算成"没做到"）。
         function petAura() {
-            if (!state.pet || !state.pet.nutri) return '';
-            const n = state.pet.nutri;
-            const ok = nutriLevel(n.calcium) >= 2 && nutriLevel(n.wisdom) >= 2 &&
-                       nutriLevel(n.energy) >= 2 && nutriLevel(n.peace) >= 2;
-            return ok ? '✨' : '';
+            if (!state.pet) return '';
+            const ks = ['calcium', 'wisdom', 'energy', 'peace'];
+            const judged = ks.filter(function (k) { return nutriToday(k).total > 0; });
+            if (!judged.length) return '';
+            return judged.every(function (k) { return nutriReached(k) === true; }) ? '✨' : '';
         }
         function petAgeDays() {
             if (!state.pet || !state.pet.bornAt) return 1;
@@ -2427,7 +2487,8 @@
             { id:'book3',   icon:'\uD83C\uDFE1', name:'伙伴家族', desc:'养过 3 种伙伴',  got:function () { return (state.petBook || []).length >= 3; } },
             { id:'medal3',  icon:'\uD83C\uDFC5', name:'勋章收藏家', desc:'集齐 3 枚勋章', got:function () { return (state.medals || []).length >= 3; } },
             { id:'rich500', icon:'\uD83D\uDCB0', name:'小富翁',   desc:'累计赚到 500 金币', got:function () { return (state.coinsEver || 0) >= 500; } },
-            { id:'poem20',  icon:'\uD83C\uDF8B', name:'古诗二十首', desc:'完成 20 天今日一句', got:function () { return Object.keys(state.poemLog || {}).filter(function (k) { return state.poemLog[k]; }).length >= 20; } }
+            { id:'poem20',  icon:'\uD83C\uDF8B', name:'古诗二十首', desc:'完成 20 天今日一句', got:function () { return Object.keys(state.poemLog || {}).filter(function (k) { return state.poemLog[k]; }).length >= 20; } },
+            { id:'fourfull', icon:'\uD83C\uDF1F', name:'四维全满', desc:'一天里四个方向全都照顾到', got:function () { return !!state.fourFullDate; } }
         ];
         function checkPetAchv(silent) {
             if (!state.achv) state.achv = [];
@@ -2446,6 +2507,20 @@
                 }, 900 + i * 2400);
             });
         }
+        // 四维全满的当场庆祝（每天最多一次）—— 让重做的四条有一个明确的高潮
+        function celebrateFourFull() {
+            if (!state.pet) return;
+            if (state.fourFullDate === state.todayDate) return;
+            if (!nutriAllFull()) return;
+            state.fourFullDate = state.todayDate;
+            saveState();
+            triggerCelebration();
+            setTimeout(function () {
+                showToast('\uD83C\uDF1F 四\u4e2a\u65b9\u5411\u5168\u5403\u5230\u4e86\uff01\u4eca\u5929\u662f\u56db\u7ef4\u5168\u6ee1\u7684\u4e00\u5929\uff01', 'linear-gradient(135deg,#F5A623,#3AA17E)');
+                petSay('wishDone', { hold: 5200 });
+            }, 700);
+        }
+
         // ========== 今日心愿：宠物主动提出一个"今天真能做到"的小愿望 ==========
         // 关键：只从"今天尚未完成的维度"里挑，保证布丁今天有办法满足它（不可执行的请求一律不提）
         function petWishToday() {
@@ -2632,7 +2707,7 @@
                 nu += '<div class="pp-bar-row">' +
                         '<span class="lb">' + NUTRI_ICON[k] + ' ' + NUTRI_NAME[k] + '</span>' +
                         '<span class="pp-bar-out"><span class="pp-bar-in" style="width:' + Math.round(v / maxN * 100) + '%;background:' + NUTRI_LV_COLOR[lv] + ';"></span></span>' +
-                        '<span class="vl" style="color:' + NUTRI_LV_COLOR[lv] + '">' + NUTRI_LV_NAME[lv] + '</span>' +
+                        '<span class="vl" style="color:' + NUTRI_LV_COLOR[lv] + '">' + '累计 ' + v + ' 口' + '</span>' +
                       '</div>';
             });
             // ④ 近 30 天打卡热力图
@@ -3000,6 +3075,7 @@
             }
             checkMedals();
             settleFreeTime();      // 当天该做的事全做完 → 当场把省下的时间还给她
+            setTimeout(function () { celebrateFourFull(); }, 2600);   // 排在鼓励语/宠物回应之后，避免叠音
             if (calcTodayCompleted() === getActiveTasks().length) {
                 setTimeout(function () { triggerCelebration(); }, 600);
                 setTimeout(function () {
@@ -3079,6 +3155,7 @@
             petWishDone: false,
             freeSettledDate: '', 
             resetAt: '', 
+            fourFullDate: '', 
             poemLog: {},
             poemLibVer: 0,
             dictationBank: null,
@@ -4350,7 +4427,7 @@
                 todayChecks: {}, totalStars: 0, streak: 0, history: [], claimedRewards: [],
                 pet: null, medals: [], petBook: [], maxExp: 0, coinsEver: 0, achv: [],
                 poemLog: {}, owned: [], leftovers: [], petWish: '', petWishDate: '',
-                petWishDone: false, freeSettledDate: '', breakfastFast: '', petGreetDate: ''
+                petWishDone: false, freeSettledDate: '', breakfastFast: '', petGreetDate: '', fourFullDate: ''
             };
             Object.keys(FRESH).forEach(function (k) { state[k] = FRESH[k]; });
             // 底线日期：其它设备下次同步时跟着丢弃更早的记录，假数据不会再被并集拉回来
@@ -5164,7 +5241,7 @@
                 state.claimedRewards = []; state.totalStars = 0; state.streak = 0;
                 state.coinsEver = 0; state.maxExp = 0; state.todayChecks = {};
                 state.petWish = ''; state.petWishDate = ''; state.petWishDone = false;
-                state.freeSettledDate = '';
+                state.freeSettledDate = ''; state.fourFullDate = '';
             }
             if (floor) {
                 state.resetAt = floor;
