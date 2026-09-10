@@ -8,7 +8,8 @@
     <meta http-equiv="Expires" content="0" data-page-node-id="YXlbOTFHU2Nr6SGRQHt7cy">
     <script>
         (function () {
-            var APP_VERSION = '20260910.18';
+            var APP_VERSION = '20260910.19';
+            window.APP_VERSION_STR = APP_VERSION;   // 主脚本里做线上版本自检要用
             try {
                 var params = new URLSearchParams(location.search);
                 if (params.get('v') !== APP_VERSION) {
@@ -2048,6 +2049,31 @@
             }, 20000);
         }
 
+        // ========== 线上版本自检（治"改了但页面还是旧版"） ==========
+        // 页面可能被浏览器缓存住旧代码（尤其是一直开着的标签页），这里主动问一次线上 version.json：
+        // 版本不一致就用带 ?v= 的新 URL 重新加载（新 URL 天然绕开缓存）。
+        // 只在 http(s) 下生效，10 分钟内最多查一次，避免反复刷新；查不到就安静放弃。
+        function checkLiveVersion() {
+            if (location.protocol.indexOf('http') !== 0) return;
+            if (typeof fetch !== 'function') return;
+            const live = window.APP_VERSION_STR;
+            if (!live) return;
+            let last = 0;
+            try { last = parseInt(sessionStorage.getItem('liveVerCheck') || '0', 10) || 0; } catch (e) {}
+            if (Date.now() - last < 600000) return;
+            try { sessionStorage.setItem('liveVerCheck', String(Date.now())); } catch (e) {}
+            fetch('version.json?t=' + Date.now(), { cache: 'no-store' })
+                .then(function (r) { return r.ok ? r.json() : null; })
+                .then(function (d) {
+                    if (!d || !d.v || d.v === live) return;
+                    const u = new URL(location.href);
+                    if (u.searchParams.get('v') === d.v) return;
+                    u.searchParams.set('v', d.v);
+                    location.replace(u.toString());
+                })
+                .catch(function () {});
+        }
+
         // ========== 家长提醒：家长端发送 → 大屏端弹出 ==========
         // 发送提醒到云端（只更新 parentMessage 字段，不影响打卡数据）
         function sendParentMessage(text) {
@@ -2434,6 +2460,8 @@
             petSpeak(key, PET_LINE[key] || '', opts);
         }
         function petShowBubble(text, hold) {
+            // 空台词直接返回：历史上出现过"空气泡挂着边框"（看起来像页面坏了）
+            if (!text || !String(text).trim()) return;
             let b = document.getElementById('petBubble');
             if (!b) {
                 // 卡片还没渲染出来（例如首次进入）→ 兜底用轻提示
@@ -3333,6 +3361,26 @@
             state.taskPatchVer = TASK_PATCH_VER;
         }
 
+        // 一次性宠物纠正：换伙伴功能曾因"比经验合并"的缺陷失效，旧的独角兽会在设备上复活。
+        // 这里定点纠正一次"养的是哪种伙伴"，经验 / 营养 / 成长日记全部保留（布丁的进度不受影响），
+        // 同时顶上新时间戳，让这次纠正也能压过其它端残留的旧宠物。跑过一遍就不再生效。
+        const PET_PATCH_VER = 1;
+        const PET_PATCH = { kind: 'rabbit', name: '\u5c0f\u5154\u591a\u591a' };
+        function applyPetPatch() {
+            if ((state.petPatchVer || 0) >= PET_PATCH_VER) return;
+            if (state.pet) {
+                const legacy = !(typeof state.pet.switchedAt === 'number' && state.pet.switchedAt > 0);
+                if (state.pet.kind === 'unicorn' || legacy) {
+                    state.pet.kind = PET_PATCH.kind;
+                    state.pet.name = PET_PATCH.name;
+                }
+                state.pet.switchedAt = Date.now();
+                if (!Array.isArray(state.petBook)) state.petBook = [];
+                if (state.petBook.indexOf(PET_PATCH.kind) < 0) state.petBook.push(PET_PATCH.kind);
+            }
+            state.petPatchVer = PET_PATCH_VER;
+        }
+
         // 确保状态数据有效（防止云端/本地缓存损坏导致任务丢失）
         function ensureValidState() {
             if (!Array.isArray(state.tasks) || state.tasks.length === 0) {
@@ -3369,6 +3417,7 @@
             // 任务参数与默认值同步（一次性校准：tasks 只存本地、不随云端同步，
             // 所以改 DEFAULT_TASKS 对已装设备无效，必须在这里显式迁移一次）
             applyTaskPatches();
+            applyPetPatch();   // 宠物一次性纠正（只跑一遍）
             // ===== 宠物 v5 迁移：自由时间结算标记 =====
             if (typeof state.freeSettledDate !== 'string') state.freeSettledDate = '';
             // ===== 宠物 v5 迁移：今日心愿字段 =====
@@ -5539,6 +5588,11 @@
                     seenS.add(k); return true;
                 }).sort(function (a, b) { return (b.d || '').localeCompare(a.d || ''); }).slice(0, 40);
             }
+            // 自愈：云端宠物缺少 switchedAt（旧版本客户端传上来的老数据）→ 顶一次本机时间戳，
+            // 触发一次回传把云端纠正过来，免得这份旧宠物继续污染其它设备
+            if (state.pet && data.pet && _petTs(state.pet) > 0 && _petTs(data.pet) === 0) {
+                state.pet.switchedAt = Date.now();
+            }
             // 已买到的装扮 / 小屋：并集（只增不减）
             if (Array.isArray(data.owned)) {
                 state.owned = Array.from(new Set([...(state.owned || []), ...data.owned]));
@@ -5611,6 +5665,10 @@
                 saveState(); // 持久化合并结果并上传云端（history 已含本地+云端所有天）
                 renderAll();
                 listenCloudChanges(); // 启动多端轮询同步
+                checkLiveVersion();   // 上线新版本后，旧页面能自己追上来
+                document.addEventListener('visibilitychange', function () {
+                    if (!document.hidden) checkLiveVersion();
+                });
                 // 首次使用：让布丁自己选一个学习伙伴（已有宠物则不再弹）
                 if (!state.pet) setTimeout(showPetPicker, 500);
             });
