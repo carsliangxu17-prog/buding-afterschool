@@ -1,95 +1,41 @@
 {
   "date": "2026-09-11",
-  "exportedAt": "2026-09-11T10:17:10",
-  "cloudUpdatedAt": "2026-09-11T01:55:54.258+00:00",
-  "todayChecks": {
-    "m_egg": {
-      "at": 1789083000000,
+  "completed": 4,
+  "total": 11,
+  "stars": 7,
+  "tasks": [
+    {
+      "id": "m_listen",
       "flag": "ok",
-      "nutri": "calcium",
+      "icon": "🎧",
+      "name": "英语熏听 30 分钟",
       "stars": 1,
-      "golden": false
+      "category": "morning"
     },
-    "m_break": {
-      "at": 1789083000000,
+    {
+      "id": "m_break",
       "flag": "ok",
-      "nutri": "calcium",
+      "icon": "⏱️",
+      "name": "早餐 15 分钟内吃完",
       "stars": 3,
-      "golden": false
+      "category": "morning"
     },
-    "m_listen": {
-      "at": 1789083000000,
+    {
+      "id": "m_egg",
       "flag": "ok",
-      "nutri": "wisdom",
+      "icon": "🍳",
+      "name": "炒蛋吃完 1 个",
       "stars": 1,
-      "golden": false
+      "category": "morning"
     },
-    "m_read_cn": {
-      "at": 1789083000000,
+    {
+      "id": "m_read_cn",
       "flag": "ok",
-      "nutri": "wisdom",
+      "icon": "📖",
+      "name": "晨读 10 分钟 · 语文《金波四季美文》",
       "stars": 2,
-      "golden": false
+      "category": "morning"
     }
-  },
-  "historyRecord": {
-    "date": "2026-09-11",
-    "stars": 7,
-    "tasks": [
-      {
-        "id": "m_listen",
-        "flag": "ok",
-        "icon": "🎧",
-        "name": "英语熏听 30 分钟",
-        "stars": 1,
-        "category": "morning"
-      },
-      {
-        "id": "m_break",
-        "flag": "ok",
-        "icon": "⏱️",
-        "name": "早餐 10 分钟内吃完",
-        "stars": 3,
-        "category": "morning"
-      },
-      {
-        "id": "m_egg",
-        "flag": "ok",
-        "icon": "🍳",
-        "name": "炒蛋吃完 1 个",
-        "stars": 1,
-        "category": "morning"
-      },
-      {
-        "id": "m_read_cn",
-        "flag": "ok",
-        "icon": "📖",
-        "name": "晨读 10 分钟 · 语文《金波四季美文》",
-        "stars": 2,
-        "category": "morning"
-      }
-    ],
-    "total": 11,
-    "doneAt": null,
-    "lastAt": null,
-    "allDone": false,
-    "firstAt": null,
-    "freeMin": null,
-    "completed": 4
-  },
-  "summary": {
-    "totalStars": 42,
-    "streak": 1,
-    "coinsEver": 62,
-    "maxExp": 390,
-    "medals": null,
-    "achv": [
-      "hatch"
-    ],
-    "petBook": [
-      "rabbit",
-      "unicorn"
-    ],
-    "fourFullDate": ""
-  }
+  ],
+  "note": "已剔除测试打卡 a_dog（撤销上传被打卡上传覆盖的竞态残留）"
 }
