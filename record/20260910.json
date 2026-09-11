@@ -1,0 +1,122 @@
+{
+  "date": "2026-09-10",
+  "source": "recovered from local backup cloud_backup_before_reset_20260910_211128.json",
+  "completed": 14,
+  "total": 16,
+  "stars": 25,
+  "tasks": [
+    {
+      "id": "m_listen",
+      "flag": "ok",
+      "icon": "🎧",
+      "name": "英语熏听 30 分钟",
+      "stars": 1,
+      "category": "morning"
+    },
+    {
+      "id": "m_break",
+      "flag": "ok",
+      "icon": "⏱️",
+      "name": "早餐 10 分钟内吃完",
+      "stars": 3,
+      "category": "morning"
+    },
+    {
+      "id": "m_milk",
+      "flag": "ok",
+      "icon": "🥛",
+      "name": "牛奶喝完 1 盒",
+      "stars": 2,
+      "category": "morning"
+    },
+    {
+      "id": "m_egg",
+      "flag": "ok",
+      "icon": "🍳",
+      "name": "炒蛋吃完 1 个",
+      "stars": 1,
+      "category": "morning"
+    },
+    {
+      "id": "a_calc",
+      "flag": "ok",
+      "icon": "🧮",
+      "name": "数学计算题 1 页",
+      "stars": 2,
+      "category": "after"
+    },
+    {
+      "id": "a_abc",
+      "flag": "ok",
+      "icon": "🔤",
+      "name": "ABC Reading 1 个",
+      "stars": 2,
+      "category": "evening"
+    },
+    {
+      "id": "a_dog",
+      "flag": "ok",
+      "icon": "🐶",
+      "name": "百词斩（单词小狗）",
+      "stars": 1,
+      "category": "after"
+    },
+    {
+      "id": "a_weiyang",
+      "flag": "ok",
+      "icon": "📚",
+      "name": "未泱英文阅读 2 个",
+      "stars": 2,
+      "category": "after"
+    },
+    {
+      "id": "e_hw",
+      "flag": "ok",
+      "icon": "📝",
+      "name": "校内作业（有则先做）",
+      "stars": 3,
+      "category": "evening"
+    },
+    {
+      "id": "e_53",
+      "flag": "ok",
+      "icon": "📘",
+      "name": "53 天天练 · 数学同步",
+      "stars": 2,
+      "category": "evening"
+    },
+    {
+      "id": "e_words",
+      "flag": "ok",
+      "icon": "✏️",
+      "name": "认识生字 6 个",
+      "stars": 1,
+      "category": "evening"
+    },
+    {
+      "id": "e_read",
+      "flag": "ok",
+      "icon": "📚",
+      "name": "课外阅读 15 分钟 ·《西游记》",
+      "stars": 2,
+      "category": "after"
+    },
+    {
+      "id": "e_pack",
+      "flag": "ok",
+      "icon": "🎒",
+      "name": "整理书包",
+      "stars": 1,
+      "category": "evening"
+    },
+    {
+      "id": "n_sleep",
+      "flag": "ok",
+      "icon": "🌙",
+      "name": "21:00 前上床睡觉",
+      "stars": 2,
+      "category": "night"
+    }
+  ],
+  "note": "9/10 16/16 29星 是旧设备跨天泄漏污染，已 PATCH 回 14/14 25星（m_read_en 未完成）"
+}

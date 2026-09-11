@@ -8,7 +8,7 @@
     <meta http-equiv="Expires" content="0" data-page-node-id="YXlbOTFHU2Nr6SGRQHt7cy">
     <script>
         (function () {
-            var APP_VERSION = '20260911.3';
+            var APP_VERSION = '20260911.4';
             window.APP_VERSION_STR = APP_VERSION;   // 主脚本里做线上版本自检要用
             try {
                 var params = new URLSearchParams(location.search);
@@ -4210,23 +4210,33 @@
 
         function renderStats() {
             const todayStars = calcTodayStars();
-            // 时段口径：只把"现在已经到点"的任务算进进度，避免孩子白天看到"完成度很低"
-            const completed = calcDueCompleted();
-            const total = calcDueTasks().length;
+            // 全天口径（2026-09-11 改）：分母=今天所有激活任务，避免白天完成度低、
+            // 下午进度条反而倒退。原"已到时段"分母会让 4/5→4/8→4/10→4/11 持续倒退。
+            const allActive = getActiveTasks();
+            const completed = allActive.filter(function (t) { return state.todayChecks[t.id]; }).length;
+            const total = allActive.length;
 
             document.getElementById('todayStars').textContent = todayStars;
             document.getElementById('totalStars').textContent = state.totalStars;
             renderMotto();   // 存钱罐里的时间要当场就涨
             document.getElementById('completedCount').textContent = `${completed}/${total}`;
 
-            // 进度
+            // 进度条按比例走（不会倒退），文案不显示百分比，改用"还剩 N 项"（孩子理解不了 62%）
+            const pending = total - completed;
+            const pp = document.getElementById('progressPercent');
+            if (pp) {
+                if (pending === 0 && total > 0) {
+                    pp.textContent = '✨ 全部完成！';
+                } else {
+                    pp.textContent = '还剩 ' + pending + ' 项';
+                }
+            }
             const percent = total > 0 ? Math.round((completed / total) * 100) : 0;
-            document.getElementById('progressPercent').textContent = `${percent}%`;
             const fill = document.getElementById('progressFill');
             fill.style.width = `${percent}%`;
             fill.className = 'progress-fill' + (percent === 100 ? ' complete' : '');
 
-            // 用"还剩几项"代替百分比 —— 孩子理解"还有多少事"，理解不了"完成度 62%"
+            // 「现在该做的」小提示：保留"已到时段"维度（告诉孩子"现在做哪个"，与全天"还剩"区分开）
             const hint = document.getElementById('pendingHint');
             if (hint) {
                 const pendingDue = calcPendingDue();
@@ -4238,7 +4248,7 @@
                     hint.textContent = '✅ 现在该做的都做完啦，晚一点还有 ' + pendingAll + ' 项';
                     hint.className = 'pending-hint done';
                 } else {
-                    hint.textContent = '现在还剩 ' + pendingDue + ' 项，一样一样来 🙂';
+                    hint.textContent = '现在该做还有 ' + pendingDue + ' 项，一样一样来 🙂';
                     hint.className = 'pending-hint';
                 }
             }
