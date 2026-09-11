@@ -1,0 +1,47 @@
+[
+  {
+    "id": "cat",
+    "emoji": "🐱",
+    "name": "小猫"
+  },
+  {
+    "id": "rabbit",
+    "emoji": "🐰",
+    "name": "小兔"
+  },
+  {
+    "id": "unicorn",
+    "emoji": "🦄",
+    "name": "独角兽"
+  },
+  {
+    "id": "dino",
+    "emoji": "🦖",
+    "name": "小恐龙"
+  },
+  {
+    "id": "panda",
+    "emoji": "🐼",
+    "name": "熊猫"
+  },
+  {
+    "id": "penguin",
+    "emoji": "🐧",
+    "name": "企鹅"
+  },
+  {
+    "id": "fox",
+    "emoji": "🦊",
+    "name": "小狐狸"
+  },
+  {
+    "id": "hamster",
+    "emoji": "🐹",
+    "name": "仓鼠"
+  },
+  {
+    "id": "frog",
+    "emoji": "🐸",
+    "name": "小青蛙"
+  }
+]

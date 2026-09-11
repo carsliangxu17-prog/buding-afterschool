@@ -1,0 +1,94 @@
+[
+  {
+    "id": "f_apple",
+    "name": "苹果",
+    "icon": "🍎",
+    "cost": 10,
+    "type": "food",
+    "exp": 20,
+    "desc": "喂一口，长一点"
+  },
+  {
+    "id": "f_milk",
+    "name": "牛奶",
+    "icon": "🥛",
+    "cost": 15,
+    "type": "food",
+    "exp": 35,
+    "desc": "补钙，长得快"
+  },
+  {
+    "id": "f_fish",
+    "name": "小鱼干",
+    "icon": "🐟",
+    "cost": 25,
+    "type": "food",
+    "exp": 60,
+    "desc": "最爱吃的小零食"
+  },
+  {
+    "id": "f_cake",
+    "name": "生日蛋糕",
+    "icon": "🍰",
+    "cost": 50,
+    "type": "food",
+    "exp": 130,
+    "desc": "大餐，长得特别快"
+  },
+  {
+    "id": "d_bow",
+    "name": "蝴蝶结",
+    "icon": "🎀",
+    "cost": 60,
+    "type": "decor",
+    "desc": "戴上去更可爱"
+  },
+  {
+    "id": "d_scarf",
+    "name": "小围巾",
+    "icon": "🧣",
+    "cost": 80,
+    "type": "decor",
+    "desc": "天冷也不怕"
+  },
+  {
+    "id": "d_dress",
+    "name": "小裙子",
+    "icon": "👗",
+    "cost": 120,
+    "type": "decor",
+    "desc": "漂亮的新衣服"
+  },
+  {
+    "id": "d_cape",
+    "name": "小披风",
+    "icon": "🦸",
+    "cost": 160,
+    "type": "decor",
+    "desc": "像个小英雄"
+  },
+  {
+    "id": "s_room",
+    "name": "温馨小屋",
+    "icon": "🏠",
+    "cost": 200,
+    "type": "scene",
+    "desc": "给伙伴一个家"
+  },
+  {
+    "id": "s_tree",
+    "name": "树屋",
+    "icon": "🌳",
+    "cost": 350,
+    "type": "scene",
+    "desc": "爬高高的看远处"
+  },
+  {
+    "id": "s_star",
+    "name": "星空房",
+    "icon": "🌌",
+    "cost": 500,
+    "type": "scene",
+    "desc": "躺在里面看星星"
+  }
+]

@@ -1,0 +1,92 @@
+[
+  {
+    "text": "太棒了，小布丁！",
+    "emoji": "🎉",
+    "bg": "linear-gradient(135deg,#FF6B6B,#FF8E53)",
+    "audio": "audio/praise_01.mp3"
+  },
+  {
+    "text": "又完成一项，真厉害！",
+    "emoji": "⭐",
+    "bg": "linear-gradient(135deg,#f6d365,#fda085)",
+    "audio": "audio/praise_02.mp3"
+  },
+  {
+    "text": "布丁是最棒的！",
+    "emoji": "🌟",
+    "bg": "linear-gradient(135deg,#667eea,#764ba2)",
+    "audio": "audio/praise_03.mp3"
+  },
+  {
+    "text": "加油加油，继续冲！",
+    "emoji": "💪",
+    "bg": "linear-gradient(135deg,#FA709A,#FEE140)",
+    "audio": "audio/praise_04.mp3"
+  },
+  {
+    "text": "哇塞，太厉害了！",
+    "emoji": "🤩",
+    "bg": "linear-gradient(135deg,#a18cd1,#fbc2eb)",
+    "audio": "audio/praise_05.mp3"
+  },
+  {
+    "text": "布丁真了不起！",
+    "emoji": "🏆",
+    "bg": "linear-gradient(135deg,#FFD93D,#FF6B6B)",
+    "audio": "audio/praise_06.mp3"
+  },
+  {
+    "text": "进步越来越大啦！",
+    "emoji": "📈",
+    "bg": "linear-gradient(135deg,#43e97b,#38f9d7)",
+    "audio": "audio/praise_07.mp3"
+  },
+  {
+    "text": "你真是个小超人！",
+    "emoji": "🦸",
+    "bg": "linear-gradient(135deg,#4FACFE,#00F2FE)",
+    "audio": "audio/praise_08.mp3"
+  },
+  {
+    "text": "又一个任务搞定！",
+    "emoji": "✅",
+    "bg": "linear-gradient(135deg,#fa709a,#fee140)",
+    "audio": "audio/praise_09.mp3"
+  },
+  {
+    "text": "布丁好勤奋呀！",
+    "emoji": "🐰",
+    "bg": "linear-gradient(135deg,#a8edea,#fed6e3)",
+    "audio": "audio/praise_10.mp3"
+  },
+  {
+    "text": "自律小达人！",
+    "emoji": "👑",
+    "bg": "linear-gradient(135deg,#ff9a9e,#fecfef)",
+    "audio": "audio/praise_11.mp3"
+  },
+  {
+    "text": "为自己点赞！",
+    "emoji": "👍",
+    "bg": "linear-gradient(135deg,#84fab0,#8fd3f4)",
+    "audio": "audio/praise_12.mp3"
+  },
+  {
+    "text": "布丁真让人骄傲！",
+    "emoji": "💝",
+    "bg": "linear-gradient(135deg,#FD6585,#FFD3A5)",
+    "audio": "audio/praise_13.mp3"
+  },
+  {
+    "text": "完成的感觉真好！",
+    "emoji": "🥳",
+    "bg": "linear-gradient(135deg,#c471f5,#fa71cd)",
+    "audio": "audio/praise_14.mp3"
+  },
+  {
+    "text": "越来越接近目标了！",
+    "emoji": "🎯",
+    "bg": "linear-gradient(135deg,#30cfd0,#330867)",
+    "audio": "audio/praise_15.mp3"
+  }
+]
