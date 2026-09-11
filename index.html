@@ -8,7 +8,7 @@
     <meta http-equiv="Expires" content="0" data-page-node-id="YXlbOTFHU2Nr6SGRQHt7cy">
     <script>
         (function () {
-            var APP_VERSION = '20260911.4';
+            var APP_VERSION = '20260911.5';
             window.APP_VERSION_STR = APP_VERSION;   // 主脚本里做线上版本自检要用
             try {
                 var params = new URLSearchParams(location.search);
@@ -3545,18 +3545,28 @@
         //   并刷新 updatedAt。
         function saveTodayToHistory(skipIfArchived) {
             const activeTasks = getActiveTasks();
-            const completed = activeTasks.filter(t => state.todayChecks[t.id]);
+            // 20260911.5：completed 与 stars 用同一口径 —— 只统计"今天激活且真打了"的任务，
+            // 星星按 todayChecks 里实际到账的 gain 求和（含金色翻倍）。
+            // 旧口径 completed 用 activeTasks 过滤、stars 用 calcTodayStars 遍历全表，
+            // 幽灵记录会让「完成 N 项 / 星数对不上」甚至打卡记录多出一项（天姝 9/11 反馈）。
+            const completed = activeTasks.filter(function (t) {
+                const v = state.todayChecks[t.id];
+                return v && typeof v === 'object';
+            });
             const total = activeTasks.length;
-            const todayEarned = calcTodayStars();
 
-            const taskDetails = completed.map(t => ({
-                id: t.id,
-                name: t.name,
-                icon: t.icon,
-                stars: t.stars,
-                category: t.category,
-                flag: (state.todayChecks[t.id] && state.todayChecks[t.id].flag) || 'ok',
-            }));
+            const taskDetails = completed.map(t => {
+                const rec = state.todayChecks[t.id] || {};
+                return {
+                    id: t.id,
+                    name: t.name,
+                    icon: t.icon,
+                    stars: (typeof rec.stars === 'number') ? rec.stars : t.stars,   // 实际到账（含金色翻倍）
+                    category: t.category,
+                    flag: rec.flag || 'ok',
+                };
+            });
+            const todayEarned = taskDetails.reduce(function (s, t) { return s + t.stars; }, 0);
             const dayTimes = calcDayTimes();
             const existIdx = state.history.findIndex(h => h.date === state.todayDate);
 
@@ -3586,14 +3596,17 @@
 
         // ========== 星星计算 ==========
         function calcTodayStars() {
+            // 20260911.5：只统计「今天激活任务」的到账星，遍历全表会把不属于
+            // 今天任务集的幽灵记录也算进去（撤销残留/旧端合并脏数据），
+            // 造成「今日金币」与「打卡记录」对不上（天姝 9/11 反馈 5/11 vs 4/11）。
             let stars = 0;
-            for (const [id, checked] of Object.entries(state.todayChecks)) {
+            for (const t of getActiveTasks()) {
+                const checked = state.todayChecks[t.id];
                 if (!checked) continue;
                 if (typeof checked === 'object' && checked.stars !== undefined) {
                     stars += checked.stars;
                 } else {
-                    const task = state.tasks.find(t => t.id === id);
-                    if (task) stars += task.stars;
+                    stars += t.stars;
                 }
             }
             return stars;
@@ -4518,7 +4531,7 @@
             if (state.pet && state.pet.nutri && rec.nutri) {
                 state.pet.nutri[rec.nutri] = Math.max(0, (state.pet.nutri[rec.nutri] || 0) - (rec.golden ? 2 : 1));
             }
-            state.todayChecks['a_dictation'] = false;
+            delete state.todayChecks['a_dictation'];   // 20260911.5：删掉而不是设 false，防幽灵记录
             state.checksUpdatedAt = Date.now();
             playSound('uncheck');
             deductPet(got);
@@ -5304,7 +5317,7 @@
                     state.pet.nutri[rec.nutri] = Math.max(0, (state.pet.nutri[rec.nutri] || 0) - (rec.golden ? 2 : 1));
                 }
                 if (task.id === 'm_break') state.breakfastFast = false;
-                state.todayChecks[taskId] = false;
+                delete state.todayChecks[taskId];   // 20260911.5：删掉而不是设 false，防幽灵记录污染合并与统计
                 state.checksUpdatedAt = Date.now();
                 playSound('uncheck');
                 deductPet(got);
