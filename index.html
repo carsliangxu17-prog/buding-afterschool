@@ -8,7 +8,7 @@
     <meta http-equiv="Expires" content="0" data-page-node-id="YXlbOTFHU2Nr6SGRQHt7cy">
     <script>
         (function () {
-            var APP_VERSION = '20260910.20';
+            var APP_VERSION = '20260911.1';
             window.APP_VERSION_STR = APP_VERSION;   // 主脚本里做线上版本自检要用
             try {
                 var params = new URLSearchParams(location.search);
@@ -2043,6 +2043,7 @@
                         };
                         const before = snap();
                         mergeCloudIntoState(data);
+                        purgeStaleChecks();   // 轮询路径同样要把“昨天混进来的卡”剔掉
                         if (snap() !== before) saveState();
                         // 检查家长提醒：有新消息则弹窗 + 响铃
                         if (data.parentMessage && data.parentMessage.time > (state.lastReadMsgTime || 0)) {
@@ -3370,7 +3371,37 @@
             state.taskPatchVer = TASK_PATCH_VER;
         }
 
-        // 一次性宠物纠正：换伙伴功能曾因"比经验合并"的缺陷失效，旧的独角兽会在设备上复活。
+        // ===== 一次性数据修正：2026-09-11 跨天泄漏 =====
+        // 事故当天，昨天（09-10）已完成的 15 项被当成今天（09-11）的打卡，存在于云端与本机。
+        // 这里把它清理回“今天真正打过的”那一批（当天日志有据可查），避免假数据继续传播。
+        // 只对事故当天生效、只跑一遍；之后每天由 checkNewDay + purgeStaleChecks 正常把关。
+        const LEAK_PATCH_VER = 1;
+        const LEAK_DATE = '2026-09-11';
+        const LEAK_KEEP = ['m_listen', 'm_break', 'm_egg', 'm_read_cn'];
+        function applyLeakPatch() {
+            if ((state.leakPatchVer || 0) >= LEAK_PATCH_VER) return;
+            state.leakPatchVer = LEAK_PATCH_VER;
+            if (state.todayDate !== LEAK_DATE) return;      // 不是事故当天，不介入
+            const dayStart = new Date(LEAK_DATE + 'T00:00:00').getTime();
+            const tc = state.todayChecks || {};
+            const kept = {};
+            Object.keys(tc).forEach(function (id) {
+                const v = tc[id];
+                if (!v) return;
+                // ① 带“今天”时间戳 → 确实是今天打的，原样保留
+                if (typeof v === 'object' && v.at && v.at >= dayStart) { kept[id] = v; return; }
+                // ② 事故当天确证打过、但记录已被降级成布尔 → 用任务定义重建
+                if (LEAK_KEEP.indexOf(id) >= 0) {
+                    const t = (state.tasks || []).find(function (x) { return x && x.id === id; });
+                    kept[id] = { stars: t ? t.stars : 1, flag: 'ok',
+                                 nutri: t ? t.nutri : null, at: Date.now(), golden: false };
+                }
+                // ③ 其余（昨天带进来的）一律丢弃
+            });
+            state.todayChecks = kept;
+        }
+
+        // 一次性宠物纠正：换伙伴功能曾因“比经验合并”的缺陷失效，旧的独角兽会在设备上复活。"比经验合并"的缺陷失效，旧的独角兽会在设备上复活。
         // 这里定点纠正一次"养的是哪种伙伴"，经验 / 营养 / 成长日记全部保留（布丁的进度不受影响），
         // 同时顶上新时间戳，让这次纠正也能压过其它端残留的旧宠物。跑过一遍就不再生效。
         const PET_PATCH_VER = 1;
@@ -3427,6 +3458,7 @@
             // 所以改 DEFAULT_TASKS 对已装设备无效，必须在这里显式迁移一次）
             applyTaskPatches();
             applyPetPatch();   // 宠物一次性纠正（只跑一遍）
+            applyLeakPatch();  // 跨天泄漏一次性数据修正（只跑一遍）
             // ===== 宠物 v5 迁移：自由时间结算标记 =====
             if (typeof state.freeSettledDate !== 'string') state.freeSettledDate = '';
             // ===== 宠物 v5 迁移：今日心愿字段 =====
@@ -3449,6 +3481,29 @@
         }
 
         // ========== 新一天检查 ==========
+        // 跨天自净防线：把“打卡时间早于今天”的记录剔出去。
+        // 多端同步时可能出现“日期字段已是今天、但记录还是昨天打的”这种混合状态，
+        // 而每条打卡都自带 at 时间戳，是最可靠的判据。降级成布尔 true 的记录无法自证
+        // 日期，只有在当天日志里有据可查时才敢留下（防止历史污染被反复继承）。
+        function purgeStaleChecks() {
+            if (state.todayDate !== getTodayStr()) return 0;
+            const dayStart = new Date(getTodayStr() + 'T00:00:00').getTime();
+            const rec = (state.history || []).find(function (h) { return h.date === state.todayDate; });
+            const proven = {};
+            if (rec) (rec.tasks || []).forEach(function (t) { if (t && t.id) proven[t.id] = true; });
+            const tc = state.todayChecks || {};
+            let n = 0;
+            Object.keys(tc).forEach(function (id) {
+                const v = tc[id];
+                if (!v) return;
+                if (typeof v === 'object') {
+                    if (v.at && v.at < dayStart) { delete tc[id]; n++; }   // 明确是昨天打的
+                    return;
+                }
+                if (v === true && !proven[id]) { delete tc[id]; n++; }      // 残缺记录且日志里查不到
+            });
+            return n;
+        }
         function checkNewDay() {
             const today = getTodayStr();
             if (state.todayDate !== today) {
@@ -3459,6 +3514,12 @@
                 state.todayChecks = {};
                 state.streak = calcStreak();
                 saveState();
+            } else if (purgeStaleChecks() > 0) {
+                // 日期已是今天，但混进了昨天打的卡 → 就地纠正并同步回云端
+                saveTodayToHistory();
+                saveState();
+                renderStats();
+                renderTasks();
             }
         }
         // 保存今日记录到历史（即使完成数为0也记录，确保撤销打卡后实时反映）
@@ -5554,11 +5615,22 @@
 
         // ========== 云端数据合并到本地（按天去重，防止覆盖丢历史） ==========
         // 今日打卡按任务合并（取并集）：任一端打过的任务都算已完成，避免多端同日打卡互相覆盖丢卡
+        // 合并两端「今日打卡」（并集语义：只增不减，避免多端互洗丢卡）。
+        // ⚠ 不要把记录降级成布尔 true：打卡记录里的 stars / flag / 营养 / at（打卡时间）
+        // 都是后续判断的依据（星级统计、勋章“闪电早餐”看 flag、跨天自净看 at），
+        // 一旦降级就永久丢失。这里保留“信息更完整”的一方。
         function mergeTodayChecks(localChecks, cloudChecks) {
             const merged = Object.assign({}, localChecks || {});
-            for (const [k, v] of Object.entries(cloudChecks || {})) {
-                if (v) merged[k] = true;
-            }
+            const rank = function (v) {
+                if (!v) return 0;
+                if (typeof v === 'object') return 2;   // 完整记录
+                return 1;                              // 历史遗留的布尔 true（信息最少）
+            };
+            Object.keys(cloudChecks || {}).forEach(function (k) {
+                const v = cloudChecks[k];
+                if (!v) return;                        // 假值不参与（保持“只增不减”）
+                if (rank(v) >= rank(merged[k])) merged[k] = v;
+            });
             return merged;
         }
         function mergeCloudIntoState(data) {
@@ -5679,16 +5751,28 @@
                     new Set([...(state.claimedRewards || []), ...data.claimedRewards])
                 );
             }
-            // 今日打卡数据：仅当云端日期不早于本地时才合并（防旧设备残留覆盖今天新卡）
+            // 今日打卡数据：**只有“云端日期就是今天”时，云端那份才算今天的有效数据**。
+            //
+            // 历史事故（2026-09-11，现象：“一打开网页全部任务已打卡”）：
+            // 原来只要 cloudDate >= localDate 就合并，并且顺手把本机 state.todayDate 改成
+            // 云端的“今天”。于是紧接着的 checkNewDay() 看到 todayDate 已经是今天，
+            // 不再触发「归档昨天 + 清空今日打卡」——本机残留的昨天打卡被当成
+            // 今天的保留下来，还被上传云端，再传染给其它设备。每天跨天时都会发生一次。
+            const todayStr = getTodayStr();
             const cloudDate = data.todayDate || '';
             const localDate = state.todayDate || '';
-            if (cloudDate && cloudDate >= localDate) {
-                if (data.todayDate !== undefined) state.todayDate = data.todayDate;
-                // 今日打卡按任务合并（并集），避免多端同日打卡互相覆盖丢卡
+            if (cloudDate === todayStr) {
+                // 本机那份只有“日期也是今天”才可信；停在昨天/更早的一律作废（等 checkNewDay 归档）
+                const localIsToday = (localDate === todayStr);
+                state.todayDate = todayStr;
                 if (data.todayChecks) {
-                    state.todayChecks = mergeTodayChecks(state.todayChecks, data.todayChecks);
+                    state.todayChecks = mergeTodayChecks(localIsToday ? state.todayChecks : {}, data.todayChecks);
+                } else if (!localIsToday) {
+                    state.todayChecks = {};
                 }
             }
+            // 云端日期不是今天（跨天竞态，例如对方还没换天）：一概不动 todayDate / todayChecks，
+            // 交给随后的 checkNewDay() 把本机过期的那一天正常归档并清空。
         }
 
         // ========== 初始化 ==========
