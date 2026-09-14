@@ -8,7 +8,7 @@
     <meta http-equiv="Expires" content="0" data-page-node-id="YXlbOTFHU2Nr6SGRQHt7cy">
     <script>
         (function () {
-            var APP_VERSION = '20260911.5';
+            var APP_VERSION = '20260914.1';
             window.APP_VERSION_STR = APP_VERSION;   // 主脚本里做线上版本自检要用
             try {
                 var params = new URLSearchParams(location.search);
@@ -2152,7 +2152,8 @@
             // 放学后
             { id:'a_sport',   name:'户外运动 30 分钟',             icon:'\uD83D\uDEB4', category:'after',   stars:2, nutri:'energy', days:[1,2] },
             { id:'a_calc',    name:'数学计算题 1 页',              icon:'\uD83E\uDDEE', category:'after',   stars:2, nutri:'wisdom', days:[1,2,3,4] },
-            { id:'a_abc',     name:'ABC Reading 1 个',            icon:'\uD83D\uDD24', category:'evening', stars:2, nutri:'wisdom', days:[1,2,3,4] },
+            { id:'a_oral',    name:'20 以内加减法口算卡 5 分钟',      icon:'\uD83D\uDD22', category:'after',   stars:2, nutri:'wisdom', timer:300 },
+            { id:'a_abc',     name:'ABC Reading 2 个',            icon:'\uD83D\uDD24', category:'weekend', stars:2, nutri:'wisdom', days:[6,0] },
             { id:'a_dog',     name:'百词斩（单词小狗）',            icon:'\uD83D\uDC36', category:'after',   stars:1, nutri:'wisdom' },
             { id:'a_weiyang', name:'未泱英文阅读 2 个',              icon:'\uD83D\uDCDA', category:'after',   stars:2, nutri:'wisdom' },
             // 晚间陪学 19:00-20:30
@@ -3343,7 +3344,13 @@
                         state.tasks = DEFAULT_TASKS;
                         state.shop = DEFAULT_SHOP;
                         state.appVersion = APP_VERSION;
-                        state.todayChecks = {};
+                        // 2026-09-14：不再整份清空 todayChecks —— 改任务不该让布丁当天已打的卡白打。
+                        // 只剔除「已不在任务库里」的残留 id（防幽灵记录），当天打卡与星星全部保留。
+                        if (!state.todayChecks || typeof state.todayChecks !== 'object') state.todayChecks = {};
+                        const aliveIds = new Set(state.tasks.map(function (x) { return x.id; }));
+                        Object.keys(state.todayChecks).forEach(function (id) {
+                            if (!aliveIds.has(id)) delete state.todayChecks[id];
+                        });
                         state.summerStart = '2026-09-01';
                     }
                     if (!state.shop || state.shop.length === 0) {
@@ -3365,7 +3372,7 @@
         }
 
         // 一次性任务参数校准（ensureValidState 里调用，只跑一遍）
-        const TASK_PATCH_VER = 1;
+        const TASK_PATCH_VER = 2;
         function applyTaskPatches() {
             if ((state.taskPatchVer || 0) >= TASK_PATCH_VER) return;
             if (!Array.isArray(state.tasks)) state.tasks = [];
@@ -3375,6 +3382,13 @@
                 if (typeof t.name === 'string' && t.name.indexOf('10 分钟') >= 0) {
                     t.name = t.name.replace('10 分钟', '15 分钟');
                 }
+            }
+            // v2（2026-09-14，天姝）：ABC Reading 从「周一~四 · 晚间陪学」挪到「周六日 · 周末专属」，数量 1 个 → 2 个
+            const abc = state.tasks.find(x => x && x.id === 'a_abc');
+            if (abc) {
+                abc.name = 'ABC Reading 2 个';
+                abc.days = [6, 0];         // 0=周日 6=周六
+                abc.category = 'weekend';  // 显示进「🎊 周末专属」分组
             }
             state.taskPatchVer = TASK_PATCH_VER;
         }
@@ -5879,7 +5893,7 @@
         // ========== 静态数据外置加载（data/*.json 为权威源，内嵌为离线兜底） ==========
         // 只读数据（任务库/勋章/成就/台词/听写词单等）拆成 JSON 文件，像音频一样按 URL 加载；
         // 加载成功覆盖内嵌值并缓存到 localStorage；加载失败/无网络回退缓存；缓存也没有则用内嵌兜底。
-        const STATIC_DATA_VER = '20260911.3';
+        const STATIC_DATA_VER = '20260914.1';
         const STATIC_FILES = {
             tasks:     'data/tasks.json',
             shop:      'data/shop.json',
