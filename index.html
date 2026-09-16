@@ -8,7 +8,7 @@
     <meta http-equiv="Expires" content="0" data-page-node-id="YXlbOTFHU2Nr6SGRQHt7cy">
     <script>
         (function () {
-            var APP_VERSION = '20260914.1';
+            var APP_VERSION = '20260916.1';
             window.APP_VERSION_STR = APP_VERSION;   // 主脚本里做线上版本自检要用
             try {
                 var params = new URLSearchParams(location.search);
@@ -2034,6 +2034,12 @@
                 syncingFromCloud = true;
                 syncFromCloud(data => {
                     syncingFromCloud = false;
+                    // 2026-09-16：云端也还没换天（各端都停着）→ 本机先正常换天，
+                    // 此时云端今天的账本是空的，换天不会覆盖任何有效数据
+                    if (data && data.todayDate !== getTodayStr() && state.todayDate !== getTodayStr()) {
+                        ensureToday();
+                        renderAll();
+                    }
                     if (data && data.todayDate === getTodayStr()) {
                         // 统一走「只增不减」合并：伙伴 / 装扮 / 金币都不会被空值或旧值洗掉
                         const snap = function () {
@@ -3153,6 +3159,7 @@
             document.getElementById('plateNo').onclick  = function () { mask.remove(); finishCheck(task, 1, 'leftover'); };
         }
         function finishCheck(task, stars, flag) {
+            ensureToday();   // 2026-09-16：写入打卡前兜底保证记在今天的账上
             const golden = (flag !== 'leftover') && (Math.random() < 0.15);
             const gain = golden ? stars * 2 : stars;
             state.todayChecks[task.id] = { stars: gain, flag: flag, nutri: task.nutri, at: Date.now(), golden: golden };
@@ -3529,6 +3536,68 @@
             });
             return n;
         }
+        // ===== 2026-09-16 事故修复：手机 App 常驻后台 → 今日打卡被记成「昨天」 =====
+        // 现象（天姝 9/16 反馈）：布丁早上在长期挂在后台的设备上打卡，早上打的卡全部不见了。
+        // 成因：换天（checkNewDay）原先只在「整页加载」时跑一次。手机把网页添加到主屏幕后
+        //   页面常驻后台是常态，第二天早上直接点开就打卡时页面并不会重新加载，
+        //   state.todayDate 还停在前一天 → 打卡被写进「昨天」的 todayChecks；
+        //   随后任意一次重载 / 云端合并就把这批卡当成"昨天的残留"丢掉，
+        //   而跨天归档是 skipIfArchived（已归档就不覆盖）→ 连 history 都不会写 → 静默丢失。
+        // 对策（三道）：
+        //   ① pickMisfiledTodayChecks / applyRescuedChecks：把「打卡时间 at 落在今天、
+        //      却被记在旧日期名下」的记录救回今天的账本，并顶时间戳压过云端。
+        //   ② ensureToday()：打包「先救回、再换天」，所有写入打卡的入口先调一次。
+        //   ③ 回前台 / 云端轮询也补一次换天，页面不重载也能正常跨天。
+        function pickMisfiledTodayChecks() {
+            const out = {};
+            if (state.todayDate === getTodayStr()) return out;   // 日期本来就是对的，没什么可救
+            const dayStart = new Date(getTodayStr() + 'T00:00:00').getTime();
+            const tc = state.todayChecks || {};
+            Object.keys(tc).forEach(function (id) {
+                const v = tc[id];
+                // 只认带 at 的完整记录：at 是打卡那一刻的时间戳，落在今天 = 这张卡其实是今天打的
+                if (v && typeof v === 'object' && typeof v.at === 'number' && v.at >= dayStart) {
+                    out[id] = v;
+                }
+            });
+            return out;
+        }
+
+        function applyRescuedChecks(mis) {
+            const ids = Object.keys(mis || {});
+            if (!ids.length) return 0;
+            const today = getTodayStr();
+            if (state.todayDate !== today) {
+                // 旧的一天照**原样**归档：绝不能把这批卡从旧账里摘走 ——
+                // 摘走会让昨天的记录缺项（还连带让 lock 依赖它的任务失效），
+                // 而且归档记录 updatedAt 更新，反而会把云端正确的昨天历史覆盖成偏低版。
+                // 这里归档时打 stale 标记，交给 mergeCloudIntoState 让位给云端的正常记录。
+                saveTodayToHistory(true, true);
+                state.todayDate = today;
+                state.todayChecks = {};
+            }
+            ids.forEach(function (id) {
+                if (!state.todayChecks[id]) state.todayChecks[id] = mis[id];   // 云端已有的不覆盖
+            });
+            state.checksUpdatedAt = Date.now();   // 顶时间戳：合并时本机赢，并把救援结果回传云端
+            state.streak = calcStreak();
+            return ids.length;
+        }
+
+        // 即时路径用：摘 + 挂，一步到位
+        function rescueMisfiledTodayChecks() {
+            return applyRescuedChecks(pickMisfiledTodayChecks());
+        }
+
+        // 保证账本落在「今天」：先救回误记日期的今日打卡，仍停在过去才走正常跨天归档。
+        // 返回是否发生了跨天（调用方据此决定要不要重绘）。
+        function ensureToday() {
+            if (state.todayDate === getTodayStr()) return false;
+            rescueMisfiledTodayChecks();
+            if (state.todayDate !== getTodayStr()) checkNewDay();
+            return true;
+        }
+
         function checkNewDay() {
             const today = getTodayStr();
             if (state.todayDate !== today) {
@@ -3557,7 +3626,10 @@
         //   还在反复覆盖的现象（2026-09-11 教训）。
         // 实时打卡（skipIfArchived=false）：永远以当前 state.todayChecks 为准重写，
         //   并刷新 updatedAt。
-        function saveTodayToHistory(skipIfArchived) {
+        // staleNow：本次归档是「设备停在过去、事后补归档」的产物 —— 那批卡可能已被
+        //   今天的打卡覆盖过，归档结果可能缺项/串星，所以打上 stale 标记，
+        //   合并时让位给云端的正常记录（2026-09-16）。
+        function saveTodayToHistory(skipIfArchived, staleNow) {
             const activeTasks = getActiveTasks();
             // 20260911.5：completed 与 stars 用同一口径 —— 只统计"今天激活且真打了"的任务，
             // 星星按 todayChecks 里实际到账的 gain 求和（含金色翻倍）。
@@ -3600,6 +3672,7 @@
                 freeMin: dayTimes.freeMin,
                 updatedAt: Date.now(),    // 任何写入都盖时间戳（合并用它判新旧）
             };
+            if (staleNow) record.stale = true;   // 补归档标记（见函数头注释）
             if (existIdx >= 0) {
                 state.history[existIdx] = record;
             } else {
@@ -4536,6 +4609,7 @@
         }
         // 撤销听写打卡：把任务放回待办，并收回星星、营养与宠物经验
         function undoDictation() {
+            ensureToday();   // 2026-09-16：撤销也要落在今天，避免撤到昨天的账上
             var rec = state.todayChecks['a_dictation'];
             if (!rec) { showToast('今天还没打卡呢'); return; }
             var got = (typeof rec === 'object' && rec.stars !== undefined) ? rec.stars : 2;
@@ -5318,6 +5392,7 @@
 
         // ========== 打卡操作 ==========
         function toggleTask(taskId) {
+            ensureToday();   // 2026-09-16：页面常驻后台不重载，也要保证写进「今天」的账
             const task = state.tasks.find(t => t.id === taskId);
             if (!task) return;
             if (task.modal === 'dictation') { openDictation(); return; }
@@ -5702,6 +5777,20 @@
             const cTs = (typeof cloudTs === 'number' && cloudTs) || 0;
             const l = Object.assign({}, localChecks || {});
             const c = Object.assign({}, cloudChecks || {});
+            // 2026-09-16：云端「空对象」极可能是另一台设备误解跨天误清（它并不知道今天已打过卡），
+            // 不能无条件当成「今天确实没打卡」的证据 —— 否则一端的误清会单向抹掉另一端的有效记录。
+            // 撤销打卡走的是逐项 delete，不会制造「空 vs 非空」的整体冲突，所以这里保留本机是安全的。
+            // ⚠️ 只认「带 at 的完整记录」：旧版客户端留下的布尔 true 是幽灵，必须继续被空值清掉，
+            //    否则自愈防线会被这条保护挡住（2026-09-16 加保护时踩到，已收窄）。
+            const lReal = Object.keys(l).filter(function (k) {
+                const v = l[k];
+                return v && typeof v === 'object' && typeof v.at === 'number';
+            });
+            if (Object.keys(c).length === 0 && lReal.length > 0) {
+                const keep = {};
+                lReal.forEach(function (k) { keep[k] = l[k]; });
+                return keep;   // 保住今天的真实打卡，同时把布尔幽灵剔除
+            }
             if (lTs && cTs) {
                 return cTs > lTs ? c : l;            // 后写者赢
             }
@@ -5769,6 +5858,10 @@
                     if (!h || !h.date) continue;
                     const ex = byDate.get(h.date);
                     if (!ex) { byDate.set(h.date, h); continue; }
+                    // 2026-09-16：本机这条是「设备停在过去、事后补归档」的产物（stale）→
+                    // 可能缺项/串星，云端同日已有正常记录时让云端赢，
+                    // 免得把偏低的昨天数字推上云端（云端没这天时仍会补上）
+                    if (ex.stale && !h.stale) { byDate.set(h.date, h); continue; }
                     const cT = ts(h), lT = ts(ex);
                     if (cT && cT > lT) byDate.set(h.date, h);            // 云端是新版
                     else if (cT && !lT) byDate.set(h.date, h);          // 云端带时间戳、本机 legacy -> 升级
@@ -5967,6 +6060,9 @@
         function init() {
             loadState();
             ensureValidState();
+            // 2026-09-16：先把「今天打的、却记在旧日期名下」的卡救回今天，再参与云端合并
+            // （否则 mergeCloudIntoState 会把本机那份判为"停在昨天的不可信数据"直接丢掉）
+            rescueMisfiledTodayChecks();
             renderAll(); // 先渲染本地已有数据，避免白屏等待
 
             // 关键修复：先拉云端并合并完整数据，再处理「新的一天」归档，最后统一上传
@@ -5981,7 +6077,12 @@
                 listenCloudChanges(); // 启动多端轮询同步
                 checkLiveVersion();   // 上线新版本后，旧页面能自己追上来
                 document.addEventListener('visibilitychange', function () {
-                    if (!document.hidden) checkLiveVersion();
+                    if (document.hidden) return;
+                    checkLiveVersion();
+                    // 2026-09-16：手机 App 常驻后台，回前台时要补一次换天，
+                    // 否则第二天早上直接点开打卡会把记录写进昨天（布丁丢卡事故）
+                    try { if (ensureToday()) renderAll(); }
+                    catch (e) { console.warn('回前台换天失败', e); }
                 });
                 // 首次使用：让布丁自己选一个学习伙伴（已有宠物则不再弹）
                 if (!state.pet) setTimeout(showPetPicker, 500);
