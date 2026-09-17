@@ -8,7 +8,7 @@
     <meta http-equiv="Expires" content="0" data-page-node-id="YXlbOTFHU2Nr6SGRQHt7cy">
     <script>
         (function () {
-            var APP_VERSION = '20260916.1';
+            var APP_VERSION = '20260916.2';
             window.APP_VERSION_STR = APP_VERSION;   // 主脚本里做线上版本自检要用
             try {
                 var params = new URLSearchParams(location.search);
@@ -2153,11 +2153,11 @@
             { id:'m_break',   name:'早餐 15 分钟内吃完',           icon:'\u23F1\uFE0F', category:'morning', stars:3, nutri:'calcium', timer:900 },
             { id:'m_milk',    name:'牛奶喝完 1 盒',                icon:'\uD83E\uDD5B', category:'morning', stars:2, nutri:'calcium', plate:true },
             { id:'m_egg',     name:'炒蛋吃完 1 个',                icon:'\uD83C\uDF73', category:'morning', stars:1, nutri:'calcium', plate:true },
-            { id:'m_read_cn', name:'晨读 10 分钟 · 语文《金波四季美文》', icon:'\uD83D\uDCD6', category:'morning', stars:2, nutri:'wisdom', days:[1,3,5],   lock:'m_break' },
-            { id:'m_read_en', name:'晨读 10 分钟 · 英语《星火100篇》',   icon:'\uD83D\uDD24', category:'morning', stars:2, nutri:'wisdom', days:[2,4,6], lock:'m_break' },
+            { id:'m_read_cn', name:'语文朗读 10 分钟 ·《金波四季美文》', icon:'\uD83D\uDCD6', category:'after',   stars:2, nutri:'wisdom', days:[1,3,5] },
+            { id:'m_read_en', name:'英语朗读 10 分钟 ·《星火100篇》',   icon:'\uD83D\uDD24', category:'after',   stars:2, nutri:'wisdom', days:[2,4,6] },
             // 放学后
             { id:'a_sport',   name:'户外运动 30 分钟',             icon:'\uD83D\uDEB4', category:'after',   stars:2, nutri:'energy', days:[1,2] },
-            { id:'a_calc',    name:'数学计算题 1 页',              icon:'\uD83E\uDDEE', category:'after',   stars:2, nutri:'wisdom', days:[1,2,3,4] },
+            { id:'a_calc',    name:'数学计算题 1 页',              icon:'\uD83E\uDDEE', category:'morning', stars:2, nutri:'wisdom', days:[1,2,3,4] },
             { id:'a_oral',    name:'20 以内加减法口算卡 5 分钟',      icon:'\uD83D\uDD22', category:'after',   stars:2, nutri:'wisdom', timer:300 },
             { id:'a_abc',     name:'ABC Reading 2 个',            icon:'\uD83D\uDD24', category:'weekend', stars:2, nutri:'wisdom', days:[6,0] },
             { id:'a_dog',     name:'百词斩（单词小狗）',            icon:'\uD83D\uDC36', category:'after',   stars:1, nutri:'wisdom' },
@@ -3379,7 +3379,7 @@
         }
 
         // 一次性任务参数校准（ensureValidState 里调用，只跑一遍）
-        const TASK_PATCH_VER = 2;
+        const TASK_PATCH_VER = 3;
         function applyTaskPatches() {
             if ((state.taskPatchVer || 0) >= TASK_PATCH_VER) return;
             if (!Array.isArray(state.tasks)) state.tasks = [];
@@ -3397,6 +3397,20 @@
                 abc.days = [6, 0];         // 0=周日 6=周六
                 abc.category = 'weekend';  // 显示进「🎊 周末专属」分组
             }
+            // v3（2026-09-16，天姝）：晨读两条从「早晨」挪到「放学后」、改名「朗读」、取消早餐前置；
+            //                       数学计算题 1 页从「放学后」挪到「早晨」
+            [
+                ['m_read_cn', '语文朗读 10 分钟 ·《金波四季美文》'],
+                ['m_read_en', '英语朗读 10 分钟 ·《星火100篇》']
+            ].forEach(function (pair) {
+                const r = state.tasks.find(function (x) { return x && x.id === pair[0]; });
+                if (!r) return;
+                r.name = pair[1];
+                r.category = 'after';   // 显示进「放学后」分组
+                delete r.lock;          // 不再要求「先吃完早餐」——早餐是早晨的事，挂着它跨半天会整天挡住任务
+            });
+            const calcV3 = state.tasks.find(function (x) { return x && x.id === 'a_calc'; });
+            if (calcV3) calcV3.category = 'morning';   // 显示进「早晨」分组
             state.taskPatchVer = TASK_PATCH_VER;
         }
 
@@ -5986,7 +6000,7 @@
         // ========== 静态数据外置加载（data/*.json 为权威源，内嵌为离线兜底） ==========
         // 只读数据（任务库/勋章/成就/台词/听写词单等）拆成 JSON 文件，像音频一样按 URL 加载；
         // 加载成功覆盖内嵌值并缓存到 localStorage；加载失败/无网络回退缓存；缓存也没有则用内嵌兜底。
-        const STATIC_DATA_VER = '20260914.1';
+        const STATIC_DATA_VER = '20260916.2';
         const STATIC_FILES = {
             tasks:     'data/tasks.json',
             shop:      'data/shop.json',
