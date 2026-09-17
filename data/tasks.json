@@ -40,9 +40,9 @@
   },
   {
     "id": "m_read_cn",
-    "name": "晨读 10 分钟 · 语文《金波四季美文》",
+    "name": "语文朗读 10 分钟 ·《金波四季美文》",
     "icon": "📖",
-    "category": "morning",
+    "category": "after",
     "stars": 2,
     "nutri": "wisdom",
     "days": [
@@ -50,14 +50,13 @@
       3,
       5
     ],
-    "lock": "m_break",
     "weekendOnly": false
   },
   {
     "id": "m_read_en",
-    "name": "晨读 10 分钟 · 英语《星火100篇》",
+    "name": "英语朗读 10 分钟 ·《星火100篇》",
     "icon": "🔤",
-    "category": "morning",
+    "category": "after",
     "stars": 2,
     "nutri": "wisdom",
     "days": [
@@ -65,7 +64,6 @@
       4,
       6
     ],
-    "lock": "m_break",
     "weekendOnly": false
   },
   {
@@ -85,7 +83,7 @@
     "id": "a_calc",
     "name": "数学计算题 1 页",
     "icon": "🧮",
-    "category": "after",
+    "category": "morning",
     "stars": 2,
     "nutri": "wisdom",
     "days": [
