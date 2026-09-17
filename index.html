@@ -8,7 +8,7 @@
     <meta http-equiv="Expires" content="0" data-page-node-id="YXlbOTFHU2Nr6SGRQHt7cy">
     <script>
         (function () {
-            var APP_VERSION = '20260916.2';
+            var APP_VERSION = '20260917.1';
             window.APP_VERSION_STR = APP_VERSION;   // 主脚本里做线上版本自检要用
             try {
                 var params = new URLSearchParams(location.search);
@@ -2158,7 +2158,6 @@
             // 放学后
             { id:'a_sport',   name:'户外运动 30 分钟',             icon:'\uD83D\uDEB4', category:'after',   stars:2, nutri:'energy', days:[1,2] },
             { id:'a_calc',    name:'数学计算题 1 页',              icon:'\uD83E\uDDEE', category:'morning', stars:2, nutri:'wisdom', days:[1,2,3,4] },
-            { id:'a_oral',    name:'20 以内加减法口算卡 5 分钟',      icon:'\uD83D\uDD22', category:'after',   stars:2, nutri:'wisdom', timer:300 },
             { id:'a_abc',     name:'ABC Reading 2 个',            icon:'\uD83D\uDD24', category:'weekend', stars:2, nutri:'wisdom', days:[6,0] },
             { id:'a_dog',     name:'百词斩（单词小狗）',            icon:'\uD83D\uDC36', category:'after',   stars:1, nutri:'wisdom' },
             { id:'a_weiyang', name:'未泱英文阅读 2 个',              icon:'\uD83D\uDCDA', category:'after',   stars:2, nutri:'wisdom' },
@@ -3379,7 +3378,7 @@
         }
 
         // 一次性任务参数校准（ensureValidState 里调用，只跑一遍）
-        const TASK_PATCH_VER = 3;
+        const TASK_PATCH_VER = 4;
         function applyTaskPatches() {
             if ((state.taskPatchVer || 0) >= TASK_PATCH_VER) return;
             if (!Array.isArray(state.tasks)) state.tasks = [];
@@ -3411,6 +3410,13 @@
             });
             const calcV3 = state.tasks.find(function (x) { return x && x.id === 'a_calc'; });
             if (calcV3) calcV3.category = 'morning';   // 显示进「早晨」分组
+            // v4（2026-09-17，天姝）：数学一天出现三次（早晨·计算题 1 页 / 放学后·口算卡 / 晚间·53 天天练）
+            //                       太重 → 删掉「20 以内加减法口算卡 5 分钟」（a_oral）
+            // ⚠️ mergeDefaultTasks() 只补不删，所以「删任务」必须在这里显式剔除，光改 data/*.json 到不了已装设备。
+            // ⚠️ 只动 state.tasks，不碰 todayChecks（残留 id 不进统计：只认 getActiveTasks()；
+            //    动它反而会顶 checksUpdatedAt，可能反过来压掉别的设备的有效记录）。
+            //    历史里她真做过的那条也不动。
+            state.tasks = state.tasks.filter(function (x) { return !x || x.id !== 'a_oral'; });
             state.taskPatchVer = TASK_PATCH_VER;
         }
 
@@ -6000,7 +6006,7 @@
         // ========== 静态数据外置加载（data/*.json 为权威源，内嵌为离线兜底） ==========
         // 只读数据（任务库/勋章/成就/台词/听写词单等）拆成 JSON 文件，像音频一样按 URL 加载；
         // 加载成功覆盖内嵌值并缓存到 localStorage；加载失败/无网络回退缓存；缓存也没有则用内嵌兜底。
-        const STATIC_DATA_VER = '20260916.2';
+        const STATIC_DATA_VER = '20260917.1';
         const STATIC_FILES = {
             tasks:     'data/tasks.json',
             shop:      'data/shop.json',
