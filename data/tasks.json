@@ -95,16 +95,6 @@
     "weekendOnly": false
   },
   {
-    "id": "a_oral",
-    "name": "20 以内加减法口算卡 5 分钟",
-    "icon": "🔢",
-    "category": "after",
-    "stars": 2,
-    "nutri": "wisdom",
-    "timer": 300,
-    "weekendOnly": false
-  },
-  {
     "id": "a_abc",
     "name": "ABC Reading 2 个",
     "icon": "🔤",
