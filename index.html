@@ -8,7 +8,7 @@
     <meta http-equiv="Expires" content="0" data-page-node-id="YXlbOTFHU2Nr6SGRQHt7cy">
     <script>
         (function () {
-            var APP_VERSION = '20260922.2';
+            var APP_VERSION = '20260922.3';
             window.APP_VERSION_STR = APP_VERSION;   // 主脚本里做线上版本自检要用
             try {
                 var params = new URLSearchParams(location.search);
@@ -323,8 +323,16 @@
         }
         .pp-badge .bi { font-size: 20px; display: block; line-height: 1.15; }
         .pp-badge .bn { font-size: 9px; color: #4A5F57; margin-top: 2px; line-height: 1.25; }
-        .pp-badge.lock { opacity: .42; filter: grayscale(1); background: #F4F7F5; }
-        .pp-badge.lock .bn { color: #9AB0A7; }
+        /* ⚠️ 实拍第一版：.lock 的 opacity:.42 会把**整格连同进度文字一起淡化** →
+           "还差几天"淡到几乎看不见，等于白写。改成只淡化锁图标和名字：
+           "未解锁"的感觉交给 🔒 与灰底承担，**进度必须读得清** —— 那才是这一版要加的东西。 */
+        .pp-badge.lock { filter: grayscale(1); background: #F4F7F5; }
+        .pp-badge.lock .bi { opacity: .38; }
+        .pp-badge.lock .bn { color: #9AB0A7; opacity: .8; }
+        /* 未解锁时的"还差多少"：比名字更深，因为这句才是孩子真正要读的 */
+        .pp-badge .bp { display: block; font-size: 8.5px; color: #7E948B; margin-top: 1px; letter-spacing: -0.2px; }
+        .pp-badge.lock .bp { color: #66807A; }
+        .pp-badge { cursor: pointer; }
         /* 图鉴 */
         .pp-books { display: grid; grid-template-columns: repeat(9, 1fr); gap: 5px; }
         .pp-book { text-align: center; font-size: 21px; line-height: 1; padding: 5px 0; border-radius: 10px; background: #F2FBF7; border: 1.5px solid #D6F2E6; }
@@ -407,6 +415,17 @@
         }
         .pet-cape::before { left: 0;  transform: rotate(-14deg); transform-origin: top right; }
         .pet-cape::after  { right: 0; transform: rotate(14deg);  transform-origin: top left; }
+        /* 勋章（2026-09-22 P1）：荣誉别在胸口 —— 与我买来的装扮同处一身，
+           但语义不同：装扮是"妈妈买的"，勋章是"我自己坚持出来的"。
+           ⚠️ 实拍第一版是 left:26% / bottom:0 / .40em —— 那枚勋章**正压在兔子的脸颊上**，
+              看着像张贴纸而不是"别上去的东西"。改小（.32em）+ 挪到左下边缘：
+              既避开四件装扮（头顶 66% / 脖子与身上都在中线 / 背后 50%），也不挡脸。
+              位置只能靠实拍定，emoji 的实际绘制范围比盒模型大得多（约 1.43 倍）。 */
+        .pet-wear.pm-medal {
+            z-index: 7; left: 18%; bottom: 2%; font-size: .32em;
+            transform: translateX(-50%);
+            filter: drop-shadow(0 0 5px rgba(245,166,35,.85)) drop-shadow(0 2px 3px rgba(0,0,0,.28));
+        }
 
         /* ===== 小家场景层（2026-09-22 P0）=====
            ⚠️ 场景只罩住宠物（一块「舞台」），**不铺满整张卡片**。
@@ -621,8 +640,10 @@
             font-size:15px;font-weight:700;color:#2E9E6B; }
         .medal-count { font-size:12px;background:#E8F5EF;color:#2E9E6B;padding:3px 10px;
             border-radius:10px;font-weight:600; }
-        .medal-grid { display:flex;flex-wrap:wrap;gap:8px;margin-top:12px; }
-        .medal-cell { width:74px;text-align:center;opacity:0.4;filter:grayscale(1);transition:.3s; }
+        /* ⚠️ 可用内宽只有 314px，而 74×4+8×3=320 —— 就差 6px，「全勤王」被判到第二行单独站着。
+           收到 72+7 后一行正好放 4 枚（309px）；justify-content:center 让末行居中，不留孤格。 */
+        .medal-grid { display:flex;flex-wrap:wrap;gap:7px;margin-top:12px;justify-content:center; }
+        .medal-cell { flex:0 0 72px;text-align:center;opacity:0.4;filter:grayscale(1);transition:.3s; }
         .medal-cell.got { opacity:1;filter:none; }
         .medal-emoji { font-size:30px;line-height:1.25; }
         .medal-name { font-size:11px;color:#4A5568;font-weight:600;margin-top:2px; }
@@ -2610,6 +2631,19 @@
             const hit = wid ? owned.find(function (x) { return x.id === wid; }) : null;
             return hit || owned[owned.length - 1];
         }
+        // 正在戴的勋章：**不像装扮那样兜底成"最新那件"** ——
+        // 勋章是荣誉，戴不戴、戴哪枚，得是她自己的动作；没挑过就没戴。
+        function currentMedalItem() {
+            const wid = (state.wearing && state.wearing.medal) || '';
+            if (!wid || (state.medals || []).indexOf(wid) < 0) return null;
+            return MEDALS.find(function (x) { return x.id === wid; }) || null;
+        }
+        // 已得到的全部勋章（收藏格用，按得到的先后）
+        function medalList() {
+            return (state.medals || []).map(function (id) {
+                return MEDALS.find(function (m) { return m.id === id; });
+            }).filter(Boolean);
+        }
         // ===== 食物记录（2026-09-22 P0）：让"喂过"这件事留得下来 =====
         // 食物和装扮不一样 —— 装扮买完能一直戴着，食物吃完就没了，所以它必须靠"痕迹"存在。
         // 今日那份自带日期，读取时校验 → 跨天不需要任何清理动作，也永远不会串天。
@@ -2649,9 +2683,26 @@
 
         // 点收藏格换装。7 岁孩子最着迷的动作就是"挑"和"换" —— 买完自动全戴上反而没了这个动作。
         function wearItem(kind, id) {
+            state.wearing = state.wearing || { decor: '', scene: '', medal: '', at: 0 };
+            // 勋章不是商店商品（它是坚持出来的），所以校验走 state.medals；
+            // 点已戴的那枚 = 摘下 —— 孩子最爱的动作除了"挑"就是"换"。
+            if (kind === 'medal') {
+                if ((state.medals || []).indexOf(id) < 0) return;
+                state.wearing.medal = (state.wearing.medal === id) ? '' : id;
+                state.wearing.at = Date.now();
+                saveState();
+                renderPet();
+                const m = MEDALS.find(function (x) { return x.id === id; });
+                if (m) {
+                    petShowBubble(state.wearing.medal
+                        ? ('我把「' + m.name + '」别在胸口啦！' + m.icon + ' 是不是很精神？')
+                        : ('「' + m.name + '」先收进盒子里啦，想戴再点我～'), 4200);
+                }
+                playSound('check');
+                return;
+            }
             const owned = petOwnedItems(kind);
             if (!owned.some(function (x) { return x.id === id; })) return;
-            state.wearing = state.wearing || { decor: '', scene: '', at: 0 };
             if (kind === 'scene') state.wearing.scene = id; else state.wearing.decor = id;
             state.wearing.at = Date.now();
             saveState();
@@ -2905,7 +2956,7 @@
                         { id:'legend',  icon:'👑', name:'星光勇士', desc:'伙伴成为星光勇士', got:function () { return (state.maxExp || 0) >= 2400; } },
             { id:'star1',   icon:'\u2B50',       name:'第一颗星', desc:'点亮第一颗星',    got:function () { return (state.maxExp || 0) >= 2700; } },
                         { id:'star5',   icon:'💫', name:'满冠星光', desc:'皇冠点亮全部 5 颗星', got:function () { return (state.maxExp || 0) >= 3900; } },
-            { id:'streak7', icon:'\uD83D\uDD25', name:'七日坚持', desc:'连续 7 天打卡',   got:function () { return contStreak(function (ids) { return Object.keys(ids).length > 0; }) >= 7; } },
+            { id:'streak7', icon:'\uD83D\uDD25', name:'二十天纪念', desc:'一共打卡 20 天，不用连着', got:function () { return medalActiveDays() >= 20; } },
             { id:'streak30',icon:'\uD83D\uDC8E', name:'三十日之约', desc:'连续 30 天打卡', got:function () { return contStreak(function (ids) { return Object.keys(ids).length > 0; }) >= 30; } },
             { id:'full10',  icon:'\u2705',       name:'满分十日', desc:'10 天全部完成',     got:function () { return (state.history || []).filter(function (h) { return h.allDone; }).length >= 10; } },
             { id:'decor3',  icon:'\uD83C\uDF80', name:'打扮达人', desc:'拥有 3 件装扮',  got:function () { return petOwnedItems('decor').length >= 3; } },
@@ -2915,6 +2966,72 @@
             { id:'poem20',  icon:'\uD83C\uDF8B', name:'古诗二十首', desc:'完成 20 天今日一句', got:function () { return Object.keys(state.poemLog || {}).filter(function (k) { return state.poemLog[k]; }).length >= 20; } },
             { id:'fourfull', icon:'\uD83C\uDF1F', name:'四维全满', desc:'一天里四个方向全都照顾到', got:function () { return !!state.fourFullDate; } }
         ];
+        // ===== 成就进度（2026-09-22 P1）=====
+        // 原来 15 枚里有 8 枚是锁，条件只写在 title 属性上、还配了句"长按看条件"，
+        // 但代码里**从来没有长按事件** —— 手机长按只会弹系统菜单，孩子永远看不到条件。
+        // 现在未解锁的格子直接写出"还差多少"，点一下还能看完整条件。
+        function achvLeft(n, unit) {
+            n = Math.max(0, Math.floor(n) || 0);
+            return n > 0 ? ('\u8fd8\u5dee ' + n + ' ' + unit) : '\u5c31\u5feb\u5566';
+        }
+        // 长伙伴的成就按"再一起打卡几天"折算 —— 不出现 exp 这类孩子读不懂的数
+        function achvExpNeed(target) {
+            const gap = Math.max(0, target - (state.maxExp || 0));
+            if (gap <= 0) return '\u5c31\u5feb\u5566';
+            return achvLeft(Math.max(1, Math.ceil(gap / petAvgExpPerDay())), '\u5929');
+        }
+        const ACHV_PROG = {
+            hatch:    function () { return achvExpNeed(100); },
+            teen:     function () { return achvExpNeed(400); },
+            adult:    function () { return achvExpNeed(1200); },
+            legend:   function () { return achvExpNeed(2400); },
+            star1:    function () { return achvExpNeed(2700); },
+            star5:    function () { return achvExpNeed(3900); },
+            streak7:  function () { return achvLeft(20 - medalActiveDays(), '\u5929'); },
+            streak30: function () {
+                return achvLeft(30 - contStreak(function (ids) { return Object.keys(ids).length > 0; }), '\u5929');
+            },
+            full10:   function () {
+                const n = (state.history || []).filter(function (h) { return h.allDone; }).length;
+                return achvLeft(10 - n, '\u5929');
+            },
+            decor3:   function () { return achvLeft(3 - petOwnedItems('decor').length, '\u4ef6'); },
+            book3:    function () { return achvLeft(3 - (state.petBook || []).length, '\u79cd'); },
+            medal3:   function () { return achvLeft(3 - (state.medals || []).length, '\u679a'); },
+            rich500:  function () { return achvLeft(500 - (state.coinsEver || 0), '\u91d1\u5e01'); },
+            poem20:   function () {
+                const n = Object.keys(state.poemLog || {}).filter(function (k) { return state.poemLog[k]; }).length;
+                return achvLeft(20 - n, '\u5929');
+            },
+            fourfull: function () { return '\u4eca\u5929\u5c31\u80fd\u505a\u5230'; }
+        };
+        PET_ACHV.forEach(function (a) {
+            a.prog = ACHV_PROG[a.id] || function () { return ''; };
+        });
+        // 一共打卡过多少天（只增不减，断了也不倒退）。
+        // 与主页「全勤王」（连着 7 天）区分：那枚奖励"连着不断"，这枚奖励"次数够多"。
+        function medalActiveDays() {
+            let n = 0;
+            const seen = {};
+            (state.history || []).forEach(function (h) {
+                if (!h || !h.date) return;
+                seen[h.date] = true;
+                if (Object.keys(dayFlags(h.date) || {}).length > 0) n++;
+            });
+            if (state.todayDate && !seen[state.todayDate]
+                && Object.keys(dayFlags(state.todayDate) || {}).length > 0) n++;
+            return n;
+        }
+        // 点一下徽章，把条件说清楚（原来的"长按看条件"是句空话，孩子点了没反应）
+        function ppBadgeTap(id) {
+            const a = PET_ACHV.find(function (x) { return x.id === id; });
+            if (!a) return;
+            const on = (state.achv || []).indexOf(id) >= 0;
+            const left = (on || typeof a.prog !== 'function') ? '' : (' \u00b7 ' + a.prog());
+            showToast((on ? '\u2705 \u5df2\u89e3\u9501\uff1a' : '\uD83D\uDD12 \u8fd8\u6ca1\u89e3\u9501\uff1a') +
+                a.icon + ' ' + a.name + '\u3002' + a.desc + left);
+            playSound('check');
+        }
         function checkPetAchv(silent) {
             if (!state.achv) state.achv = [];
             const newly = PET_ACHV.filter(function (a) {
@@ -3156,9 +3273,13 @@
             const achvOwned = state.achv || [];
             let badges = PET_ACHV.map(function (a) {
                 const on = achvOwned.indexOf(a.id) >= 0;
-                return '<div class="pp-badge' + (on ? '' : ' lock') + '" title="' + (on ? '已解锁：' : '未解锁：') + a.desc + '">' +
+                const left = (on || typeof a.prog !== 'function') ? '' : a.prog();
+                return '<div class="pp-badge' + (on ? '' : ' lock') + '" title="' + (on ? '已解锁：' : '未解锁：') + a.desc + '"' +
+                        ' onclick="ppBadgeTap(\'' + a.id + '\')">' +
                         '<span class="bi">' + (on ? a.icon : '\uD83D\uDD12') + '</span>' +
-                        '<span class="bn">' + a.name + '</span></div>';
+                        '<span class="bn">' + a.name + '</span>' +
+                        (left ? '<span class="bp">' + left + '</span>' : '') +
+                    '</div>';
             }).join('');
             // ⑥ 图鉴（收养过的伙伴永久点亮）
             const book = state.petBook || [];
@@ -3211,7 +3332,7 @@
 
                     '<div class="pp-sec">🍚 四维营养 <small>靠每天打卡吃进去，四项都"不错"以上会亮 ✨</small></div>' + nu +
 
-                    '<div class="pp-sec">🏅 成就墙 <small>' + achvOwned.length + ' / ' + PET_ACHV.length + '（长按看条件）</small></div>' +
+                    '<div class="pp-sec">🏅 成就墙 <small>' + achvOwned.length + ' / ' + PET_ACHV.length + '（点一下看条件）</small></div>' +
                     '<div class="pp-badges">' + badges + '</div>' +
 
                     '<div class="pp-sec">🏡 我的伙伴图鉴 <small>' + book.length + ' / ' + PET_KINDS.length + ' 种</small></div>' +
@@ -3287,6 +3408,8 @@
             const fedList = foodLogList();
             const scene = currentSceneItem();      // 正在住的小家（她挑的那个）
             const decor = currentDecorItem();      // 正在戴的装扮（她挑的那个）
+            const medal = currentMedalItem();      // 正在戴的勋章（她挑的那枚）
+            const medalAll = medalList();
             const sceneHTML = scene ? sceneLayerHTML(scene.id) : '';
             const bg = scene ? (SCENE_BG[scene.id] || '') : '';   // 卡片整体氛围色（很淡，不影响读字）
             const dSlot = decor ? (DECOR_SLOT[decor.id] || 'pw-head') : '';
@@ -3297,13 +3420,17 @@
                     : '<span class="pet-wear pw-back">' + decor.icon + '</span>')
                 : '';
             const wearFront = (decor && dSlot !== 'pw-back') ? '<span class="pet-wear ' + dSlot + '">' + decor.icon + '</span>' : '';
+            // 勋章别在左胸：与我买来的装扮同处一身，但语义是"我自己坚持出来的"
+            const medalHTML = medal
+                ? '<span class="pet-wear pm-medal" title="' + medal.name + '">' + medal.icon + '</span>'
+                : '';
             const starLine = isLegend
                 ? '<span class="pet-starline">' + [0, 1, 2, 3, 4].map(function (i) {
                       return '<i class="' + (i < stars ? 'on' : '') + '">\u2B50</i>';
                   }).join('') + '</span>'
                 : '';
             // 收藏格：已拥有的东西做成可点方块（点一下换上），只在她真的拥有时才出现
-            const collectHTML = (decorList.length || sceneList.length || fedList.length)
+            const collectHTML = (decorList.length || sceneList.length || medalAll.length || fedList.length)
                 ? '<div class="pet-collect">' +
                     (decorList.length ? '<div class="pet-collect-row"><span class="pet-collect-label">🎀 装扮</span>' +
                         decorList.map(function (d) {
@@ -3315,12 +3442,17 @@
                             return '<button class="pet-slot' + (scene && s.id === scene.id ? ' on' : '') +
                                 '" onclick="wearItem(\'scene\',\'' + s.id + '\')" title="住进' + s.name + '">' + s.icon + '</button>';
                         }).join('') + '</div>' : '') +
+                    (medalAll.length ? '<div class="pet-collect-row"><span class="pet-collect-label">🏅 勋章</span>' +
+                        medalAll.map(function (m) {
+                            return '<button class="pet-slot' + (medal && m.id === medal.id ? ' on' : '') +
+                                '" onclick="wearItem(\'medal\',\'' + m.id + '\')" title="别上' + m.name + '">' + m.icon + '</button>';
+                        }).join('') + '</div>' : '') +
                     (fedList.length ? '<div class="pet-collect-row"><span class="pet-collect-label">🍽 吃过</span>' +
                         fedList.map(function (f) {
                             return '<span class="pet-slot fed-slot" title="吃过 ' + f.count + ' 次">' +
                                 f.icon + '<i class="fed-n">' + f.count + '</i></span>';
                         }).join('') + '</div>' : '') +
-                    ((decorList.length + sceneList.length) > 1 ? '<div class="pet-collect-hint">点一下就能换上 ✨</div>' : '') +
+                    ((decorList.length + sceneList.length + medalAll.length) > 1 ? '<div class="pet-collect-hint">点一下就能换上 ✨</div>' : '') +
                   '</div>'
                 : '';
             // 今天喂过什么 —— 食物吃完就没了，这行字是它唯一留得下来的东西
@@ -3351,7 +3483,7 @@
                             '<div class="pet-avatar-holder">' +
                                 crown + auraHTML +
                                 '<div class="pet-avatar ' + moodCls + '" id="petAvatar" style="font-size:' + PET_STAGE_SIZE[stage] + ';cursor:pointer;" onclick="petInteract()" title="摸摸它">' +
-                                    wearBack + '<span class="pa-emoji">' + avatar + '</span>' + wearFront +
+                                    wearBack + '<span class="pa-emoji">' + avatar + '</span>' + wearFront + medalHTML +
                                 '</div>' +
                                 '<div class="pet-ground"></div>' +
                             '</div>' +
@@ -3620,8 +3752,9 @@
             shop: DEFAULT_SHOP,
             owned: [],
             // 当前穿戴：decor/scene 存 shop 里的 id（空 = 还没挑，按"最新买的那件"兜底）
+            // medal 存勋章 id（2026-09-22 P1：荣誉别在伙伴身上，戴上/摘下都是她的动作）
             // at = 最后一次选择的时间戳，多端合并靠它判先后（本机没时间戳的旧值一定输）
-            wearing: { decor: '', scene: '', at: 0 },
+            wearing: { decor: '', scene: '', medal: '', at: 0 },
             foodToday: { date: '', items: {} },
             foodLog: {},
             timers: {},
@@ -3860,10 +3993,13 @@
             if (state.poemLibVer !== POEM_LIB_VERSION) { state.poemLog = {}; state.poemLibVer = POEM_LIB_VERSION; }
             // ===== 当前穿戴（2026-09-22 P0）：老设备没有这个字段 → 补默认；坏值也在这里纠正 =====
             if (!state.wearing || typeof state.wearing !== 'object') {
-                state.wearing = { decor: '', scene: '', at: 0 };
+                state.wearing = { decor: '', scene: '', medal: '', at: 0 };
             }
             if (typeof state.wearing.decor !== 'string') state.wearing.decor = '';
             if (typeof state.wearing.scene !== 'string') state.wearing.scene = '';
+            // 勋章槽：老设备没这个字段 → 补空串（**不自动戴**，戴哪枚由她自己挑；
+            // 第一次得到勋章时 checkMedals 会替她别上，那之后就归她管）
+            if (typeof state.wearing.medal !== 'string') state.wearing.medal = '';
             if (typeof state.wearing.at !== 'number') state.wearing.at = 0;
             // ===== 食物记录（2026-09-22 P0）：老设备补默认；坏值在这里纠正 =====
             if (!state.foodToday || typeof state.foodToday !== 'object') {
@@ -4357,20 +4493,25 @@
 
 
         // ========== 勋章系统（连续打卡攒勋章，防腻） ==========
+        // mode: 'streak' = 连着做（断一天从头数）；'total' = 攒够天数（只增不减）
+        // ⚠️ 为什么要有 total：对"想做才做"的事（早餐/运动/早睡），"连续 N 天"几乎不可达 ——
+        //    2026-09-22 读云端实据：这三枚的历史最长连续只有 3 / 1 / 1 天，
+        //    只差一天就归零的规则，对 7 岁孩子打击大于激励（沉没成本被一次抹平）。
+        //    而"每天都要做"的引导已经由宠物愿望/每日金币/全勤王承担，不必让勋章兼职。
         let MEDALS = [
-            { id:'milk3',  name:'牛奶勋章',   icon:'\uD83E\uDD5B', need:3, desc:'连续 3 天把牛奶喝光光',
+            { id:'milk3',  name:'牛奶勋章',   icon:'\uD83E\uDD5B', need:3, mode:'streak', desc:'连着 3 天把牛奶喝光光',
               check:function(ids){ return !!(ids['m_milk'] && ids['m_milk'].flag !== 'leftover'); } },
-            { id:'fast5',  name:'闪电早餐',   icon:'\u26A1',      need:5, desc:'连续 5 天 15 分钟内吃完早餐',
+            { id:'fast5',  name:'闪电早餐',   icon:'\u26A1',      need:5, mode:'total',  desc:'一共做到 5 天，早餐都在 15 分钟内吃完',
               check:function(ids){ return !!(ids['m_break'] && ids['m_break'].flag === 'ok'); } },
-            { id:'read5',  name:'小书虫',     icon:'\uD83D\uDC1B', need:5, desc:'连续 5 天读书',
+            { id:'read5',  name:'小书虫',     icon:'\uD83D\uDC1B', need:5, mode:'streak', desc:'连着 5 天读书',
               check:function(ids){ return !!(ids['e_read'] || ids['m_read_cn'] || ids['m_read_en']); } },
-            { id:'sport5', name:'运动小将',   icon:'\uD83C\uDFC5', need:5, desc:'连续 5 天户外 / 亲子运动',
+            { id:'sport5', name:'运动小将',   icon:'\uD83C\uDFC5', need:5, mode:'total',  desc:'一共做到 5 天，出去玩或和爸妈一起运动',
               check:function(ids){ return !!(ids['a_sport'] || ids['w_family']); } },
-            { id:'eng5',   name:'英语小达人', icon:'\uD83E\uDD9C', need:5, desc:'连续 5 天学英语',
+            { id:'eng5',   name:'英语小达人', icon:'\uD83E\uDD9C', need:5, mode:'streak', desc:'连着 5 天学英语',
               check:function(ids){ return !!(ids['a_abc'] || ids['a_weiyang'] || ids['e_engread'] || ids['m_listen']); } },
-            { id:'sleep5', name:'早睡星人',   icon:'\uD83C\uDF19', need:5, desc:'连续 5 天 21 点前上床',
+            { id:'sleep5', name:'早睡星人',   icon:'\uD83C\uDF19', need:5, mode:'total',  desc:'一共做到 5 天，21 点前上床',
               check:function(ids){ return !!ids['n_sleep']; } },
-            { id:'all7',   name:'全勤王',     icon:'\uD83D\uDC51', need:7, desc:'连续 7 天至少完成 1 项',
+            { id:'all7',   name:'全勤王',     icon:'\uD83D\uDC51', need:7, mode:'streak', desc:'连着 7 天至少完成 1 项',
               check:function(ids){ return Object.keys(ids).length > 0; } },
         ];
         function dayFlags(dateStr) {
@@ -4400,17 +4541,47 @@
             }
             return n;
         }
+        // 累计达标天数：只增不减。
+        // 与 contStreak 并列的第二种口径 —— 两者共用同一个 checkFn，
+        // 口径差异只由 m.mode 决定，杜绝"同一个数在两处算法不同"（petAvgExpPerDay 栽过）。
+        function totalDays(checkFn) {
+            let n = 0;
+            const seen = {};
+            (state.history || []).forEach(function (h) {
+                if (!h || !h.date) return;
+                seen[h.date] = true;
+                if (checkFn(dayFlags(h.date) || {})) n++;
+            });
+            const t = state.todayDate;
+            if (t && !seen[t]) {
+                const ids = dayFlags(t);
+                if (ids && checkFn(ids)) n++;
+            }
+            return n;
+        }
+        // 一枚勋章"现在到哪儿了" —— 发奖与显示共用这一处，永远同源
+        function medalProgress(m) {
+            const mode = (m.mode === 'total') ? 'total' : 'streak';
+            const have = (mode === 'total') ? totalDays(m.check) : contStreak(m.check);
+            return { mode: mode, have: have, left: Math.max(0, m.need - have) };
+        }
         // 刚解锁的勋章 id（用于播放弹出动画；CSS .justgot 一直存在但从没被用上）
         let justGotMedals = [];
-        function checkMedals() {
+        function checkMedals(silent) {
             if (!state.medals) state.medals = [];
             const newly = [];
             MEDALS.forEach(function (m) {
                 if (state.medals.indexOf(m.id) >= 0) return;
-                if (contStreak(m.check) >= m.need) { state.medals.push(m.id); newly.push(m); }
+                if (medalProgress(m).have >= m.need) { state.medals.push(m.id); newly.push(m); }
             });
             if (newly.length === 0) return;
+            // 第一次得到勋章就自动别在伙伴身上 —— 藏进成长档案里等于没得到。
+            // 之后由她自己挑（不覆盖已选的那枚）。
+            if (state.wearing && !state.wearing.medal) {
+                state.wearing.medal = newly[newly.length - 1].id;
+            }
             saveState();
+            if (silent) { renderMedals(); return; }
             justGotMedals = newly.map(function (m) { return m.id; });
             renderMedals();
             setTimeout(function () { justGotMedals = []; renderMedals(); }, 3200);
@@ -4429,10 +4600,12 @@
             let nearest = null, nearestLeft = 9999;   // 离解锁最近的一枚
             MEDALS.forEach(function (m) {
                 const got = state.medals.indexOf(m.id) >= 0;
-                const cur = Math.min(contStreak(m.check), m.need);
-                const left = m.need - cur;
-                // 未解锁不再只显示 "2/3"（孩子推不出“再做什么就能拿到”），改成还差几天
-                const prog = got ? '\u5df2\u5f97\u5230' : ('\u8fd8\u5dee ' + left + ' \u5929');
+                const p = medalProgress(m);
+                const left = p.left;
+                // 未解锁不再只显示 "2/3"（孩子推不出“再做什么就能拿到”），改成还差几天。
+                // 「连着做」与「攒够天数」用词不同，孩子才分得清这两类勋章。
+                const prog = got ? '\u5df2\u5f97\u5230'
+                    : (p.mode === 'total' ? ('\u518d\u6512 ' + left + ' \u5929') : ('\u8fd8\u5dee ' + left + ' \u5929'));
                 if (!got && left < nearestLeft) { nearestLeft = left; nearest = m; }
                 cells += '<div class="medal-cell' + (got ? ' got' : '') +
                         (justGotMedals.indexOf(m.id) >= 0 ? ' justgot' : '') +
@@ -4445,7 +4618,8 @@
             // 只推一个最近的目标：孩子面对一堆目标会分散，一个才记得住
             let nextTip = '';
             if (nearest) {
-                nextTip = '<div class="medal-next">\uD83C\uDFAF \u518d\u575a\u6301 <b>' + nearestLeft + ' \u5929</b>\uff0c\u5c31\u80fd\u5f97\u5230 ' +
+                const verb = (nearest.mode === 'total') ? '\u518d\u505a' : '\u518d\u575a\u6301';
+                nextTip = '<div class="medal-next">\uD83C\uDFAF ' + verb + ' <b>' + nearestLeft + ' \u5929</b>\uff0c\u5c31\u80fd\u5f97\u5230 ' +
                           nearest.icon + ' <b>' + nearest.name + '</b>\uff08' + nearest.desc + '\uff09</div>';
             } else {
                 nextTip = '<div class="medal-next">\U0001F3C6 \u5168\u90e8\u52cb\u7ae0\u90fd\u5f97\u5230\u4e86\uff01\u4f60\u771f\u7684\u5f88\u80fd\u575a\u6301</div>';
@@ -4453,7 +4627,7 @@
             area.innerHTML = '<div class="medal-card">' +
                 '<div class="medal-head"><span>\uD83C\uDFC5 \u6211\u7684\u52cb\u7ae0</span>' +
                 '<span class="medal-count">' + state.medals.length + '/' + MEDALS.length + '</span></div>' +
-                '<div class="medal-rule">\u540c\u4e00\u4ef6\u4e8b\u8fde\u7eed\u505a\u5230\uff0c\u5c31\u5f97\u5230\u4e00\u679a\u52cb\u7ae0\u3002\u4e2d\u95f4\u65ad\u4e86\uff0c\u8fd9\u4e00\u679a\u5c31\u8981\u91cd\u65b0\u6570\u3002</div>' +
+                '<div class="medal-rule">\u6bcf\u679a\u52cb\u7ae0\u4e0b\u9762\u90fd\u5199\u7740\u8fd8\u5dee\u51e0\u5929 \u2014\u2014 \u505a\u5230\u4e86\u5c31\u80fd\u62ff\u5230 \uD83C\uDF81</div>' +
                 '<div class="medal-grid">' + cells + '</div>' +
                 nextTip +
             '</div>';
@@ -6351,7 +6525,7 @@
                 state.coinsEver = 0; state.maxExp = 0; state.todayChecks = {};
                 state.petWish = ''; state.petWishDate = ''; state.petWishDone = false;
                 state.freeSettledDate = ''; state.fourFullDate = '';
-                state.wearing = { decor: '', scene: '', at: 0 };
+                state.wearing = { decor: '', scene: '', medal: '', at: 0 };
                 state.foodToday = { date: '', items: {} }; state.foodLog = {};
             }
             if (floor) {
@@ -6444,9 +6618,16 @@
                 const _wT = function (w) { return (w && typeof w.at === 'number') ? w.at : 0; };
                 state.wearing = state.wearing || { decor: '', scene: '', at: 0 };
                 if (_wT(data.wearing) > _wT(state.wearing)) {
+                    // ⚠️ medal 必须区分"字段不存在"与"空串"：
+                    //    · 老客户端（还没有勋章佩挂功能）推上来的 payload 里根本没有 medal，
+                    //      若一律当空串，她就会莫名其妙被摘掉勋章 → 这种情况保留本机的；
+                    //    · 而空串表示"她主动摘下了"，必须尊重 → 所以只能判 undefined，不能写 ||。
                     state.wearing = {
                         decor: String(data.wearing.decor || ''),
                         scene: String(data.wearing.scene || ''),
+                        medal: (data.wearing.medal === undefined)
+                            ? String((state.wearing && state.wearing.medal) || '')
+                            : String(data.wearing.medal || ''),
                         at: _wT(data.wearing)
                     };
                 }
@@ -6552,7 +6733,7 @@
         // ========== 静态数据外置加载（data/*.json 为权威源，内嵌为离线兜底） ==========
         // 只读数据（任务库/勋章/成就/台词/听写词单等）拆成 JSON 文件，像音频一样按 URL 加载；
         // 加载成功覆盖内嵌值并缓存到 localStorage；加载失败/无网络回退缓存；缓存也没有则用内嵌兜底。
-        const STATIC_DATA_VER = '20260922.1';
+        const STATIC_DATA_VER = '20260922.3';
         const STATIC_FILES = {
             tasks:     'data/tasks.json',
             shop:      'data/shop.json',
@@ -6612,14 +6793,28 @@
             if (D.petVoices) { PET_VOICE = D.petVoices; buildPetAudio(); }
             // 勋章/成就的判断逻辑（函数）无法存进 JSON，用内嵌兜底里同 id 的函数重新挂接
             if (D.medals) {
-                const checkById = {};
-                MEDALS.forEach(function (m) { checkById[m.id] = m.check; });
-                MEDALS = D.medals.map(function (m) { m.check = checkById[m.id]; return m; });
+                // 远端 JSON 只放文案（name / desc / icon / need）；
+                // 判定用的 check 与 mode 是函数和逻辑，存不进 JSON → 一律按 id 从内嵌兜底取回。
+                // ⚠️ filter 是防御：远端多出的 id 在内嵌里没有 check，留着会在打卡时抛错。
+                const byId = {};
+                MEDALS.forEach(function (m) { byId[m.id] = m; });
+                MEDALS = D.medals.filter(function (m) { return !!byId[m.id]; })
+                    .map(function (m) {
+                        m.check = byId[m.id].check;
+                        m.mode  = byId[m.id].mode;
+                        return m;
+                    });
             }
             if (D.achv) {
-                const gotById = {};
-                PET_ACHV.forEach(function (a) { gotById[a.id] = a.got; });
-                PET_ACHV = D.achv.map(function (a) { a.got = gotById[a.id]; return a; });
+                // 同 medals：远端只放文案，判定（got）与进度（prog）是函数，按 id 从内嵌取回。
+                const byId = {};
+                PET_ACHV.forEach(function (a) { byId[a.id] = a; });
+                PET_ACHV = D.achv.filter(function (a) { return !!byId[a.id]; })
+                    .map(function (a) {
+                        a.got  = byId[a.id].got;
+                        a.prog = byId[a.id].prog;
+                        return a;
+                    });
             }
         }
 
@@ -6663,7 +6858,9 @@
         // 宠物首次问候：挂到布丁第一次点击/触摸上，避免浏览器拦截自动播放导致"没声音"
         armPetGreeting();
         // 静默补一次成就判定（老用户已满足条件的成就直接点亮，不弹提示）
-        setTimeout(function () { checkPetAchv(true); }, 2500);
+        // 静默补发：勋章原先只在"打卡那一瞬间"判定 → 改判据后已达标的（或老设备首次升级）
+        // 打开页面时补上，否则她永远等不到那枚本该属于她的奖章
+        setTimeout(function () { checkPetAchv(true); checkMedals(true); }, 2500);
             setInterval(function () {
             const chips = document.querySelectorAll('.timer-chip.run');
             if (!chips.length) return;
