@@ -8,7 +8,7 @@
     <meta http-equiv="Expires" content="0" data-page-node-id="YXlbOTFHU2Nr6SGRQHt7cy">
     <script>
         (function () {
-            var APP_VERSION = '20260922.3';
+            var APP_VERSION = '20260923.1';
             window.APP_VERSION_STR = APP_VERSION;   // 主脚本里做线上版本自检要用
             try {
                 var params = new URLSearchParams(location.search);
@@ -2795,6 +2795,42 @@
             'wish_done':'pet_wish_done.mp3', 'wish_energy':'pet_wish_energy.mp3', 'wish_peace':'pet_wish_peace.mp3', 'wish_wisdom':'pet_wish_wisdom.mp3',
             'witness':'pet_witness.mp3'
         };
+        /* ===== 打卡后「宠物说什么」的选话表（2026-09-23 修）=====
+           原先按营养维度直接随机取 task_<nutri>1 / task_<nutri>2，但**一个维度下挂着十几项任务**，
+           而这两句台词里写了具体行为：
+             · task_wisdom1 「读到好书啦」  —— wisdom 下有数学计算、词语听写、校内作业、英语熏听…
+             · task_peace1  「洗漱完成啦」  —— peace 下只有「整理书包」「21:00 上床」，洗漱任务早已不在库里
+             · task_calcium1/2「早餐吃完啦」「喝了好喝的牛奶」—— calcium 下还有「炒蛋吃完」
+           于是会出现"做完数学，宠物夸我读到好书"。
+           修法是**只改"什么时候说哪句"，不动台词**：改台词就得重录 mp3，
+           而现有文字与语音是一一对应的，动文字反而制造真错配。
+           选话优先级：任务专句 → 该维通用句 → 通用夸一句。 */
+        const TASK_LINE = {          // 任务 → 确实成立的那几句（没列出的走维度通用句）
+            m_break:   ['task_calcium1'],            // 「早餐吃完啦」只对早餐成立
+            m_milk:    ['task_calcium2'],            // 「喝了好喝的牛奶」只对牛奶成立
+            m_read_cn: ['task_wisdom1'], m_read_en: ['task_wisdom1'],
+            e_read:    ['task_wisdom1'], e_engread: ['task_wisdom1'],
+            a_abc:     ['task_wisdom1'], a_weiyang: ['task_wisdom1'],
+            w_weiyang6:['task_wisdom1'], w_weiyang0:['task_wisdom1'],
+            a_sport:   ['task_energy1', 'task_energy2'],
+            w_family:  ['task_energy1', 'task_energy2']
+        };
+        // 维度通用句：句子里**不含"具体做了哪一项"**，该维任何任务都成立
+        const NUTRI_LINE = {
+            calcium: ['witness'],                        // 「你刚才做得又快又好」——炒蛋等没有专句的走这句
+            wisdom:  ['task_wisdom2'],                   // 「哇，你又变聪明一点点啦！」
+            energy:  ['task_energy1', 'task_energy2'],   // 该维只有运动类任务，两句都成立
+            peace:   ['task_peace2']                     // 「今天也安安心心地过完啦！」
+        };
+        // ⚠️ task_peace1（「洗漱完成啦，我的安心加一！」）**已弃用**：它对应的任务不在任务库里，
+        //    说它必然错。台词与音频都留着（不删数据），只是不再有场景会选到它。
+        function pickTaskLine(taskId, nutri) {
+            const own = TASK_LINE[taskId];
+            if (own && own.length) return own[Math.floor(Math.random() * own.length)];
+            const gen = nutri && NUTRI_LINE[nutri];
+            if (gen && gen.length) return gen[Math.floor(Math.random() * gen.length)];
+            return Math.random() < 0.5 ? 'task_other1' : 'task_other2';   // 不含具体行为，任何任务都成立
+        }
         const PET_AUDIO = {};
         // 语音表可能被 data/pet-voices.json 覆盖 → 抽成可重建函数
         function buildPetAudio() {
@@ -3119,11 +3155,13 @@
 
             // 还有没做完的 → 分组随机：心愿 / 陪伴 / 可补的营养提醒 / 随机陪伴话
             const wish = petWishToday();
+            // ⚠️ 提醒语也"话里带具体行为"，所以判据要落到**具体任务**上，不能只看维度 ——
+            //    否则只差「炒蛋」没吃时会说"牛奶还没喝完"，只差数学时会说"想听你讲一个故事"。
             const warnPool = [];
-            if (!tn.calcium && hasPendingNutri('calcium')) warnPool.push('warn_calcium');
-            if (!tn.wisdom  && hasPendingNutri('wisdom'))  warnPool.push('warn_wisdom');
-            if (!tn.energy  && hasPendingNutri('energy'))  warnPool.push('warn_energy');
-            if (!tn.peace   && hasPendingNutri('peace'))   warnPool.push('warn_peace');
+            if (hasPendingTask('m_milk'))  warnPool.push('warn_calcium');    // 「牛奶还没喝完…」
+            if (hasPendingReading())       warnPool.push('warn_wisdom');     // 「想听你讲一个故事给我听！」
+            if (hasPendingTask('n_sleep')) warnPool.push('warn_peace');      // 「早点洗漱，我们一起安心睡觉！」
+            if (hasPendingNutri('energy')) warnPool.push('warn_energy');     // 「我们出去动一动好不好？」——该维只有运动类
 
             const kinds = [];
             if (wish && !state.petWishDone) kinds.push('wish');
@@ -3171,8 +3209,9 @@
             if (golden) {
                 key = 'golden';
             } else {
-                const v = Math.random() < 0.5 ? '1' : '2';
-                key = nutri ? ('task_' + nutri + v) : ('task_other' + v);
+                // 2026-09-23：不再按维度盲选 1/2（会说出"做完数学夸我读到好书"），
+                // 改走 pickTaskLine：任务专句 → 该维通用句 → 通用夸一句。
+                key = pickTaskLine(task && task.id, nutri);
             }
             petSay(key);
         }
@@ -4268,6 +4307,16 @@
         // 今天是否还有该营养维度的未完成任务 —— 只有"还能做到"的才提醒
         function hasPendingNutri(k) {
             return calcTodayPending().some(function (t) { return t.nutri === k; });
+        }
+        // 2026-09-23：warn_calcium「牛奶还没喝完」/ warn_wisdom「想听你讲一个故事」都点了具体的事，
+        // 判据必须落到具体任务上，否则维度被判"未完成"时会说出与事实不符的提醒。
+        const READING_IDS = ['m_read_cn', 'm_read_en', 'e_read', 'e_engread',
+                             'a_abc', 'a_weiyang', 'w_weiyang6', 'w_weiyang0'];
+        function hasPendingTask(id) {
+            return calcTodayPending().some(function (t) { return t.id === id; });
+        }
+        function hasPendingReading() {
+            return calcTodayPending().some(function (t) { return READING_IDS.indexOf(t.id) >= 0; });
         }
         // 今天还差哪几维（只在"还有机会补上"时才列出来）
         function pendingNutriList() {
