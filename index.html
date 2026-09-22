@@ -8,7 +8,7 @@
     <meta http-equiv="Expires" content="0" data-page-node-id="YXlbOTFHU2Nr6SGRQHt7cy">
     <script>
         (function () {
-            var APP_VERSION = '20260922.1';
+            var APP_VERSION = '20260922.2';
             window.APP_VERSION_STR = APP_VERSION;   // 主脚本里做线上版本自检要用
             try {
                 var params = new URLSearchParams(location.search);
@@ -443,6 +443,103 @@
         .pet-slot.on { border-color: #3AA17E; box-shadow: 0 0 0 3px rgba(58,161,126,.22); }
         .pet-slot:active { transform: scale(.9); }
         .pet-collect-hint { font-size: 11px; color: #9AAFA6; }
+
+        /* 「今天吃过什么」—— 食物唯一的痕迹。装扮买完能一直戴着，食物吃完就没了，
+           所以它必须靠这行字存在，否则孩子眼里就是"金币消失了"。 */
+        .pet-fed {
+            position: relative; z-index: 2; margin-top: 7px; text-align: center;
+            font-size: 12px; font-weight: 700; color: #B4741A;
+            background: linear-gradient(135deg, #FFF9EF, #FFEFD4);
+            border: 1.5px dashed #F0C88A; border-radius: 12px; padding: 5px 10px;
+        }
+        .pet-fed b { color: #2E9E6B; }
+        .pet-slot.fed-slot {
+            position: relative; cursor: default;
+            border-style: dashed; border-color: #F0D6AE; background: #FFFBF3;
+        }
+        .pet-slot.fed-slot:active { transform: none; }
+        .pet-slot.fed-slot .fed-n {
+            position: absolute; right: -5px; bottom: -5px;
+            font-style: normal; font-size: 9.5px; line-height: 1;
+            background: #F0A33C; color: #fff; border-radius: 8px;
+            padding: 2px 4px; min-width: 11px; text-align: center;
+            box-shadow: 0 1px 3px rgba(160,110,30,.3);
+        }
+
+        /* ===== 喂食小剧场（2026-09-22 P0）=====
+           食物和装扮不一样：装扮买完能一直戴着，食物吃完就没了。
+           所以它不能靠"进度条前进几像素"存在 —— 7 岁孩子看不懂百分比，
+           但看得懂张嘴、咀嚼、冒爱心。这个剧场就是那个"看得懂"的部分。 */
+        .feed-stage {
+            position: fixed; left: 50%; top: 46%;
+            transform: translate(-50%, -50%) scale(.92);
+            z-index: 100000; pointer-events: none;
+            opacity: 0; transition: opacity .18s ease, transform .18s ease;
+        }
+        .feed-stage.on  { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+        .feed-stage.out { opacity: 0; transform: translate(-50%, -50%) scale(1.05); }
+        .fs-card {
+            position: relative; width: 212px; height: 198px;
+            background: #fff; border: 2px solid #FFE3B8; border-radius: 22px;
+            box-shadow: 0 14px 34px rgba(120,90,40,.20);
+            display: flex; flex-direction: column; align-items: center;
+            padding-top: 16px; box-sizing: border-box; overflow: hidden;
+        }
+        .fs-card.evolved {
+            border-color: #F5C542;
+            box-shadow: 0 0 0 4px rgba(245,197,66,.26), 0 14px 34px rgba(120,90,40,.22);
+        }
+        .fs-pet {
+            position: relative; font-size: 54px; line-height: 1;
+            transform-origin: 50% 78%;
+            filter: drop-shadow(0 3px 4px rgba(120,90,40,.16));
+        }
+        .fs-pet .pa-emoji { position: relative; z-index: 3; display: inline-block; }
+        .fs-pet.chomp { animation: fsChomp .32s ease; }
+        .fs-pet.chew  { animation: fsChew .42s ease 2; }
+        @keyframes fsChomp {
+            0%   { transform: scale(1); }
+            38%  { transform: scale(1.18, .86); }
+            100% { transform: scale(1); }
+        }
+        @keyframes fsChew {
+            0%, 100% { transform: rotate(0deg) scale(1); }
+            30%      { transform: rotate(-4deg) scale(1.05, .97); }
+            70%      { transform: rotate(4deg) scale(1.05, .97); }
+        }
+        /* 食物：从宠物下方飞进嘴里（起点 top:76% → 终点上移 94px = 嘴的位置） */
+        .fs-food {
+            position: absolute; left: 50%; top: 76%;
+            font-size: 30px; line-height: 1; z-index: 4;
+            transform: translate(-50%, 0) scale(1.25);
+            opacity: 0;
+        }
+        .fs-food.start { opacity: 1; }
+        .fs-food.fly {
+            transform: translate(-50%, -94px) scale(.55);
+            opacity: 0;
+            transition: transform .40s cubic-bezier(.34,.86,.42,1), opacity .16s ease .26s;
+        }
+        /* 爱心放宠物**右上方**：宠物占掉卡片上半部，放正上方会压在脸上，放头顶又会飘出卡片被裁 */
+        .fs-hearts {
+            position: absolute; left: 74%; top: 20%;
+            font-size: 17px; letter-spacing: 2px; z-index: 5;
+            transform: translateX(-50%); opacity: 0;
+        }
+        .fs-hearts.pop { animation: fsHeart 1.05s ease-out forwards; }
+        @keyframes fsHeart {
+            0%   { opacity: 0; transform: translate(-50%, 6px) scale(.6); }
+            28%  { opacity: 1; transform: translate(-50%, -8px) scale(1.12); }
+            100% { opacity: 0; transform: translate(-50%, -30px) scale(1); }
+        }
+        .fs-cap {
+            position: absolute; left: 8px; right: 8px; bottom: 16px;
+            text-align: center; font-size: 13px; font-weight: 700; color: #B4741A;
+            line-height: 1.35; opacity: 0; transform: translateY(6px);
+            transition: opacity .24s ease, transform .24s ease;
+        }
+        .fs-cap.on { opacity: 1; transform: translateY(0); }
+        .fs-cap b { color: #E08A1E; }
         .pet-cancel {
             width: 100%; margin-top: 10px; padding: 11px;
             background: #F1F5F3; color: #7A8C84; border: none; border-radius: 14px;
@@ -2078,7 +2175,7 @@
         let isParentMode = false;     // 家长模式（只读取，不写入）
 
         // 上传到云端的数据只包含动态打卡记录（任务/奖励用本地默认值）
-        const SYNC_FIELDS = ['todayChecks', 'todayDate', 'totalStars', 'streak', 'history', 'claimedRewards', 'pet', 'medals', 'poemLog', 'owned', 'leftovers', 'petBook', 'maxExp', 'coinsEver', 'achv', 'petWish', 'petWishDate', 'petWishDone', 'resetAt', 'fourFullDate', 'checksUpdatedAt', 'wearing'];
+        const SYNC_FIELDS = ['todayChecks', 'todayDate', 'totalStars', 'streak', 'history', 'claimedRewards', 'pet', 'medals', 'poemLog', 'owned', 'leftovers', 'petBook', 'maxExp', 'coinsEver', 'achv', 'petWish', 'petWishDate', 'petWishDone', 'resetAt', 'fourFullDate', 'checksUpdatedAt', 'wearing', 'foodToday', 'foodLog'];
 
         // 上传数据到 Supabase（upsert 固定 id，多端共用同一份；只更新提供的列，不覆盖其它列）
         function syncToCloud() {
@@ -2331,6 +2428,12 @@
             { id:'frog',    emoji:'\uD83D\uDC38', name:'\u5c0f\u9752\u86d9' },
         ];
         const PET_STAGE_MIN  = [0, 100, 400, 1200, 2400];
+        // 「每天打卡最多入账多少成长值」与「一颗星折多少成长值」。
+        // ⚠️ 这两个数被三处共用：feedPet（入账）、petFeedLeft（商店话术）、petAvgExpPerDay（说几天能长大）。
+        //    以前三处各写一个字面量：入账用 stars*5 封顶 80，而估算用 项数*9（≈162~230）。
+        //    口径漂移的直接后果就是「还要 N 天」说了 15 天、实际要 30 天 —— 孩子会真的数天数。
+        const PET_EXP_DAILY_CAP = 80;
+        const PET_EXP_PER_STAR  = 5;
         // 阶段名：全换成 7 岁孩子能理解、且会向往的名字（原「传说」是成人奇幻概念，抽象度过高）
         // 与后面「点亮皇冠星星」的机制顺滑衔接：成为星光勇士 → 攒星星
         const PET_STAGE_NAME = ['蛋宝宝', '小奶团', '小机灵', '大勇士', '星光勇士'];
@@ -2507,6 +2610,43 @@
             const hit = wid ? owned.find(function (x) { return x.id === wid; }) : null;
             return hit || owned[owned.length - 1];
         }
+        // ===== 食物记录（2026-09-22 P0）：让"喂过"这件事留得下来 =====
+        // 食物和装扮不一样 —— 装扮买完能一直戴着，食物吃完就没了，所以它必须靠"痕迹"存在。
+        // 今日那份自带日期，读取时校验 → 跨天不需要任何清理动作，也永远不会串天。
+        function foodTodayItems() {
+            const f = state.foodToday;
+            if (!f || f.date !== getTodayStr() || !f.items || typeof f.items !== 'object') return {};
+            return f.items;
+        }
+        function foodTodayCount() {
+            const it = foodTodayItems();
+            return Object.keys(it).reduce(function (s, k) { return s + (it[k] || 0); }, 0);
+        }
+        // 吃过的东西（累计）：给收藏格用。食物不占"拥有"名额 —— 它是一份痕迹，不是一件家当。
+        function foodLogList() {
+            const log = state.foodLog || {};
+            const out = [];
+            Object.keys(log).forEach(function (id) {
+                const n = log[id] || 0;
+                if (n <= 0) return;
+                const it = (state.shop || []).find(function (x) { return x.id === id; });
+                if (it) out.push({ id: id, icon: it.icon, name: it.name, count: n });
+            });
+            return out;
+        }
+
+        // 记一笔"吃过"：今日（带日期）+ 累计（永久）。只增不减，合并时按 id 取大。
+        function recordFood(id) {
+            if (!id) return;
+            const t = getTodayStr();
+            if (!state.foodToday || state.foodToday.date !== t || !state.foodToday.items) {
+                state.foodToday = { date: t, items: {} };
+            }
+            state.foodToday.items[id] = (state.foodToday.items[id] || 0) + 1;
+            state.foodLog = state.foodLog || {};
+            state.foodLog[id] = (state.foodLog[id] || 0) + 1;
+        }
+
         // 点收藏格换装。7 岁孩子最着迷的动作就是"挑"和"换" —— 买完自动全戴上反而没了这个动作。
         function wearItem(kind, id) {
             const owned = petOwnedItems(kind);
@@ -2526,7 +2666,7 @@
         }
         function petFeedLeft() {
             const used = (state.petExpDate === state.todayDate) ? (state.petExpToday || 0) : 0;
-            return Math.max(0, 80 - used);
+            return Math.max(0, PET_EXP_DAILY_CAP - used);
         }
 
         // ========== 宠物语音包（预录 mp3，不依赖系统 TTS） ==========
@@ -2691,16 +2831,27 @@
 
         // ========== 把"还差多少经验"翻译成孩子能理解的话：还要几天 ==========
         // 用近 14 天真实完成情况估算日均成长值（每完成一项约 9 点）；数据不足时按今天满额打八折
+        // 「还要几天能长大」必须用**真实入账速率**算，不能各估各的。
+        // 旧版这里用「完成项数 × 9」估，而 feedPet 实际是「星数 × 5，每日封顶 80」
+        // → 估出来比实际快约 2 倍，于是文案承诺的天数根本做不到（布丁会真的数天数）。
+        // 现在两边共用 PET_EXP_DAILY_CAP / PET_EXP_PER_STAR，同一套公式。
         function petAvgExpPerDay() {
             const h = (state.history || []).slice(0, 14);
             const days = h.filter(function (x) { return (x.completed || 0) > 0; });
+            const all = getActiveTasks();
+            const allStars = all.reduce(function (s, t) { return s + (t.stars || 1); }, 0);
+            // 历史里只记了「完成几项」，先按全库平均星/项折回星数，再走同一个上限公式
+            const perTask = all.length ? allStars / all.length : 2;
+            let stars;
             if (days.length >= 3) {
                 let tot = 0;
                 days.forEach(function (x) { tot += (x.completed || 0); });
-                return Math.max(15, (tot / days.length) * 9);
+                stars = (tot / days.length) * perTask;
+            } else {
+                // 还没有足够历史 → 按"正常情况下能完成八成"估
+                stars = allStars * 0.8;
             }
-            const full = getActiveTasks().reduce(function (s, t) { return s + (t.stars || 1); }, 0);
-            return Math.max(20, full * 9 * 0.8);
+            return Math.max(10, Math.min(stars * PET_EXP_PER_STAR, PET_EXP_DAILY_CAP));
         }
         function petDaysToNext() {
             if (!state.pet) return 0;
@@ -3133,6 +3284,7 @@
             }
             const sceneList = petOwnedItems('scene');
             const decorList = petOwnedItems('decor');
+            const fedList = foodLogList();
             const scene = currentSceneItem();      // 正在住的小家（她挑的那个）
             const decor = currentDecorItem();      // 正在戴的装扮（她挑的那个）
             const sceneHTML = scene ? sceneLayerHTML(scene.id) : '';
@@ -3151,7 +3303,7 @@
                   }).join('') + '</span>'
                 : '';
             // 收藏格：已拥有的东西做成可点方块（点一下换上），只在她真的拥有时才出现
-            const collectHTML = (decorList.length || sceneList.length)
+            const collectHTML = (decorList.length || sceneList.length || fedList.length)
                 ? '<div class="pet-collect">' +
                     (decorList.length ? '<div class="pet-collect-row"><span class="pet-collect-label">🎀 装扮</span>' +
                         decorList.map(function (d) {
@@ -3163,9 +3315,25 @@
                             return '<button class="pet-slot' + (scene && s.id === scene.id ? ' on' : '') +
                                 '" onclick="wearItem(\'scene\',\'' + s.id + '\')" title="住进' + s.name + '">' + s.icon + '</button>';
                         }).join('') + '</div>' : '') +
+                    (fedList.length ? '<div class="pet-collect-row"><span class="pet-collect-label">🍽 吃过</span>' +
+                        fedList.map(function (f) {
+                            return '<span class="pet-slot fed-slot" title="吃过 ' + f.count + ' 次">' +
+                                f.icon + '<i class="fed-n">' + f.count + '</i></span>';
+                        }).join('') + '</div>' : '') +
                     ((decorList.length + sceneList.length) > 1 ? '<div class="pet-collect-hint">点一下就能换上 ✨</div>' : '') +
                   '</div>'
                 : '';
+            // 今天喂过什么 —— 食物吃完就没了，这行字是它唯一留得下来的东西
+            const fedHTML = (function () {
+                const items = foodTodayItems();
+                const words = Object.keys(items).filter(function (k) { return items[k] > 0; })
+                    .map(function (id) {
+                        const it = (state.shop || []).find(function (x) { return x.id === id; });
+                        return it ? it.icon + '×' + items[id] : '';
+                    }).filter(Boolean);
+                if (!words.length) return '';
+                return '<div class="pet-fed">🍽 今天吃过 ' + words.join(' ') + ' <b>✓</b></div>';
+            })();
             const wish = petWishToday();
             const wishHTML = wish
                 ? '<div class="pet-wish' + (state.petWishDone ? ' done' : '') + '">' +
@@ -3201,6 +3369,7 @@
                     '</div>' +
                     '<div class="pet-bubble" id="petBubble"></div>' +
                     wishHTML +
+                    fedHTML +
                     collectHTML +
                     '<div class="pet-actions">' +
                         '<button class="pet-profile-btn" onclick="showPetProfile()">📖 成长档案</button>' +
@@ -3403,8 +3572,8 @@
         function feedPet(stars) {
             if (!state.pet) return;
             if (state.petExpDate !== state.todayDate) { state.petExpDate = state.todayDate; state.petExpToday = 0; }
-            const room = Math.max(0, 80 - (state.petExpToday || 0));
-            const real = Math.min(stars * 5, room);
+            const room = Math.max(0, PET_EXP_DAILY_CAP - (state.petExpToday || 0));
+            const real = Math.min(stars * PET_EXP_PER_STAR, room);
             if (real <= 0) return;
             state.petExpToday = (state.petExpToday || 0) + real;
             const beforeExp = state.pet.exp || 0;
@@ -3453,6 +3622,8 @@
             // 当前穿戴：decor/scene 存 shop 里的 id（空 = 还没挑，按"最新买的那件"兜底）
             // at = 最后一次选择的时间戳，多端合并靠它判先后（本机没时间戳的旧值一定输）
             wearing: { decor: '', scene: '', at: 0 },
+            foodToday: { date: '', items: {} },
+            foodLog: {},
             timers: {},
             leftovers: [],
             summerStart: '2026-09-01',
@@ -3694,6 +3865,15 @@
             if (typeof state.wearing.decor !== 'string') state.wearing.decor = '';
             if (typeof state.wearing.scene !== 'string') state.wearing.scene = '';
             if (typeof state.wearing.at !== 'number') state.wearing.at = 0;
+            // ===== 食物记录（2026-09-22 P0）：老设备补默认；坏值在这里纠正 =====
+            if (!state.foodToday || typeof state.foodToday !== 'object') {
+                state.foodToday = { date: '', items: {} };
+            }
+            if (typeof state.foodToday.date !== 'string') state.foodToday.date = '';
+            if (!state.foodToday.items || typeof state.foodToday.items !== 'object') {
+                state.foodToday.items = {};
+            }
+            if (!state.foodLog || typeof state.foodLog !== 'object') state.foodLog = {};
             // 商店文案与默认值同步（只更新名称/图标/描述，不动购买记录）
             if (Array.isArray(state.shop)) {
                 state.shop.forEach(function (t) {
@@ -5598,6 +5778,22 @@
                             osc.start(t);
                             osc.stop(t + 0.25);
                         });
+                    } else if (type === 'eat') {
+                        // 咬一口 — 两声短促的低音"咔"，自包含无外部文件
+                        [0, 0.17].forEach(function (off, i) {
+                            const osc = ctx.createOscillator();
+                            const gain = ctx.createGain();
+                            osc.connect(gain);
+                            gain.connect(ctx.destination);
+                            osc.type = 'triangle';
+                            const t = now + off;
+                            osc.frequency.setValueAtTime(i === 0 ? 340 : 300, t);
+                            osc.frequency.exponentialRampToValueAtTime(180, t + 0.09);
+                            gain.gain.setValueAtTime(0.20, t);
+                            gain.gain.exponentialRampToValueAtTime(0.001, t + 0.12);
+                            osc.start(t);
+                            osc.stop(t + 0.12);
+                        });
                     }
                 };
                 if (ctx.state === 'suspended') {
@@ -5771,9 +5967,18 @@
                 '🪙 当前拥有 ' + state.totalStars + ' 枚金币（打卡就能赚）';
             const typeName = { food: '🍽 好吃的 · 喂了就长大', decor: '🎀 装扮 · 买了就戴上', scene: '🏡 小家 · 给伙伴安个家' };
             let html = '';
+            // 7 岁孩子读不懂「今天还能喂它 0 口」—— 正常打卡日这个数**恒为 0**
+            // （每天星数×5 轻松超过 80 的上限），拿 0 开头做引导，像在说他做得不够。
+            // 改成正面表述，顺便报一句"今天喂过几口"。
+            const _fedLeft = petFeedLeft();
+            const _fedToday = foodTodayCount();
             html += state.pet
-                ? '<div class="shop-group">\uD83C\uDF7D \u4eca\u5929\u6253\u5361\u8fd8\u80fd\u5582\u5b83 <b>' + petFeedLeft() + '</b> \u53e3\uff08\u4e70\u98df\u7269\u4e0d\u53d7\u9650\u5236\uff09</div>'
-                : '<div class="shop-group">\u26A0\uFE0F \u8fd8\u6ca1\u6709\u5b66\u4e60\u4f19\u4f34\uff0c\u5148\u53bb\u4e3b\u9875\u9009\u4e00\u4e2a\u5427\uff5e</div>';
+                ? '<div class="shop-group">🍽 ' +
+                    (_fedToday > 0 ? '今天已经喂过 <b>' + _fedToday + '</b> 口 · ' : '') +
+                    (_fedLeft > 0 ? '再打卡，它还能再长一点 💛'
+                                  : '🧡 今天的分量够了，它吃得饱饱的') +
+                  '</div>'
+                : '<div class="shop-group">⚠️ 还没有学习伙伴，先去主页选一个吧～</div>';
             for (const tp of ['food', 'decor', 'scene']) {
                 const items = (state.shop || []).filter(function (x) { return x.type === tp; });
                 if (!items.length) continue;
@@ -5798,6 +6003,70 @@
             }
             document.getElementById('rewardList').innerHTML = html;
         }
+        // ===== 喂食小剧场（2026-09-22 P0）=====
+        // 纯视觉层，**一行数据都不碰** —— 数据在 claimReward 里已经改完了。
+        // 所以动画失败、被跳过、或用户没看，都不会影响存档，也不会让回归测试变脆。
+        let _feedTimers = [];
+        function playFeedAnim(it, evolved) {
+            try {
+                const old = document.getElementById('feedStage');
+                if (old && old.parentNode) old.parentNode.removeChild(old);
+                _feedTimers.forEach(function (t) { clearTimeout(t); });
+                _feedTimers = [];
+                if (!state.pet) return;
+                const kind = PET_KINDS.find(function (k) { return k.id === state.pet.kind; }) || PET_KINDS[0];
+                const stg = getPetStage(state.pet.exp || 0);
+                const emo = stg === 0 ? '🥚' : kind.emoji;
+                // 戴着的东西一起进剧场 —— 蝴蝶结配吃饭，比光秃秃一只更有"这是我的伙伴"的感觉
+                const decor = currentDecorItem();
+                const dSlot = decor ? (DECOR_SLOT[decor.id] || 'pw-head') : '';
+                const back = (decor && dSlot === 'pw-back')
+                    ? (decor.id === 'd_cape'
+                        ? '<span class="pet-wear pw-back pet-cape"></span>'
+                        : '<span class="pet-wear pw-back">' + decor.icon + '</span>')
+                    : '';
+                const front = (decor && dSlot !== 'pw-back')
+                    ? '<span class="pet-wear ' + dSlot + '">' + decor.icon + '</span>' : '';
+                const el = document.createElement('div');
+                el.className = 'feed-stage';
+                el.id = 'feedStage';
+                el.innerHTML =
+                    '<div class="fs-card' + (evolved ? ' evolved' : '') + '">' +
+                        '<div class="fs-pet" id="fsPet">' + back +
+                            '<span class="pa-emoji">' + emo + '</span>' + front +
+                        '</div>' +
+                        '<div class="fs-food" id="fsFood">' + it.icon + '</div>' +
+                        '<div class="fs-hearts">💕</div>' +
+                        '<div class="fs-cap" id="fsCap">' + (evolved
+                            ? '🎉 长大成「' + PET_STAGE_NAME[getPetStage(state.pet.exp || 0)] + '」啦！'
+                            : (state.pet.name || '它') + ' 长大 +' + it.exp + ' 💛') +
+                        '</div>' +
+                    '</div>';
+                document.body.appendChild(el);
+                const q = function (sel) { return document.querySelector('#feedStage ' + sel); };
+                _feedTimers.push(setTimeout(function () { el.classList.add('on'); }, 16));
+                _feedTimers.push(setTimeout(function () { const f = q('.fs-food'); if (f) f.classList.add('start'); }, 60));
+                _feedTimers.push(setTimeout(function () { const f = q('.fs-food'); if (f) f.classList.add('fly'); }, 200));
+                _feedTimers.push(setTimeout(function () {
+                    const p = q('.fs-pet'); if (p) p.classList.add('chomp');
+                    playSound('eat');
+                }, 600));
+                _feedTimers.push(setTimeout(function () {
+                    const p = q('.fs-pet'); if (p) p.classList.add('chew');
+                    const h = q('.fs-hearts'); if (h) h.classList.add('pop');
+                    const c = q('.fs-cap'); if (c) c.classList.add('on');
+                }, 790));
+                _feedTimers.push(setTimeout(function () { playSound(evolved ? 'celebrate' : 'check'); }, 900));
+                _feedTimers.push(setTimeout(function () { el.classList.add('out'); }, 1800));
+                _feedTimers.push(setTimeout(function () {
+                    if (el.parentNode) el.parentNode.removeChild(el);
+                }, 2150));
+            } catch (e) {
+                // 动画失败（极罕见）：至少留一句话 —— 绝不让孩子"什么都没看到"
+                try { showToast('好吃！' + (state.pet ? state.pet.name : '它') + ' 长大 +' + it.exp); } catch (e2) {}
+            }
+        }
+
         function claimReward(itemId) {
             const it = (state.shop || []).find(function (x) { return x.id === itemId; });
             if (!it || state.totalStars < it.cost) return;
@@ -5811,15 +6080,18 @@
                     const before = getPetStage(state.pet.exp || 0);
                     state.pet.exp = (state.pet.exp || 0) + it.exp;
                     const after = getPetStage(state.pet.exp);
-                    showToast('\u597d\u5403\uff01' + state.pet.name + ' \u957f\u5927 +' + it.exp);
+                    // 记一笔"吃过"（今日 + 累计）。食物是唯一吃完就消失的商品，
+                    // 它的价值只能靠痕迹留下来 —— 这是"花了金币看得见"的长期那一半。
+                    recordFood(it.id);
+                    // 当场吃掉。这是本次改动的核心：以前只有一句吐司 + 几乎看不见的进度条，
+                    // 布丁的真实感受就是"花了金币什么都没发生"。
+                    playFeedAnim(it, after > before);
                     if (after > before) {
+                        // 动画播完（约 2.1s）再报进化，别让两个提示叠在一起
                         setTimeout(function () {
-                            showToast('\uD83C\uDF89 ' + state.pet.name + ' \u8fdb\u5316\u6210\u300c' + PET_STAGE_NAME[after] + '\u300d\u5566\uff01');
-                            playSound('celebrate');
+                            showToast('🎉 ' + state.pet.name + ' 进化成「' + PET_STAGE_NAME[after] + '」啦！');
                             launchConfetti();
-                        }, 900);
-                    } else {
-                        playSound('check');
+                        }, 2200);
                     }
                 }
             } else {
@@ -6080,6 +6352,7 @@
                 state.petWish = ''; state.petWishDate = ''; state.petWishDone = false;
                 state.freeSettledDate = ''; state.fourFullDate = '';
                 state.wearing = { decor: '', scene: '', at: 0 };
+                state.foodToday = { date: '', items: {} }; state.foodLog = {};
             }
             if (floor) {
                 state.resetAt = floor;
@@ -6177,6 +6450,30 @@
                         at: _wT(data.wearing)
                     };
                 }
+            }
+            // 今日吃过：**只有云端说的"今天"就是今天，才采信它**（与今日打卡同一个教训，
+            // 见下面 todayChecks 那段事故注释）。次数按 id 取大 —— 多端各喂一次不该重复计数，
+            // 也绝不因为哪端是空的就把本机痕迹洗掉。
+            if (data.foodToday && typeof data.foodToday === 'object') {
+                const _ft = getTodayStr();
+                const _dItems = (data.foodToday.items && typeof data.foodToday.items === 'object') ? data.foodToday.items : {};
+                if (data.foodToday.date === _ft) {
+                    const _sItems = foodTodayItems();
+                    const _m = Object.assign({}, _sItems);
+                    Object.keys(_dItems).forEach(function (k) {
+                        _m[k] = Math.max(_m[k] || 0, _dItems[k] || 0);
+                    });
+                    state.foodToday = { date: _ft, items: _m };
+                }
+            }
+            // 吃过的东西（累计）：按 id 取大，只增不减。这是食物唯一的长期痕迹，绝不能被清掉。
+            if (data.foodLog && typeof data.foodLog === 'object') {
+                const _log = Object.assign({}, state.foodLog || {});
+                Object.keys(data.foodLog).forEach(function (k) {
+                    const dv = data.foodLog[k];
+                    if (typeof dv === 'number') _log[k] = Math.max(_log[k] || 0, dv);
+                });
+                state.foodLog = _log;
             }
             // 勋章：并集
             if (Array.isArray(data.medals)) {
