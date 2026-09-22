@@ -8,7 +8,7 @@
     <meta http-equiv="Expires" content="0" data-page-node-id="YXlbOTFHU2Nr6SGRQHt7cy">
     <script>
         (function () {
-            var APP_VERSION = '20260917.1';
+            var APP_VERSION = '20260922.1';
             window.APP_VERSION_STR = APP_VERSION;   // 主脚本里做线上版本自检要用
             try {
                 var params = new URLSearchParams(location.search);
@@ -152,7 +152,12 @@
             100% { transform: scale(1) rotate(0deg); }
         }
         .pet-main { display:flex; align-items:center; gap:14px; flex-wrap:wrap; justify-content:center; position:relative; z-index:2; }
-        .pet-side { flex:1; min-width:210px; text-align:left; }
+        .pet-side { flex:1; min-width:186px; text-align:left; }
+        /* 窄屏下 pet-main 会换行成「宠物在上、信息在下」（此时 items 占满整行），
+           左对齐会显得散 → 统一居中 */
+        @media (max-width: 460px) {
+            .pet-side { text-align: center; }
+        }
         .nutri-pill { display:inline-flex; align-items:center; gap:3px; background:#fff; border:1.5px solid #D6F2E6; border-radius:12px; padding:3px 8px; font-size:11.5px; color:#4A5F57; }
         .nutri-pill .nutri-lv { font-style:normal; font-size:10px; color:#fff; border-radius:8px; padding:1px 6px; margin-left:3px; }
         .nutri-pill .nutri-today { font-weight:400; font-size:10px; color:#C0392B; margin-left:2px; }
@@ -358,6 +363,86 @@
         }
         .pet-decor-row { position: relative; z-index: 2; margin-top: 6px; }
         .pet-decor { font-size: 18px; margin: 0 3px; display: inline-block; }
+
+        /* ===== 装扮穿戴层（2026-09-22 P0）=====
+           装饰放进 .pet-avatar 内部：.pet-avatar 带 petFloat 浮动动画，
+           装饰若挂在 holder 上会在宠物上下浮动时"留在原地"，一眼假。
+           字号一律用 em —— 自动跟随成长阶段（52~82px）等比缩放。 */
+        .pet-avatar .pa-emoji { position: relative; z-index: 3; display: inline-block; }
+        .pet-wear {
+            position: absolute; line-height: 1; pointer-events: none;
+            filter: drop-shadow(0 2px 3px rgba(0,0,0,.22));
+        }
+        .pet-wear.pw-back { z-index: 1; left: 50%; bottom: 3%;  font-size: .80em; transform: translateX(-50%); }
+        /* 小裙子：实测 bottom:-2% 会盖住脸（像戴在头上）→ 下移到大腿位置。
+           emoji 的实际绘制高度比 font-size 大（约 1.15~1.3 倍），所以锚点得按"看起来"调，
+           不能按盒模型算 —— 这也是必须实拍的另一个原因。 */
+        .pet-wear.pw-body { z-index: 6; left: 50%; bottom: -16%; font-size: .60em; transform: translateX(-50%); }
+        .pet-wear.pw-neck { z-index: 6; left: 50%; bottom: 22%; font-size: .50em; transform: translateX(-50%); }
+        .pet-wear.pw-head { z-index: 6; left: 66%; top: -2%;     font-size: .46em; transform: translateX(-50%); }
+        /* 自绘披风：🦸 是个完整的小人 emoji，当披风用会变成"身后站了另一个人"。
+           披风没有合适的 emoji → 用代码画（三处共用同一形状：宠物身上 / 收藏格 / 商店预览）。 */
+        /* 自绘披风：🦸 是个完整的小人 emoji，当披风用会变成"身后站了另一个人"。
+           披风没有合适的 emoji → 用代码画。
+           形状用**两片布从肩部向外垂下**（比一整块实心梯形更像披风）。 */
+        .cape-icon {
+            display: inline-block;
+            background: linear-gradient(170deg, #8FB6FF 0%, #4A6FE0 55%, #3450C4 100%);
+            clip-path: polygon(42% 0%, 58% 0%, 100% 72%, 86% 100%, 14% 100%, 0% 72%);
+            border-radius: 3px 3px 24% 24%;
+            box-shadow: 0 2px 5px rgba(52,80,196,.28);
+            width: 22px; height: 19px;
+        }
+        /* ⚠️ 尺寸要按**实拍的 emoji 实际宽度**来定：74px 字号下 emoji 实宽 106px（≈1.43 倍），
+           披风只有比它更宽才能从宠物两侧露出来 —— 否则整块被挡住，等于没戴。 */
+        .pet-cape { width: 2.05em; height: .94em; background: none; }
+        /* 单类选择器打不过 .pet-wear.pw-back，位置得用同等特异性覆盖 */
+        .pet-wear.pw-back.pet-cape { bottom: -2%; }
+        .pet-cape::before, .pet-cape::after {
+            content: ''; position: absolute; top: 4%;
+            width: 44%; height: 96%;
+            background: linear-gradient(175deg, #8FB6FF 0%, #4A6FE0 55%, #3450C4 100%);
+            border-radius: 46% 46% 26% 26%;
+            box-shadow: 0 2px 5px rgba(52,80,196,.25);
+        }
+        .pet-cape::before { left: 0;  transform: rotate(-14deg); transform-origin: top right; }
+        .pet-cape::after  { right: 0; transform: rotate(14deg);  transform-origin: top left; }
+
+        /* ===== 小家场景层（2026-09-22 P0）=====
+           ⚠️ 场景只罩住宠物（一块「舞台」），**不铺满整张卡片**。
+              第一版铺满的实测后果：墙纸/窗户/挂画全压在文字和营养条上，
+              星空房的深紫夜空下"有点想你了""今天还没吃"几乎看不清 → 可读性毁了。
+           舞台尺寸 (150x134) 与 SVG viewBox 完全一致，不会拉伸变形。
+           最外层的 .pet-stage-wrap 不裁切，宠物和装饰可以微微探出边（更生动）。 */
+        .pet-stage-wrap {
+            position: relative; flex-shrink: 0;
+            width: 130px; height: 122px;
+            display: flex; align-items: center; justify-content: center;
+        }
+        .pet-scene-layer {
+            position: absolute; inset: 0; z-index: 0;
+            pointer-events: none; overflow: hidden; border-radius: 18px;
+            box-shadow: inset 0 0 0 2px rgba(255,255,255,.72), 0 3px 12px rgba(46,158,107,.14);
+        }
+        .pet-scene-layer svg { width: 100%; height: 100%; display: block; }
+        .pet-stage-wrap .pet-avatar-holder { z-index: 2; }
+
+        /* ===== 收藏格（2026-09-22 P1）=====
+           替代原来"买几件就平铺几个小图标"：现在点一下就能换上/住进去。 */
+        .pet-collect { margin-top: 9px; display: flex; flex-direction: column; gap: 7px; align-items: center; }
+        .pet-collect-row { display: flex; align-items: center; justify-content: center; gap: 7px; flex-wrap: wrap; }
+        .pet-collect-label { font-size: 12px; color: #7E948B; font-weight: 700; }
+        .pet-slot {
+            width: 42px; height: 42px; padding: 0; cursor: pointer;
+            display: inline-flex; align-items: center; justify-content: center;
+            font-size: 21px; line-height: 1;
+            background: rgba(255,255,255,.88); border: 2px solid #D6F2E6; border-radius: 13px;
+            transition: transform .12s ease, border-color .12s ease, box-shadow .12s ease;
+            -webkit-tap-highlight-color: transparent;
+        }
+        .pet-slot.on { border-color: #3AA17E; box-shadow: 0 0 0 3px rgba(58,161,126,.22); }
+        .pet-slot:active { transform: scale(.9); }
+        .pet-collect-hint { font-size: 11px; color: #9AAFA6; }
         .pet-cancel {
             width: 100%; margin-top: 10px; padding: 11px;
             background: #F1F5F3; color: #7A8C84; border: none; border-radius: 14px;
@@ -1641,6 +1726,24 @@
         .nutri-tag.n-energy  { background:#FAEEDA;color:#854F0B; }
         .nutri-tag.n-peace   { background:#EEEDFE;color:#534AB7; }
         .shop-group { font-size:14px;font-weight:600;color:#2E9E6B;margin:14px 0 6px; }
+        /* 买前预览（2026-09-22 P1）：花金币之前就看见"穿上/住进去"的样子 */
+        .shop-preview {
+            width: 54px; height: 54px; flex-shrink: 0;
+            border-radius: 13px; overflow: hidden; position: relative;
+            display: flex; align-items: center; justify-content: center;
+            background: #F3FAF7; border: 1.5px solid #E1F0E9;
+        }
+        .shop-preview .sp-pet {
+            position: relative; width: 100%; height: 100%;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 30px; line-height: 1;
+        }
+        .shop-preview svg { width: 100%; height: 100%; display: block; }
+        .shop-preview .pet-wear { filter: none; }
+        .shop-preview .pet-wear.pw-back { font-size: .70em; bottom: 6%; }
+        .shop-preview .pet-wear.pw-body { font-size: .54em; bottom: 3%; }
+        .shop-preview .pet-wear.pw-neck { font-size: .44em; bottom: 26%; }
+        .shop-preview .pet-wear.pw-head { font-size: .42em; top: 5%; left: 66%; }
         .shop-exp { font-size:11px;color:#854F0B;background:#FAEEDA;padding:1px 6px;border-radius:8px;margin-left:6px; }
         .nutri-row { display:flex;gap:6px;justify-content:center;margin-top:9px;flex-wrap:wrap; }
         .nutri-pill { font-size:11px;padding:3px 10px;border-radius:12px;background:#F1EFE8;color:#5F5E5A; }
@@ -1975,7 +2078,7 @@
         let isParentMode = false;     // 家长模式（只读取，不写入）
 
         // 上传到云端的数据只包含动态打卡记录（任务/奖励用本地默认值）
-        const SYNC_FIELDS = ['todayChecks', 'todayDate', 'totalStars', 'streak', 'history', 'claimedRewards', 'pet', 'medals', 'poemLog', 'owned', 'leftovers', 'petBook', 'maxExp', 'coinsEver', 'achv', 'petWish', 'petWishDate', 'petWishDone', 'resetAt', 'fourFullDate', 'checksUpdatedAt'];
+        const SYNC_FIELDS = ['todayChecks', 'todayDate', 'totalStars', 'streak', 'history', 'claimedRewards', 'pet', 'medals', 'poemLog', 'owned', 'leftovers', 'petBook', 'maxExp', 'coinsEver', 'achv', 'petWish', 'petWishDate', 'petWishDone', 'resetAt', 'fourFullDate', 'checksUpdatedAt', 'wearing'];
 
         // 上传数据到 Supabase（upsert 固定 id，多端共用同一份；只更新提供的列，不覆盖其它列）
         function syncToCloud() {
@@ -2360,6 +2463,66 @@
         function petOwnedItems(type) {
             const owned = state.owned || [];
             return (state.shop || []).filter(function (x) { return x.type === type && owned.indexOf(x.id) >= 0; });
+        }
+
+        // ===== 小家场景（2026-09-22 P0）：纯内联 SVG =====
+        // 为什么是 SVG 而不是 CSS 渐变：原来的三个家只差一组淡到看不见的底色，
+        // 孩子花 500 金币买"星空房"和花 200 买"温馨小屋"看到的几乎一样 → 奖励贬值。
+        // viewBox 360x300 + preserveAspectRatio=none：跟着卡片拉伸铺满。
+        // ⚠️ SVG 里的 id 会进全局命名空间，三张图必须用互不相同的 id 前缀。
+        const SCENE_SVG = {
+            s_room:
+                '<svg viewBox="0 0 130 122" preserveAspectRatio="xMidYMid slice" xmlns="http://www.w3.org/2000/svg"><defs><linearGradient id="rwWall" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#FFF9EE"/><stop offset="1" stop-color="#FFE9C7"/></linearGradient><linearGradient id="rwFloor" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#E9CB9C"/><stop offset="1" stop-color="#D2A771"/></linearGradient></defs><rect width="130" height="122" fill="url(#rwWall)"/><rect x="0" y="0" width="130" height="10" fill="#FFDDAE"/><line x1="0" y1="10" x2="130" y2="10" stroke="#EBC08A" stroke-width="2"/><rect x="101" y="12" width="26" height="24" rx="4" fill="#C4E6F9" stroke="#CD9E68" stroke-width="3.5"/><line x1="114" y1="12" x2="114" y2="36" stroke="#CD9E68" stroke-width="2.6"/><line x1="101" y1="24" x2="127" y2="24" stroke="#CD9E68" stroke-width="2.6"/><rect x="3" y="13" width="22" height="19" rx="3" fill="#FFE0EA" stroke="#CD9E68" stroke-width="3"/><circle cx="10" cy="20" r="3" fill="#FFB3C6"/><path d="M6 30 L15 22 L24 30 Z" fill="#9DD9B0"/><rect x="0" y="88" width="130" height="34" fill="url(#rwFloor)"/><line x1="0" y1="96" x2="130" y2="96" stroke="#C79C63" stroke-width="1.5" opacity=".5"/><line x1="0" y1="106" x2="130" y2="106" stroke="#C79C63" stroke-width="1.5" opacity=".5"/><line x1="0" y1="116" x2="130" y2="116" stroke="#C79C63" stroke-width="1.5" opacity=".5"/><ellipse cx="65" cy="97" rx="42" ry="10" fill="#FFC9A8" opacity=".9"/><ellipse cx="65" cy="97" rx="28" ry="6" fill="#FFB48C" opacity=".72"/></svg>',
+            s_tree:
+                '<svg viewBox="0 0 130 122" preserveAspectRatio="xMidYMid slice" xmlns="http://www.w3.org/2000/svg"><defs><linearGradient id="trSky" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#E9F7FF"/><stop offset="1" stop-color="#CDEAFF"/></linearGradient><linearGradient id="trGrass" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#B7E6AE"/><stop offset="1" stop-color="#8FD489"/></linearGradient></defs><rect width="130" height="122" fill="url(#trSky)"/><circle cx="20" cy="22" r="22" fill="#7FCB78"/><circle cx="110" cy="20" r="23" fill="#8AD683"/><path d="M12 38 L65 6 L118 38 Z" fill="#C98B55"/><path d="M65 6 L118 38 L65 38 Z" fill="#B87A46" opacity=".45"/><rect x="0" y="36" width="26" height="60" rx="4" fill="#E7C495" stroke="#C39A66" stroke-width="3"/><rect x="104" y="36" width="26" height="60" rx="4" fill="#E7C495" stroke="#C39A66" stroke-width="3"/><rect x="6" y="48" width="14" height="14" rx="3" fill="#A8DDF4" stroke="#C39A66" stroke-width="2.4"/><rect x="110" y="48" width="14" height="14" rx="3" fill="#A8DDF4" stroke="#C39A66" stroke-width="2.4"/><rect x="30" y="92" width="70" height="6" rx="3" fill="#C99B62" opacity=".75"/><rect x="0" y="98" width="130" height="24" fill="url(#trGrass)"/><ellipse cx="65" cy="99" rx="54" ry="6" fill="#7CC873" opacity=".5"/></svg>',
+            s_star:
+                '<svg viewBox="0 0 130 122" preserveAspectRatio="xMidYMid slice" xmlns="http://www.w3.org/2000/svg"><defs><linearGradient id="stSky" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#251E4F"/><stop offset="0.55" stop-color="#3A3170"/><stop offset="1" stop-color="#564A9E"/></linearGradient><radialGradient id="stMoon"><stop offset="0" stop-color="#FFFBE8"/><stop offset="1" stop-color="#FFE79E"/></radialGradient></defs><rect width="130" height="122" fill="url(#stSky)"/><g fill="#FFFFFF"><circle cx="9" cy="22" r="1.6"/><circle cx="25" cy="11" r="1.1"/><circle cx="38" cy="42" r="1.3"/><circle cx="17" cy="58" r="1.2"/><circle cx="8" cy="82" r="1.4"/><circle cx="30" cy="72" r="1.0"/><circle cx="121" cy="47" r="1.5"/><circle cx="111" cy="70" r="1.2"/><circle cx="122" cy="84" r="1.4"/><circle cx="98" cy="14" r="1.1"/><circle cx="52" cy="12" r="1.3"/><circle cx="79" cy="8" r="1.1"/><circle cx="93" cy="42" r="1.0"/><circle cx="45" cy="84" r="1.1"/><circle cx="83" cy="80" r="1.0"/></g><g fill="#FFF3C4" opacity=".95"><path d="M114 18 l2 5.4 5.4 2 -5.4 2 -2 5.4 -2 -5.4 -5.4 -2 5.4 -2 z"/><path d="M34 17 l1.5 4 4 1.5 -4 1.5 -1.5 4 -1.5 -4 -4 -1.5 4 -1.5 z"/></g><ellipse cx="100" cy="26" rx="15" ry="14" fill="url(#stMoon)"/><circle cx="94" cy="22" r="2.8" fill="#F0DCA0" opacity=".6"/><circle cx="104" cy="33" r="2" fill="#F0DCA0" opacity=".6"/><rect x="0" y="98" width="130" height="24" fill="#2C2554"/><ellipse cx="65" cy="99" rx="56" ry="6" fill="#483E82" opacity=".8"/></svg>'
+        };
+        function sceneLayerHTML(sceneId) {
+            const s = SCENE_SVG[sceneId];
+            return s ? '<div class="pet-scene-layer">' + s + '</div>' : '';
+        }
+
+        // ===== 装扮锚点（2026-09-22 P0）：每件装扮挂在哪一层 =====
+        const DECOR_SLOT = { d_bow: 'pw-head', d_scarf: 'pw-neck', d_dress: 'pw-body', d_cape: 'pw-back' };
+        // 披风是代码画的（🦸 是小人不是衣服）→ 凡是"展示这件装扮"的地方都走这里
+        function decorIconHTML(it, tall) {
+            if (it && it.id === 'd_cape') return '<i class="cape-icon"></i>';
+            return it ? it.icon : '';
+        }
+
+        // 当前该戴哪件 / 该住哪个家：
+        // 优先用她亲手选的（state.wearing）；没选过就用"最新买到的那件"（= 买完立刻能看见，老行为兜底）
+        function currentDecorItem() {
+            const owned = petOwnedItems('decor');
+            if (!owned.length) return null;
+            const wid = (state.wearing && state.wearing.decor) || '';
+            const hit = wid ? owned.find(function (x) { return x.id === wid; }) : null;
+            return hit || owned[owned.length - 1];
+        }
+        function currentSceneItem() {
+            const owned = petOwnedItems('scene');
+            if (!owned.length) return null;
+            const wid = (state.wearing && state.wearing.scene) || '';
+            const hit = wid ? owned.find(function (x) { return x.id === wid; }) : null;
+            return hit || owned[owned.length - 1];
+        }
+        // 点收藏格换装。7 岁孩子最着迷的动作就是"挑"和"换" —— 买完自动全戴上反而没了这个动作。
+        function wearItem(kind, id) {
+            const owned = petOwnedItems(kind);
+            if (!owned.some(function (x) { return x.id === id; })) return;
+            state.wearing = state.wearing || { decor: '', scene: '', at: 0 };
+            if (kind === 'scene') state.wearing.scene = id; else state.wearing.decor = id;
+            state.wearing.at = Date.now();
+            saveState();
+            renderPet();
+            const it = owned.find(function (x) { return x.id === id; });
+            if (it) {
+                petShowBubble(kind === 'scene'
+                    ? ('我们住进' + it.name + '啦！谢谢你 🏡')
+                    : ('我戴上' + it.name + '啦，好看吗？' + it.icon), 4200);
+            }
+            playSound('check');
         }
         function petFeedLeft() {
             const used = (state.petExpDate === state.todayDate) ? (state.petExpToday || 0) : 0;
@@ -2862,7 +3025,8 @@
             // ⑧ 已拥有的好东西
             const decorList = petOwnedItems('decor');
             const sceneList = petOwnedItems('scene');
-            const scene = sceneList.length ? sceneList[sceneList.length - 1] : null;
+            const scene = currentSceneItem();
+            const decorWorn = currentDecorItem();
             const _dl = petDaysToNext();
             const nextExp = isLegend
                 ? (stars >= PET_STAR_MAX
@@ -2906,8 +3070,9 @@
                     '<div class="pp-story">' + storyHTML + '</div>' +
 
                     '<div class="pp-sec">🎀 已拥有的好东西</div>' +
-                    '<div class="pet-profile-row"><span>装扮</span><b>' + (decorList.length ? decorList.map(function (d) { return d.icon + ' ' + d.name; }).join('　') : '还没有') + '</b></div>' +
-                    '<div class="pet-profile-row"><span>小屋</span><b>' + (scene ? scene.icon + ' ' + scene.name : '还没有') + '</b></div>' +
+                    '<div class="pet-profile-row"><span>正在戴</span><b>' + (decorWorn ? decorWorn.icon + ' ' + decorWorn.name : '还没有') + '</b></div>' +
+                    '<div class="pet-profile-row"><span>正在住</span><b>' + (scene ? scene.icon + ' ' + scene.name : '还没有') + '</b></div>' +
+                    '<div class="pet-profile-row"><span>我的收藏</span><b>' + ((decorList.length + sceneList.length) ? ('装扮 ' + decorList.length + ' 件 · 小家 ' + sceneList.length + ' 个（在首页点一下就能换）') : '还没有') + '</b></div>' +
 
                     '<div class="pp-note">' +
                         '📖 <b>成长逻辑：</b>每天打卡 = 喂它（四维营养 +1 口、成长值 +5/颗星）；<br>' +
@@ -2968,12 +3133,38 @@
             }
             const sceneList = petOwnedItems('scene');
             const decorList = petOwnedItems('decor');
-            const scene = sceneList.length ? sceneList[sceneList.length - 1] : null;
-            const bg = scene ? (SCENE_BG[scene.id] || '') : '';
+            const scene = currentSceneItem();      // 正在住的小家（她挑的那个）
+            const decor = currentDecorItem();      // 正在戴的装扮（她挑的那个）
+            const sceneHTML = scene ? sceneLayerHTML(scene.id) : '';
+            const bg = scene ? (SCENE_BG[scene.id] || '') : '';   // 卡片整体氛围色（很淡，不影响读字）
+            const dSlot = decor ? (DECOR_SLOT[decor.id] || 'pw-head') : '';
+            // 披风要画在宠物"身后"，其余三件画在身前
+            const wearBack  = (decor && dSlot === 'pw-back')
+                ? (decor.id === 'd_cape'
+                    ? '<span class="pet-wear pw-back pet-cape"></span>'
+                    : '<span class="pet-wear pw-back">' + decor.icon + '</span>')
+                : '';
+            const wearFront = (decor && dSlot !== 'pw-back') ? '<span class="pet-wear ' + dSlot + '">' + decor.icon + '</span>' : '';
             const starLine = isLegend
                 ? '<span class="pet-starline">' + [0, 1, 2, 3, 4].map(function (i) {
                       return '<i class="' + (i < stars ? 'on' : '') + '">\u2B50</i>';
                   }).join('') + '</span>'
+                : '';
+            // 收藏格：已拥有的东西做成可点方块（点一下换上），只在她真的拥有时才出现
+            const collectHTML = (decorList.length || sceneList.length)
+                ? '<div class="pet-collect">' +
+                    (decorList.length ? '<div class="pet-collect-row"><span class="pet-collect-label">🎀 装扮</span>' +
+                        decorList.map(function (d) {
+                            return '<button class="pet-slot' + (decor && d.id === decor.id ? ' on' : '') +
+                                '" onclick="wearItem(\'decor\',\'' + d.id + '\')" title="换上' + d.name + '">' + decorIconHTML(d) + '</button>';
+                        }).join('') + '</div>' : '') +
+                    (sceneList.length ? '<div class="pet-collect-row"><span class="pet-collect-label">🏡 小家</span>' +
+                        sceneList.map(function (s) {
+                            return '<button class="pet-slot' + (scene && s.id === scene.id ? ' on' : '') +
+                                '" onclick="wearItem(\'scene\',\'' + s.id + '\')" title="住进' + s.name + '">' + s.icon + '</button>';
+                        }).join('') + '</div>' : '') +
+                    ((decorList.length + sceneList.length) > 1 ? '<div class="pet-collect-hint">点一下就能换上 ✨</div>' : '') +
+                  '</div>'
                 : '';
             const wish = petWishToday();
             const wishHTML = wish
@@ -2986,12 +3177,16 @@
             area.innerHTML =
                 '<div class="pet-card"' + (bg ? ' style="background:' + bg + ';"' : '') + '>' +
                     '<button class="pet-change-btn" onclick="confirmChangePet()" title="换一个伙伴">🔄</button>' +
-                    (scene ? '<div class="pet-scene">🏡 ' + scene.name + '</div>' : '') +
                     '<div class="pet-main">' +
-                        '<div class="pet-avatar-holder">' +
-                            crown + auraHTML +
-                            '<div class="pet-avatar ' + moodCls + '" id="petAvatar" style="font-size:' + PET_STAGE_SIZE[stage] + ';cursor:pointer;" onclick="petInteract()" title="摸摸它">' + avatar + '</div>' +
-                            '<div class="pet-ground"></div>' +
+                        '<div class="pet-stage-wrap">' +
+                            sceneHTML +
+                            '<div class="pet-avatar-holder">' +
+                                crown + auraHTML +
+                                '<div class="pet-avatar ' + moodCls + '" id="petAvatar" style="font-size:' + PET_STAGE_SIZE[stage] + ';cursor:pointer;" onclick="petInteract()" title="摸摸它">' +
+                                    wearBack + '<span class="pa-emoji">' + avatar + '</span>' + wearFront +
+                                '</div>' +
+                                '<div class="pet-ground"></div>' +
+                            '</div>' +
                         '</div>' +
                         '<div class="pet-side">' +
                             '<div class="pet-name">' + (state.pet.name || kind.name) +
@@ -3006,9 +3201,7 @@
                     '</div>' +
                     '<div class="pet-bubble" id="petBubble"></div>' +
                     wishHTML +
-                    (decorList.length ? '<div class="pet-decor-row">' +
-                        decorList.map(function (d) { return '<span class="pet-decor" title="' + d.name + '">' + d.icon + '</span>'; }).join('') +
-                        '</div>' : '') +
+                    collectHTML +
                     '<div class="pet-actions">' +
                         '<button class="pet-profile-btn" onclick="showPetProfile()">📖 成长档案</button>' +
                         '<span class="pet-today-chip">' + (calcTodayPending().length === 0 ? '今天全做完啦 🎉' : '还剩 ' + calcTodayPending().length + ' 项') + '</span>' +
@@ -3257,6 +3450,9 @@
             tasks: DEFAULT_TASKS,
             shop: DEFAULT_SHOP,
             owned: [],
+            // 当前穿戴：decor/scene 存 shop 里的 id（空 = 还没挑，按"最新买的那件"兜底）
+            // at = 最后一次选择的时间戳，多端合并靠它判先后（本机没时间戳的旧值一定输）
+            wearing: { decor: '', scene: '', at: 0 },
             timers: {},
             leftovers: [],
             summerStart: '2026-09-01',
@@ -3491,6 +3687,13 @@
                 state.appVersion = APP_VERSION;
             }
             if (state.poemLibVer !== POEM_LIB_VERSION) { state.poemLog = {}; state.poemLibVer = POEM_LIB_VERSION; }
+            // ===== 当前穿戴（2026-09-22 P0）：老设备没有这个字段 → 补默认；坏值也在这里纠正 =====
+            if (!state.wearing || typeof state.wearing !== 'object') {
+                state.wearing = { decor: '', scene: '', at: 0 };
+            }
+            if (typeof state.wearing.decor !== 'string') state.wearing.decor = '';
+            if (typeof state.wearing.scene !== 'string') state.wearing.scene = '';
+            if (typeof state.wearing.at !== 'number') state.wearing.at = 0;
             // 商店文案与默认值同步（只更新名称/图标/描述，不动购买记录）
             if (Array.isArray(state.shop)) {
                 state.shop.forEach(function (t) {
@@ -5539,6 +5742,30 @@
         function closeRewardShop() {
             document.getElementById('rewardModal').classList.remove('active');
         }
+        // 买前预览：让孩子在花金币之前就看见结果。
+        // 这正是这次改动的起点 —— 布丁攒钱买了蝴蝶结，买完才发现"什么都没变"。
+        function shopPreviewHTML(it) {
+            if (it.type === 'scene') {
+                return '<div class="shop-preview">' + (SCENE_SVG[it.id] || '') + '</div>';
+            }
+            if (it.type === 'decor') {
+                const kind = state.pet
+                    ? (PET_KINDS.find(function (k) { return k.id === state.pet.kind; }) || PET_KINDS[0])
+                    : PET_KINDS[0];
+                const stg = state.pet ? getPetStage(state.pet.exp || 0) : 1;
+                const emo = !state.pet ? '🐾' : (stg === 0 ? '🥚' : kind.emoji);
+                const slot = DECOR_SLOT[it.id] || 'pw-head';
+                const back = (slot === 'pw-back')
+                    ? (it.id === 'd_cape'
+                        ? '<span class="pet-wear pw-back pet-cape"></span>'
+                        : '<span class="pet-wear pw-back">' + it.icon + '</span>')
+                    : '';
+                const front = (slot !== 'pw-back') ? '<span class="pet-wear ' + slot + '">' + it.icon + '</span>' : '';
+                return '<div class="shop-preview"><div class="sp-pet">' +
+                    back + '<span class="pa-emoji">' + emo + '</span>' + front + '</div></div>';
+            }
+            return '<div class="shop-preview">' + it.icon + '</div>';
+        }
         function renderRewards() {
             document.getElementById('rewardBalance').innerHTML =
                 '🪙 当前拥有 ' + state.totalStars + ' 枚金币（打卡就能赚）';
@@ -5556,7 +5783,7 @@
                     const isFood = it.type === 'food';
                     const can = state.totalStars >= it.cost && (isFood || !owned);
                     html += '<div class="reward-card' + (owned ? ' claimed' : '') + '">' +
-                        '<div class="reward-icon">' + it.icon + '</div>' +
+                        (isFood ? '<div class="reward-icon">' + it.icon + '</div>' : shopPreviewHTML(it)) +
                         '<div class="reward-info">' +
                             '<div class="reward-name">' + it.name + (isFood ? '<span class="shop-exp">长大 +' + it.exp + '</span>' : '') + '</div>' +
                             '<div class="reward-desc">' + (it.desc || '') + '</div>' +
@@ -5597,7 +5824,14 @@
                 }
             } else {
                 state.owned.push(it.id);
-                showToast('\uD83C\uDF89 \u4e70\u4e0b\u4e86\u300c' + it.name + '\u300d\uff01\u5173\u6389\u5c31\u80fd\u770b\u5230\u4f19\u4f34\u7684\u65b0\u53d8\u5316\u561b\uff5e');
+                // 买了就立刻换上/住进去。旧版买完什么都不变（只是多一个小图标），
+                // 布丁 2026-09-22 的真实反馈就是"辛苦攒的金币换了个图标" → 这里必须当场可见。
+                state.wearing = state.wearing || { decor: '', scene: '', at: 0 };
+                if (it.type === 'scene') state.wearing.scene = it.id;
+                else state.wearing.decor = it.id;
+                state.wearing.at = Date.now();
+                showToast('\uD83C\uDF89 \u4e70\u4e0b\u4e86\u300c' + it.name + '\u300d\uff01' +
+                    (it.type === 'scene' ? '\u5df2\u7ecf\u4f4f\u8fdb\u53bb\u5566\uff5e' : '\u5df2\u7ecf\u7ed9\u5b83\u6234\u4e0a\u5566\uff5e'));
             }
             saveState();
             renderStats();
@@ -5845,6 +6079,7 @@
                 state.coinsEver = 0; state.maxExp = 0; state.todayChecks = {};
                 state.petWish = ''; state.petWishDate = ''; state.petWishDone = false;
                 state.freeSettledDate = ''; state.fourFullDate = '';
+                state.wearing = { decor: '', scene: '', at: 0 };
             }
             if (floor) {
                 state.resetAt = floor;
@@ -5929,6 +6164,20 @@
             if (Array.isArray(data.owned)) {
                 state.owned = Array.from(new Set([...(state.owned || []), ...data.owned]));
             }
+            // 当前穿戴：按「最后一次选择的时间戳」判先后，后选的赢。
+            // ⚠️ 不能取并集（穿戴是单选），也不能没时间戳就覆盖（否则另一端会一直顶掉本机刚换的）；
+            //    本机没有 at（老数据）时一定输给云端带时间戳的值 —— 与 pet.switchedAt 同一套路。
+            if (data.wearing && typeof data.wearing === 'object') {
+                const _wT = function (w) { return (w && typeof w.at === 'number') ? w.at : 0; };
+                state.wearing = state.wearing || { decor: '', scene: '', at: 0 };
+                if (_wT(data.wearing) > _wT(state.wearing)) {
+                    state.wearing = {
+                        decor: String(data.wearing.decor || ''),
+                        scene: String(data.wearing.scene || ''),
+                        at: _wT(data.wearing)
+                    };
+                }
+            }
             // 勋章：并集
             if (Array.isArray(data.medals)) {
                 state.medals = Array.from(new Set([...(state.medals || []), ...data.medals]));
@@ -6006,7 +6255,7 @@
         // ========== 静态数据外置加载（data/*.json 为权威源，内嵌为离线兜底） ==========
         // 只读数据（任务库/勋章/成就/台词/听写词单等）拆成 JSON 文件，像音频一样按 URL 加载；
         // 加载成功覆盖内嵌值并缓存到 localStorage；加载失败/无网络回退缓存；缓存也没有则用内嵌兜底。
-        const STATIC_DATA_VER = '20260917.1';
+        const STATIC_DATA_VER = '20260922.1';
         const STATIC_FILES = {
             tasks:     'data/tasks.json',
             shop:      'data/shop.json',
