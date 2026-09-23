@@ -71,7 +71,7 @@
     "id": "s_room",
     "name": "温馨小屋",
     "icon": "🏠",
-    "cost": 200,
+    "cost": 120,
     "type": "scene",
     "desc": "给伙伴一个家"
   },
@@ -79,7 +79,7 @@
     "id": "s_tree",
     "name": "树屋",
     "icon": "🌳",
-    "cost": 350,
+    "cost": 180,
     "type": "scene",
     "desc": "爬高高的看远处"
   },
@@ -87,7 +87,7 @@
     "id": "s_star",
     "name": "星空房",
     "icon": "🌌",
-    "cost": 500,
+    "cost": 250,
     "type": "scene",
     "desc": "躺在里面看星星"
   }
