@@ -8,7 +8,7 @@
     <meta http-equiv="Expires" content="0" data-page-node-id="YXlbOTFHU2Nr6SGRQHt7cy">
     <script>
         (function () {
-            var APP_VERSION = '20260923.3';
+            var APP_VERSION = '20260923.4';
             window.APP_VERSION_STR = APP_VERSION;   // 主脚本里做线上版本自检要用
             try {
                 var params = new URLSearchParams(location.search);
@@ -166,7 +166,24 @@
         .pet-profile-btn { background:linear-gradient(135deg,#6C5CE7,#8E7CF3); color:#fff; border:none; border-radius:12px; padding:7px 18px; font-size:13px; font-weight:700; cursor:pointer; }
         .pet-profile-btn:active { transform: scale(0.95); }
         .pet-hint { font-size:11px; color:#9AB0A7; margin-top:8px; position:relative; z-index:2; }
-        .pet-actions { display:flex; align-items:center; justify-content:center; gap:10px; }
+        .pet-actions { display:flex; align-items:center; justify-content:center; gap:10px; flex-wrap:wrap; }
+        /* 「花金币的门」放在宠物卡里（2026-09-23）。
+           实测这一行在 **0.90 屏** —— 这才是真正"第一眼就能看到"的位置：
+             宠物卡这一行 0.90 屏  <  统计卡处 1.33 屏  <  页底原按钮 4.52 屏
+           而且它紧挨着下面那句"金币买食物能让它长得更快"，正好把话接上。
+           ⚠️ 金配色与商店/统计卡一致，别改成紫色（紫色已经表示"成长档案"）。 */
+        .pet-shop-btn {
+            background: linear-gradient(135deg, #FFC93C, #FF9F1C);
+            color: #7A4A00;
+            border: none;
+            border-radius: 12px;
+            padding: 7px 16px;
+            font-size: 13px;
+            font-weight: 700;
+            cursor: pointer;
+            -webkit-tap-highlight-color: transparent;
+        }
+        .pet-shop-btn:active { transform: scale(0.96); }
         .pet-today-chip { font-size:11.5px; font-weight:700; color:#2E9E6B; background:#fff; border:1.5px solid #D6F2E6; border-radius:11px; padding:5px 11px; }
         .pending-hint { font-size:12.5px; color:#5B7A6E; margin-top:8px; text-align:center; font-weight:600; }
         .pending-hint.done { color:#2E9E6B; }
@@ -815,6 +832,65 @@
             font-size: 12px;
             color: #999;
             margin-top: 2px;
+        }
+
+        /* ========== 花金币的门（2026-09-23）==========
+           ⚠️ 别再把它挪回页底。实测（tools/_diag_entry_depth.py，390×844 真实 Chrome，
+              布丁真实状态）：
+                ★ 金币结余 → **1.22 屏**（1028px）
+                🎁 奖励商店按钮 → 原在 **4.41 屏**（3721px），页面总高 4.7 屏
+                🎀 换装入口（收藏格）→ **0.90 屏**，就在宠物卡里
+            ⇒ 她看得见钱、也摸得到换装，**唯独看不见花钱的门**。
+              外部佐证：184 枚金币下，连 10 枚的苹果她都从没买过。
+            ⚠️ CSS 改动没有任何测试覆盖（jsdom 不做布局）→ 只有实拍能兜住。 */
+        .stat-card-tap {
+            cursor: pointer;
+            -webkit-tap-highlight-color: transparent;
+            position: relative;
+            border: 2px solid #FFE0A3;
+        }
+        .stat-card-tap:active { transform: scale(0.97); }
+        .stat-go {
+            margin-top: 4px;
+            font-size: 10px;
+            font-weight: 700;
+            color: #E08A00;
+            background: #FFF4DA;
+            border-radius: 8px;
+            padding: 2px 0;
+        }
+        .shop-door {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin: -6px 0 2px;          /* 紧贴统计卡下方（stats-row 自带 16px 下边距） */
+            padding: 11px 14px;
+            background: linear-gradient(135deg, #FFF7DE 0%, #FFE9B0 100%);
+            border: 2px solid #F2C75C;
+            border-radius: 16px;
+            box-shadow: 0 2px 10px rgba(240,190,60,0.18);
+            cursor: pointer;
+            -webkit-tap-highlight-color: transparent;
+            transition: transform 0.15s;
+        }
+        .shop-door:active { transform: scale(0.98); }
+        .shop-door-icon { font-size: 26px; line-height: 1; }
+        .shop-door-main { flex: 1; min-width: 0; text-align: left; }
+        .shop-door-title {
+            font-size: 15px;
+            font-weight: 700;
+            color: #8A5A00;
+        }
+        .shop-door-sub {
+            font-size: 12px;
+            color: #B0801C;
+            margin-top: 2px;
+        }
+        .shop-door-go {
+            font-size: 13px;
+            font-weight: 700;
+            color: #8A5A00;
+            white-space: nowrap;
         }
 
         /* ========== 进度条 ========== */
@@ -2014,16 +2090,31 @@
                 <div class="stat-value today-stars" id="todayStars" data-page-node-id="IZAHmWHgf506zTxizzMICt">0</div>
                 <div class="stat-label" data-page-node-id="1UYQX02HljijeTxGYPkXjO">今日金币</div>
             </div>
-            <div class="stat-card" data-page-node-id="0Xfl0xFTc3LK9BfTqYlcUX">
+            <div class="stat-card stat-card-tap" id="coinCard" role="button" tabindex="0" title="点这里去奖励商店花金币" onclick="showRewardShop()" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();showRewardShop();}" data-page-node-id="0Xfl0xFTc3LK9BfTqYlcUX">
                 <div class="stat-icon" data-page-node-id="Vtcbzw15yWUtP7pUyvOAYV">🏆</div>
                 <div class="stat-value total-stars" id="totalStars" data-page-node-id="i3JrmVWypQrdQdMpZYD9WO">0</div>
                 <div class="stat-label" data-page-node-id="73cckmzbcJixtvZDcaYp8A">金币结余</div>
+                <div class="stat-go">去花掉 ›</div>
             </div>
             <div class="stat-card" data-page-node-id="BfJCHKqLrDAEBmVeUwfya1">
                 <div class="stat-icon" data-page-node-id="2ccrFhg2lLotr6jPnQZVfm">✅</div>
                 <div class="stat-value completed" id="completedCount" data-page-node-id="ulDTY2ShsQLHhDwUnDANZn">0/0</div>
                 <div class="stat-label" data-page-node-id="bwZhpoha7TlAIThdm1aoco">今日完成</div>
             </div>
+        </div>
+
+        <!-- 花金币的门（2026-09-23）：紧贴统计卡，**必须在首屏**。
+             ⚠️ 实测这个入口原先只在页底 .actions-row 里（4.41 屏），而金币结余在 1.22 屏、
+                换装入口（收藏格）在 0.90 屏 —— 她看得见钱、摸得到换装，唯独找不到商店。
+             ⚠️ 页底那个「🎁 奖励商店」按钮**保留不动**：长页面留个重复入口是有意的，
+                打卡完滚到底还能再点一次，比"必须滚回顶部"更顺。 -->
+        <div class="shop-door" id="shopDoor" role="button" tabindex="0" title="打开奖励商店" onclick="showRewardShop()" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();showRewardShop();}">
+            <div class="shop-door-icon">🎁</div>
+            <div class="shop-door-main">
+                <div class="shop-door-title">奖励商店</div>
+                <div class="shop-door-sub" id="shopDoorSub">用金币给伙伴买好吃的</div>
+            </div>
+            <div class="shop-door-go">去逛逛 ›</div>
         </div>
 
         <!-- 进度条 -->
@@ -3809,6 +3900,7 @@
                     collectHTML +
                     '<div class="pet-actions">' +
                         '<button class="pet-profile-btn" onclick="showPetProfile()">📖 成长档案</button>' +
+                        '<button class="pet-shop-btn" onclick="showRewardShop()">🎁 奖励商店</button>' +
                         '<span class="pet-today-chip">' + (calcTodayPending().length === 0 ? '今天全做完啦 🎉' : '还剩 ' + calcTodayPending().length + ' 项') + '</span>' +
                     '</div>' +
                     '<div class="pet-hint">👆 点它会说话 · 打卡时它也会回应你 · 金币买食物能让它长得更快</div>' +
@@ -5214,6 +5306,28 @@
             }
         }
 
+        // 「花金币的门」副文案（2026-09-23）
+        // 只陈述"你现在买得起什么"这个**事实**，不写"快去买" ——
+        // 催促会把内在动力换成外部指令，与这个 App 的目标相反。
+        // ⚠️ 门槛必须从**商店定义**推导，不能写死 10/120：
+        //    2026-09-23 刚调过价（小家 200/350/500 → 120/180/250），
+        //    写死的数字下次调价就变成假信息。
+        function renderShopDoor() {
+            const el = document.getElementById('shopDoorSub');
+            if (!el) return;
+            const n = state.totalStars || 0;
+            const shop = (Array.isArray(state.shop) && state.shop.length) ? state.shop : (DEFAULT_SHOP || []);
+            const minOf = function (type) {
+                const xs = shop.filter(function (x) { return x.type === type; })
+                               .map(function (x) { return x.cost; })
+                               .filter(function (c) { return typeof c === 'number'; });
+                return xs.length ? Math.min.apply(null, xs) : Infinity;
+            };
+            const minFood = minOf('food'), minScene = minOf('scene');
+            if (n >= minScene)      el.textContent = '你有 ' + n + ' 枚金币，够买一个小家啦～';
+            else if (n >= minFood)  el.textContent = '你有 ' + n + ' 枚金币，去挑一个吧～';
+            else                    el.textContent = '打卡就能赚金币，攒够了来买～';
+        }
         function renderStats() {
             const todayStars = calcTodayStars();
             // 全天口径（2026-09-11 改）：分母=今天所有激活任务，避免白天完成度低、
@@ -5224,6 +5338,7 @@
 
             document.getElementById('todayStars').textContent = todayStars;
             document.getElementById('totalStars').textContent = state.totalStars;
+            renderShopDoor();  // 花金币的门（2026-09-23）：余额变了，入口那句话也得跟着变
             renderMotto();   // 存钱罐里的时间要当场就涨
             document.getElementById('completedCount').textContent = `${completed}/${total}`;
 
