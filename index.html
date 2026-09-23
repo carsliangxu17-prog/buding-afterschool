@@ -8,7 +8,7 @@
     <meta http-equiv="Expires" content="0" data-page-node-id="YXlbOTFHU2Nr6SGRQHt7cy">
     <script>
         (function () {
-            var APP_VERSION = '20260923.1';
+            var APP_VERSION = '20260923.2';
             window.APP_VERSION_STR = APP_VERSION;   // 主脚本里做线上版本自检要用
             try {
                 var params = new URLSearchParams(location.search);
@@ -376,7 +376,6 @@
            装饰放进 .pet-avatar 内部：.pet-avatar 带 petFloat 浮动动画，
            装饰若挂在 holder 上会在宠物上下浮动时"留在原地"，一眼假。
            字号一律用 em —— 自动跟随成长阶段（52~82px）等比缩放。 */
-        .pet-avatar .pa-emoji { position: relative; z-index: 3; display: inline-block; }
         .pet-wear {
             position: absolute; line-height: 1; pointer-events: none;
             filter: drop-shadow(0 2px 3px rgba(0,0,0,.22));
@@ -388,6 +387,87 @@
         .pet-wear.pw-body { z-index: 6; left: 50%; bottom: -16%; font-size: .60em; transform: translateX(-50%); }
         .pet-wear.pw-neck { z-index: 6; left: 50%; bottom: 22%; font-size: .50em; transform: translateX(-50%); }
         .pet-wear.pw-head { z-index: 6; left: 66%; top: -2%;     font-size: .46em; transform: translateX(-50%); }
+        /* ===== 宠物「长身子」几何层（2026-09-23 方案 A）=====
+           【为什么要这一层】.pet-avatar 里原来只有**一个 emoji 字符**，而 9 种动物全是"脸"，
+           所以"脖子 / 身体"这两个部位此前**根本不存在** —— 围巾只能落在脸下沿（压嘴），
+           裙子只能盖住下半张脸。位置调过两轮都调不出来，因为缺的是部件、不是坐标。
+
+           【几何基准靠 strut】.pet-figure 是画布，高度由 line-height:1 的 strut 保证
+           = font-size × 1 → **头缩小后容器高度不会塌陷**，因此 .pet-ground（地面）与
+           .pet-stage-wrap（舞台）位置零漂移。量化验证见 tools/_measure_pet_0923.py。
+
+           【头缩 .80em】给身子让出空间。⚠️ 必须同时 vertical-align:top：
+           默认 baseline 对齐会让缩小后的头**下沉约 11.5px**（74px strut 与 59px 内盒的
+           基线差），整个宠物看着往下掉 —— 这是本轮靠"量数字"才抓住的。
+
+           【每只动物一套参数】熊猫黑、青蛙绿、狐狸橙白、独角兽薰衣草……
+           共用一套必然违和（天姝的直觉是对的）。参数表见 PET_FIGURE。
+           🦖 小恐龙 / 🐧 企鹅 本身就是完整全身 emoji → 不画身子，只把围巾戴到真脖子上。 */
+        .pet-figure { position: relative; display: inline-block; line-height: 1; }
+        .pa-emoji {
+            position: relative; z-index: 3; display: inline-block;
+            line-height: 1; vertical-align: top;
+            font-size: .80em;
+        }
+        /* 自绘身子：圆润躯干 + 两只小脚。--c 主体色 / --p 爪子色，
+           由每只动物的参数、或"布丁自己涂的颜色"提供。
+           ⚠️ 不用 color-mix()：真机（旧 iOS/WKWebView）不支持会让整条 background
+              声明失效 → 身子变透明。底色 + rgba 高光叠加是等效且全兼容的写法。 */
+        .pa-body {
+            position: absolute; left: 50%; transform: translateX(-50%); z-index: 2;
+            background-color: var(--c);
+            background-image: linear-gradient(178deg,
+                rgba(255,255,255,.34) 0%, rgba(255,255,255,0) 44%, rgba(0,0,0,.16) 100%);
+            border-radius: 48% 48% 40% 40% / 30% 30% 62% 62%;
+        }
+        .pa-body::before, .pa-body::after {
+            content: ''; position: absolute; bottom: -.15em;
+            width: .19em; height: .25em;
+            background: var(--p); border-radius: 42% 42% 46% 46%;
+        }
+        .pa-body::before { left: .05em; }
+        .pa-body::after  { right: .05em; }
+
+        /* 自绘围巾：🧣 这个 emoji 是"叠好的围巾"商品图（斜放带流苏），
+           从 top:50% 到 68% 逐档实拍**没有一档能用**，放哪都像一个红块贴在脸上。
+           而且 emoji 的脸从额头直贯到底、没有"脖子"那段空隙，
+           所以**细围巾**同样像贴在嘴筒上 —— 宽度必须 ≈ 脸宽（1em）才读成"围了一圈"。
+           这一档是拿 3 宽 × 3 落点 = 9 格矩阵实拍比出来的。 */
+        .pa-scarf {
+            position: absolute; left: 50%; transform: translateX(-50%);
+            width: 1em; height: .14em; border-radius: 999px;
+            background: linear-gradient(180deg, #FF8A8A 0%, #E8453F 55%, #C42F2B 100%);
+            box-shadow: 0 1px 2px rgba(0,0,0,.25), inset 0 -1px 1px rgba(0,0,0,.10);
+            z-index: 4;
+        }
+        .pa-scarf::before, .pa-scarf::after {
+            content: ''; position: absolute; top: 55%;
+            width: .13em; height: .25em;
+            background: linear-gradient(180deg, #E8453F, #B92F2B);
+            border-radius: .02em .02em .05em .05em;
+        }
+        .pa-scarf::before { left: .06em;  transform: rotate(7deg); }
+        .pa-scarf::after  { right: .06em; transform: rotate(-7deg); }
+
+        /* ===== 涂色面板（2026-09-23）=====
+           布丁说"想让我的兔子长出身子"、"四肢能不能我自己画"。
+           分工：衔接（接缝高度/贴合/比例）由我们按每只动物锁死 → 保证效果；
+           外观（颜色）交给她 → 满足"我的兔子"。
+           色块即按钮：选中的加 .on 环。最后一个 🎨 里藏原生取色器（想要什么色都行）。 */
+        .pet-color-btn {
+            width: 30px; height: 30px; padding: 0; cursor: pointer; border-radius: 50%;
+            border: 2px solid #fff; box-shadow: 0 1px 4px rgba(46,158,107,.22);
+            position: relative; overflow: hidden; flex-shrink: 0;
+        }
+        .pet-color-btn.on { box-shadow: 0 0 0 2px #2E9E6B, 0 1px 4px rgba(46,158,107,.30); }
+        .pet-color-btn.orig {
+            background: #fff; color: #7E948B; font-size: 11px; font-weight: 700;
+            display: inline-flex; align-items: center; justify-content: center;
+        }
+        .pet-color-btn input[type=color] {
+            position: absolute; inset: 0; width: 100%; height: 100%;
+            opacity: 0; cursor: pointer; border: 0; padding: 0;
+        }
         /* 自绘披风：🦸 是个完整的小人 emoji，当披风用会变成"身后站了另一个人"。
            披风没有合适的 emoji → 用代码画（三处共用同一形状：宠物身上 / 收藏格 / 商店预览）。 */
         /* 自绘披风：🦸 是个完整的小人 emoji，当披风用会变成"身后站了另一个人"。
@@ -451,6 +531,11 @@
         .pet-collect { margin-top: 9px; display: flex; flex-direction: column; gap: 7px; align-items: center; }
         .pet-collect-row { display: flex; align-items: center; justify-content: center; gap: 7px; flex-wrap: wrap; }
         .pet-collect-label { font-size: 12px; color: #7E948B; font-weight: 700; }
+        /* ⚠️ 涂色行：容器里"标签 + 8 个色块"是**平级兄弟节点**（没有内层包裹），
+           所以**绝不能**用 `flex-direction: column` —— 那会把 9 个元素**全部竖着堆成一列**。
+           正解：让标签独占整行（flex-basis:100%），靠父级的 flex-wrap 把色块挤到第二行。
+           宽度核算：8 个 32px 色块 + 7 个 7px 间距 = 305px ≤ 卡片内宽 314px → 一行放得下。 */
+        .pet-color-row .pet-collect-label { flex-basis: 100%; text-align: center; }
         .pet-slot {
             width: 42px; height: 42px; padding: 0; cursor: pointer;
             display: inline-flex; align-items: center; justify-content: center;
@@ -513,7 +598,6 @@
             transform-origin: 50% 78%;
             filter: drop-shadow(0 3px 4px rgba(120,90,40,.16));
         }
-        .fs-pet .pa-emoji { position: relative; z-index: 3; display: inline-block; }
         .fs-pet.chomp { animation: fsChomp .32s ease; }
         .fs-pet.chew  { animation: fsChew .42s ease 2; }
         @keyframes fsChomp {
@@ -1856,6 +1940,10 @@
             display: flex; align-items: center; justify-content: center;
             font-size: 30px; line-height: 1;
         }
+        /* ⚠️ 这里必须再包一层 .pet-figure 当画布：
+           .sp-pet 高 54px 而字号只有 30px（1em ≠ 容器高），
+           身子/围巾的 top% 会算错。包一层 1em 高的画布后，
+           三处宿主的几何完全一致，同一套参数通用。 */
         .shop-preview svg { width: 100%; height: 100%; display: block; }
         .shop-preview .pet-wear { filter: none; }
         .shop-preview .pet-wear.pw-back { font-size: .70em; bottom: 6%; }
@@ -2196,7 +2284,7 @@
         let isParentMode = false;     // 家长模式（只读取，不写入）
 
         // 上传到云端的数据只包含动态打卡记录（任务/奖励用本地默认值）
-        const SYNC_FIELDS = ['todayChecks', 'todayDate', 'totalStars', 'streak', 'history', 'claimedRewards', 'pet', 'medals', 'poemLog', 'owned', 'leftovers', 'petBook', 'maxExp', 'coinsEver', 'achv', 'petWish', 'petWishDate', 'petWishDone', 'resetAt', 'fourFullDate', 'checksUpdatedAt', 'wearing', 'foodToday', 'foodLog'];
+        const SYNC_FIELDS = ['todayChecks', 'todayDate', 'totalStars', 'streak', 'history', 'claimedRewards', 'pet', 'medals', 'poemLog', 'owned', 'leftovers', 'petBook', 'maxExp', 'coinsEver', 'achv', 'petWish', 'petWishDate', 'petWishDone', 'resetAt', 'fourFullDate', 'checksUpdatedAt', 'wearing', 'foodToday', 'foodLog', 'petLegs'];
 
         // 上传数据到 Supabase（upsert 固定 id，多端共用同一份；只更新提供的列，不覆盖其它列）
         function syncToCloud() {
@@ -2206,6 +2294,8 @@
                 // 关键：本地还没养伙伴 / 还没买装扮时不要上传空值，否则会把云端已有的养成进度洗掉
                 if (key === 'pet' && !v) return acc;
                 if ((key === 'owned' || key === 'medals' || key === 'petBook' || key === 'achv') && (!Array.isArray(v) || v.length === 0)) return acc;
+                // 腿色空对象同理：别把它当成"她取消了自己的颜色"推上去
+                if (key === 'petLegs' && (!v || typeof v !== 'object' || !Object.keys(v).length)) return acc;
                 acc[key] = v;
                 return acc;
             }, {});
@@ -2448,6 +2538,58 @@
             { id:'hamster', emoji:'\uD83D\uDC39', name:'\u4ed3\u9f20' },
             { id:'frog',    emoji:'\uD83D\uDC38', name:'\u5c0f\u9752\u86d9' },
         ];
+        // ===== 宠物身形参数（2026-09-23 方案 A：长身子）=====
+        // ⚠️ **必须独立成表，不能塞进 PET_KINDS**：applyStaticOverrides 里写着
+        //    `if (D.pets) PET_KINDS = D.pets` —— 远端 data/pets.json 会把它**整份覆盖**，
+        //    塞进去就等于白改（还得连带改 JSON + bump STATIC_DATA_VER）。
+        // hs   头相对画布基准的缩放（0.80 = 让出身子空间）
+        // top/w/h  自绘身子的起始高度%、宽、高（em）
+        // c/p  身子主体色 / 爪子色（也可被"布丁自己涂的颜色"覆盖）
+        // nk   围巾落点 top%（= .pa-scarf 这条带的顶边位置）
+        // dt   裙子落点 top%（= 👗 emoji 盒的顶边位置）
+        //
+        // ⚠️ **这组数是在真实应用里实测定死的，不能照搬原型页的值**。
+        //    原型（独立 HTML）与真机的画布基准不同，而且 emoji 的**视觉**绘制范围
+        //    比盒模型大得多 —— "脸的下沿到底在百分之几"根本没法用盒模型算。
+        //    第一版直接搬原型的 nk:62 上线预览，结果围巾横穿在**鼻子下方、胡须中间**
+        //    （= 还是压嘴），裙子则整个穿在脸上。
+        //    正解是 tools/_scan_dock_0923.py：把 .pet-avatar 克隆多份、各设一个 top%，
+        //    一次并排拍成矩阵图，用眼睛选定 —— 实测结论：
+        //      围巾 58%/64% 压嘴 · 70% 勉强 · **76% 正好围在脖子上** · 82%/88% 掉到肚子上
+        //      裙子 52%/60% 肩带还挂在嘴上 · 68% 碰到下巴 · **76% 最好** · 84% 挡住脚
+        //      身子 58%→**50%** 更紧凑（脸和身子之间不会出现"空档"）
+        //
+        // ⚠️ **自带全身的两只（🦖 小恐龙 / 🐧 企鹅）必须单独标定**：
+        //    它们的"身体"本来就画在 emoji 里，落点逻辑与"只有脸"的 7 只**完全不同**。
+        //    第一版给它们套了同一套偏移量，结果围巾直接落在胸口、裙子掉到腿下面（实拍才发现）：
+        //      🦖 28% 压嘴 · **34% 正好在脖子** · 46% 到胸口；裙子 40%/46% 像连衣裙 · 58% 掉到腿下
+        //      🐧 32% 压嘴 · **38% 正好在脖子** · 50% 到胸口；裙子 **50%** 最好 · 62% 到脚
+        //      🐸 裙子 60% 碰到下嘴唇 · **72% 最好**（青蛙脸短、眼泡占顶部）
+        //
+        // body:null 的两种 = 🦖 小恐龙 / 🐧 企鹅，它们**本身就是完整全身 emoji**，
+        //    再画身子会变成"脸下面又粘一个身子"（实拍确认），所以只把围巾戴到真脖子上。
+        const PET_FIGURE = {
+            cat:     { id:'cat',     hs:.80, nk:73, dt:74, body:{ c:'#F0A552', p:'#FFE6C4', top:48, w:.62, h:.46 } },
+            rabbit:  { id:'rabbit',  hs:.80, nk:76, dt:76, body:{ c:'#E6E1EC', p:'#FFC2D4', top:50, w:.62, h:.46 } },
+            unicorn: { id:'unicorn', hs:.78, nk:80, dt:81, body:{ c:'#D8C9F2', p:'#BFA3EC', top:55, w:.58, h:.44 } },
+            panda:   { id:'panda',   hs:.80, nk:80, dt:78, body:{ c:'#3B3B45', p:'#26262E', top:52, w:.62, h:.46 } },
+            fox:     { id:'fox',     hs:.80, nk:77, dt:78, body:{ c:'#E8823C', p:'#FFFFFF', top:52, w:.62, h:.46 } },
+            hamster: { id:'hamster', hs:.80, nk:75, dt:76, body:{ c:'#E3B27C', p:'#FFF1DE', top:50, w:.62, h:.46 } },
+            frog:    { id:'frog',    hs:.80, nk:63, dt:72, body:{ c:'#8FD14F', p:'#6FB32F', top:38, w:.66, h:.48 } },
+            dino:    { id:'dino',    hs:1,   nk:34, dt:44, body:null },
+            penguin: { id:'penguin', hs:1,   nk:38, dt:50, body:null },
+            // 兜底：远端 data/pets.json 若新增了动物，给一套中性参数（灰白身子），绝不抛错
+            __default:{ id:'',       hs:.80, nk:76, dt:76, body:{ c:'#D8D8DE', p:'#F2F2F6', top:50, w:.62, h:.46 } }
+        };
+        const LEG_COLORS = [
+            { c: '#FFC2D4', p: '#FF8FB1', name: '粉粉' },
+            { c: '#A9D6FF', p: '#6FB2F0', name: '蓝蓝' },
+            { c: '#FFE28A', p: '#F0BE3B', name: '黄黄' },
+            { c: '#B6E8B0', p: '#7BC77A', name: '绿绿' },
+            { c: '#D8C9F2', p: '#BFA3EC', name: '紫紫' },
+            { c: '#FFCBA4', p: '#F0955C', name: '橘橘' }
+        ];
+
         const PET_STAGE_MIN  = [0, 100, 400, 1200, 2400];
         // 「每天打卡最多入账多少成长值」与「一颗星折多少成长值」。
         // ⚠️ 这两个数被三处共用：feedPet（入账）、petFeedLeft（商店话术）、petAvgExpPerDay（说几天能长大）。
@@ -2613,6 +2755,112 @@
         function decorIconHTML(it, tall) {
             if (it && it.id === 'd_cape') return '<i class="cape-icon"></i>';
             return it ? it.icon : '';
+        }
+
+        // ===== 宠物图形：三处宿主共用一套几何（2026-09-23）=====
+        // 主页 .pet-avatar / 商店预览 .sp-pet / 喂食剧场 .fs-pet 原来**各拼一遍**
+        // 完全相同的 wearBack + emoji + wearFront，改一处必漏另两处 →
+        // 所以统一收口到这几个函数，落点参数只有 PET_FIGURE 一处来源。
+        function petFigureOf(kindId, stg, plain) {
+            // 蛋宝宝（stg 0）与"还没选伙伴"（🐾）没有身子，头也不缩 ——
+            // 它们没有下半身要腾地方，缩了只会让蛋莫名变小。
+            if (plain || stg === 0) return { id: '', hs: 1, nk: 0, dt: 0, body: null };
+            return PET_FIGURE[kindId] || PET_FIGURE.__default;
+        }
+        // 头的大小一律**内联**写，让 PET_FIGURE 成为唯一来源。
+        // ⚠️ 若只在"不该缩"时才写内联，unicorn 的 hs:.78 会被 CSS 的 .80em 吃掉 ——
+        //    参数与实现悄悄不一致，而这种漂移几乎不可能靠看发现。
+        //    CSS 里的 .80em 从此只作兜底（图省事或参数缺失时）。
+        function petHeadStyle(fig) {
+            return ' style="font-size:' + ((fig && fig.hs) || .80) + 'em"';
+        }
+        function legsColorFor(kindId, def) {
+            const v = (state.petLegs || {})[kindId];
+            if (!v) return { c: def.c, p: def.p, custom: false };
+            // ⚠️ c/p 为空串 = 她**主动还原**成本来的颜色。
+            //    绝不能用"删掉这个 key"来表达还原 —— 删了之后云端那份会在下次合并时
+            //    被当成"本机没有"重新采纳回来，她就永远回不到本色。
+            //    （与 wearing.medal 用空串表示"主动摘下"同源。）
+            return { c: v.c || def.c, p: v.p || def.p, custom: !!(v.c || v.p) };
+        }
+        function petTorsoHTML(fig) {
+            if (!fig || !fig.body) return '';
+            const g = legsColorFor(fig.id, fig.body);
+            return '<span class="pa-body" style="--c:' + g.c + ';--p:' + g.p + ';'
+                 + 'top:' + fig.body.top + '%;'
+                 + 'width:' + fig.body.w + 'em;height:' + fig.body.h + 'em"></span>';
+        }
+        // 装扮穿戴：which = 'back' | 'front'（披风/围巾要画在身后或身前）
+        function decorWearHTML(decor, slot, fig, which) {
+            if (!decor) return '';
+            const isBack = (slot === 'pw-back');
+            if ((which === 'back') !== isBack) return '';
+            // 披风：🦸 是"完整小人"emoji，当披风会像身后站了另一个人 → 自绘
+            if (decor.id === 'd_cape') return '<span class="pet-wear pw-back pet-cape"></span>';
+            // 围巾：🧣 是"叠好的围巾"商品图，放哪都是一个红块 → 自绘（详见 .pa-scarf 注释）
+            if (decor.id === 'd_scarf') {
+                return '<span class="pa-scarf" style="top:' + (fig.nk || 62) + '%"></span>';
+            }
+            // 裙子：落点从"糊在脸上"移到身子上。
+            // 内联 top 覆盖 CSS 的 bottom:-16%（内联优先级更高，三处宿主通用）。
+            if (decor.id === 'd_dress') {
+                return '<span class="pet-wear pw-body" style="top:' + (fig.dt || 60) + '%;bottom:auto;'
+                     + 'font-size:.54em">' + decor.icon + '</span>';
+            }
+            if (isBack) return '<span class="pet-wear pw-back">' + decor.icon + '</span>';
+            return '<span class="pet-wear ' + slot + '">' + decor.icon + '</span>';
+        }
+        // 颜色混白：给"她自己在取色器里挑的色"自动配一个浅色爪子色 ——
+        // 这是"外观归她、协调归我们"的落点（不然爪子跟腿同色，看不清脚）。
+        function legsLighten(hex, k) {
+            const h = String(hex || '').replace('#', '');
+            if (h.length !== 6 || !/^[0-9a-fA-F]{6}$/.test(h)) return '#F2F2F6';
+            const n = parseInt(h, 16);
+            const mix = function (x) { return Math.round(x + (255 - x) * k); };
+            return '#' + [mix((n >> 16) & 255), mix((n >> 8) & 255), mix(n & 255)]
+                .map(function (x) { return ('0' + x.toString(16)).slice(-2); })
+                .join('').toUpperCase();
+        }
+        function setLegsColor(c) {
+            if (!state.pet) return;
+            const id = state.pet.kind;
+            state.petLegs = state.petLegs || {};
+            if (c) {
+                state.petLegs[id] = { c: String(c), p: legsLighten(c, .55), at: Date.now() };
+            } else {
+                // 还原成本色 —— 记"空串 + 时间戳"，不删 key（理由见 legsColorFor）
+                state.petLegs[id] = { c: '', p: '', at: Date.now() };
+            }
+            saveState();
+            renderPet();
+            try { playSound('check'); } catch (e) {}
+            const hit = LEG_COLORS.find(function (x) { return x.c === c; });
+            petShowBubble(c
+                ? ('我的腿变成' + (hit ? '「' + hit.name + '」' : '这个颜色') + '啦！好看吗？')
+                : ('腿变回本来的颜色啦～'), 3200);
+        }
+        // 涂色面板：只在"这只动物有自绘身子"时才出现
+        //（🦖 小恐龙 / 🐧 企鹅 的腿是 emoji 的一部分，改不了颜色）
+        function legColorRowHTML() {
+            if (!state.pet) return '';
+            const fig = PET_FIGURE[state.pet.kind];
+            if (!fig || !fig.body) return '';
+            const cur = legsColorFor(state.pet.kind, fig.body);
+            const pal = LEG_COLORS.map(function (p) {
+                const on = (cur.custom && String(cur.c).toUpperCase() === p.c.toUpperCase()) ? ' on' : '';
+                return '<button class="pet-color-btn' + on + '" style="background:' + p.c
+                     + ';border-color:' + p.p + '" data-c="' + p.c
+                     + '" onclick="setLegsColor(this.dataset.c)" title="' + p.name + '"></button>';
+            }).join('');
+            // 最后一个按钮里藏着原生取色器 —— 想要什么颜色都可以
+            const pick = '<button class="pet-color-btn orig" style="border-color:#D8E4DE;font-size:15px"'
+                + ' title="我自己挑颜色">\uD83C\uDFA8'
+                + '<input type="color" value="' + (cur.custom ? cur.c : fig.body.c)
+                + '" onchange="setLegsColor(this.value)"></button>';
+            return '<div class="pet-collect-row pet-color-row"><span class="pet-collect-label">\uD83C\uDFA8 腿的颜色</span>'
+                 + '<button class="pet-color-btn orig' + (cur.custom ? '' : ' on')
+                 + '" title="变回本来的颜色" onclick="setLegsColor()">原本</button>'
+                 + pal + pick + '</div>';
         }
 
         // 当前该戴哪件 / 该住哪个家：
@@ -3452,13 +3700,11 @@
             const sceneHTML = scene ? sceneLayerHTML(scene.id) : '';
             const bg = scene ? (SCENE_BG[scene.id] || '') : '';   // 卡片整体氛围色（很淡，不影响读字）
             const dSlot = decor ? (DECOR_SLOT[decor.id] || 'pw-head') : '';
-            // 披风要画在宠物"身后"，其余三件画在身前
-            const wearBack  = (decor && dSlot === 'pw-back')
-                ? (decor.id === 'd_cape'
-                    ? '<span class="pet-wear pw-back pet-cape"></span>'
-                    : '<span class="pet-wear pw-back">' + decor.icon + '</span>')
-                : '';
-            const wearFront = (decor && dSlot !== 'pw-back') ? '<span class="pet-wear ' + dSlot + '">' + decor.icon + '</span>' : '';
+            // 身形参数（每只动物一套）+ 装扮落点，全部走公共函数：
+            // 原来这里和商店预览、喂食剧场**各拼一遍**，改一处必漏另两处。
+            const fig = petFigureOf(kind.id, stage, false);
+            const wearBack  = decorWearHTML(decor, dSlot, fig, 'back');
+            const wearFront = decorWearHTML(decor, dSlot, fig, 'front');
             // 勋章别在左胸：与我买来的装扮同处一身，但语义是"我自己坚持出来的"
             const medalHTML = medal
                 ? '<span class="pet-wear pm-medal" title="' + medal.name + '">' + medal.icon + '</span>'
@@ -3469,8 +3715,11 @@
                   }).join('') + '</span>'
                 : '';
             // 收藏格：已拥有的东西做成可点方块（点一下换上），只在她真的拥有时才出现
-            const collectHTML = (decorList.length || sceneList.length || medalAll.length || fedList.length)
-                ? '<div class="pet-collect">' +
+            // 条件里补 state.pet：**即使她什么都还没买**，也要能看到「腿的颜色」 ——
+            // 涂色不是"买来的东西"，是"她自己画的"，不该等买了装扮才出现。
+            const legRow = legColorRowHTML();
+            const collectHTML = (decorList.length || sceneList.length || medalAll.length || fedList.length || legRow)
+                ? '<div class="pet-collect">' + legRow +
                     (decorList.length ? '<div class="pet-collect-row"><span class="pet-collect-label">🎀 装扮</span>' +
                         decorList.map(function (d) {
                             return '<button class="pet-slot' + (decor && d.id === decor.id ? ' on' : '') +
@@ -3522,7 +3771,9 @@
                             '<div class="pet-avatar-holder">' +
                                 crown + auraHTML +
                                 '<div class="pet-avatar ' + moodCls + '" id="petAvatar" style="font-size:' + PET_STAGE_SIZE[stage] + ';cursor:pointer;" onclick="petInteract()" title="摸摸它">' +
-                                    wearBack + '<span class="pa-emoji">' + avatar + '</span>' + wearFront + medalHTML +
+                                    wearBack + petTorsoHTML(fig) +
+                                    '<span class="pa-emoji"' + petHeadStyle(fig) + '>' + avatar + '</span>' +
+                                    wearFront + medalHTML +
                                 '</div>' +
                                 '<div class="pet-ground"></div>' +
                             '</div>' +
@@ -3794,6 +4045,10 @@
             // medal 存勋章 id（2026-09-22 P1：荣誉别在伙伴身上，戴上/摘下都是她的动作）
             // at = 最后一次选择的时间戳，多端合并靠它判先后（本机没时间戳的旧值一定输）
             wearing: { decor: '', scene: '', medal: '', at: 0 },
+            // 布丁自己涂的腿色：{ 动物id: { c, p, at } }。绑"只会变大的时间戳"以便多端合并
+            //（铁律：可换掉的对象必须带单调时间戳，否则多端互洗）。
+            // c/p 为空串 = 她主动还原成本色 —— 不删 key，理由见 legsColorFor。
+            petLegs: {},
             foodToday: { date: '', items: {} },
             foodLog: {},
             timers: {},
@@ -6174,14 +6429,16 @@
                 const stg = state.pet ? getPetStage(state.pet.exp || 0) : 1;
                 const emo = !state.pet ? '🐾' : (stg === 0 ? '🥚' : kind.emoji);
                 const slot = DECOR_SLOT[it.id] || 'pw-head';
-                const back = (slot === 'pw-back')
-                    ? (it.id === 'd_cape'
-                        ? '<span class="pet-wear pw-back pet-cape"></span>'
-                        : '<span class="pet-wear pw-back">' + it.icon + '</span>')
-                    : '';
-                const front = (slot !== 'pw-back') ? '<span class="pet-wear ' + slot + '">' + it.icon + '</span>' : '';
-                return '<div class="shop-preview"><div class="sp-pet">' +
-                    back + '<span class="pa-emoji">' + emo + '</span>' + front + '</div></div>';
+                const _f = petFigureOf(state.pet ? state.pet.kind : '', stg, !state.pet);
+                const back  = decorWearHTML(it, slot, _f, 'back');
+                const front = decorWearHTML(it, slot, _f, 'front');
+                // ⚠️ 内层 .pet-figure 是必需的：.sp-pet 高 54px 而字号 30px，
+                //    1em ≠ 容器高 → 身子/围巾的 top% 会算错。包一层 1em 画布后
+                //    三处宿主几何一致，同一套 PET_FIGURE 参数通用。
+                return '<div class="shop-preview"><div class="sp-pet"><span class="pet-figure">' +
+                    back + petTorsoHTML(_f) +
+                    '<span class="pa-emoji"' + petHeadStyle(_f) + '>' + emo + '</span>' +
+                    front + '</span></div></div>';
             }
             return '<div class="shop-preview">' + it.icon + '</div>';
         }
@@ -6243,20 +6500,16 @@
                 // 戴着的东西一起进剧场 —— 蝴蝶结配吃饭，比光秃秃一只更有"这是我的伙伴"的感觉
                 const decor = currentDecorItem();
                 const dSlot = decor ? (DECOR_SLOT[decor.id] || 'pw-head') : '';
-                const back = (decor && dSlot === 'pw-back')
-                    ? (decor.id === 'd_cape'
-                        ? '<span class="pet-wear pw-back pet-cape"></span>'
-                        : '<span class="pet-wear pw-back">' + decor.icon + '</span>')
-                    : '';
-                const front = (decor && dSlot !== 'pw-back')
-                    ? '<span class="pet-wear ' + dSlot + '">' + decor.icon + '</span>' : '';
+                const _ff = petFigureOf(kind.id, stg, false);
+                const back  = decorWearHTML(decor, dSlot, _ff, 'back');
+                const front = decorWearHTML(decor, dSlot, _ff, 'front');
                 const el = document.createElement('div');
                 el.className = 'feed-stage';
                 el.id = 'feedStage';
                 el.innerHTML =
                     '<div class="fs-card' + (evolved ? ' evolved' : '') + '">' +
-                        '<div class="fs-pet" id="fsPet">' + back +
-                            '<span class="pa-emoji">' + emo + '</span>' + front +
+                        '<div class="fs-pet" id="fsPet">' + back + petTorsoHTML(_ff) +
+                            '<span class="pa-emoji"' + petHeadStyle(_ff) + '>' + emo + '</span>' + front +
                         '</div>' +
                         '<div class="fs-food" id="fsFood">' + it.icon + '</div>' +
                         '<div class="fs-hearts">💕</div>' +
@@ -6680,6 +6933,22 @@
                         at: _wT(data.wearing)
                     };
                 }
+            }
+            // 她自己涂的腿色：按「每只动物各自的时间戳」逐条取新，**不能整份覆盖** ——
+            // 两端可能各自涂过不同的动物，整份覆盖会丢掉另一端的（多端互洗的同一类坑）。
+            if (data.petLegs && typeof data.petLegs === 'object') {
+                const _lT = function (v) { return (v && typeof v.at === 'number') ? v.at : 0; };
+                state.petLegs = state.petLegs || {};
+                Object.keys(data.petLegs).forEach(function (k) {
+                    const remote = data.petLegs[k];
+                    if (!remote || typeof remote !== 'object') return;
+                    const mine = state.petLegs[k];
+                    if (!mine || _lT(remote) > _lT(mine)) {
+                        state.petLegs[k] = {
+                            c: String(remote.c || ''), p: String(remote.p || ''), at: _lT(remote)
+                        };
+                    }
+                });
             }
             // 今日吃过：**只有云端说的"今天"就是今天，才采信它**（与今日打卡同一个教训，
             // 见下面 todayChecks 那段事故注释）。次数按 id 取大 —— 多端各喂一次不该重复计数，
