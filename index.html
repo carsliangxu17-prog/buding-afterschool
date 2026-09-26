@@ -8,7 +8,7 @@
     <meta http-equiv="Expires" content="0" data-page-node-id="YXlbOTFHU2Nr6SGRQHt7cy">
     <script>
         (function () {
-            var APP_VERSION = '20260923.5';
+            var APP_VERSION = '20260923.6';
             window.APP_VERSION_STR = APP_VERSION;   // 主脚本里做线上版本自检要用
             try {
                 var params = new URLSearchParams(location.search);
@@ -3577,7 +3577,10 @@
             }
 
             // ---- 情况 2：换成别的动物（或第一次选）----
-            const wasOwned = Array.isArray(state.petBook) && state.petBook.indexOf(kindId) >= 0;
+            // ⚠️ 这里曾有 `const wasOwned = ...` 但从未被读 —— 是死变量（linter 会报）。
+            //    它的意图（"这只养过没有"）由下面的 `isNewKind` 承担，语义不同别合并：
+            //      · wasOwned   = 图鉴里有没有（含当前这只）
+            //      · isNewKind  = 是不是**首次**收养（决定文案与台词）
             state.pet = {
                 kind: kindId,
                 name: name || kind.name,
@@ -3593,14 +3596,26 @@
             if (!Array.isArray(state.petBook)) state.petBook = [];
             const isNewKind = state.petBook.indexOf(kindId) < 0;
             if (isNewKind) state.petBook.push(kindId);
-            addPetStory('🎁', '「' + state.pet.name + '」来到我们家');
+            // 成长日记：区分「第一次来」和「回来了」——
+            // ⚠️ 原先无论哪种都写「来到我们家」，换回养过的伙伴时**文案不准确**
+            //    （它本来就养过，不是"来到"）。7 岁孩子会当真，所以必须分开写。
+            //    ⚠️ 换回时 exp 归 0 是**有意的**（拿不回来），但不能让故事看起来像"新来的"。
+            const backStory = isNewKind ? '🎁' : '🔁';
+            const backText  = isNewKind
+                ? ('「' + state.pet.name + '」来到我们家')
+                : ('「' + state.pet.name + '」又回来啦');
+            addPetStory(backStory, backText);
             checkPetAchv(true);
             saveState();
-            showToast('欢迎 ' + state.pet.name + ' 加入！开始打卡喂养它吧');
+            const manyBook = (state.petBook || []).length > 1;
+            showToast(isNewKind
+                ? ('欢迎 ' + state.pet.name + ' 加入！开始打卡喂养它吧')
+                : (state.pet.name + ' 回来啦！和你一起继续加油吧'));
             setTimeout(function () {
-                const many = (state.petBook || []).length > 1;
-                petSpeak((isNewKind && many) ? 'collect' : 'tap1',
-                         (isNewKind && many) ? '又有新伙伴来我们家啦！' : ('我是' + state.pet.name + '，请多关照！'),
+                // ⚠️ 台词要与"第一次来 / 回来了"一致，否则文案与语音对不上
+                //    （这类错位在录音与代码不同步时最容易发生）
+                petSpeak((isNewKind && manyBook) ? 'collect' : 'tap1',
+                         (isNewKind && manyBook) ? '又有新伙伴来我们家啦！' : ('我是' + state.pet.name + '，请多关照！'),
                          { hold: 5400 });
             }, 800);
             return true;        // true = 真的换了一只
@@ -7354,6 +7369,10 @@
             if (Array.isArray(data.petBook)) state.petBook = Array.from(new Set([...(state.petBook || []), ...data.petBook]));
             if (Array.isArray(data.achv))    state.achv    = Array.from(new Set([...(state.achv || []), ...data.achv]));
             if (typeof data.maxExp === 'number')    state.maxExp    = Math.max(state.maxExp || 0, data.maxExp);
+            // ⚠️ 必须先记下"合并前的本机累计已赚"，下面算 everGain（新收入）要用。
+            //    它一旦被 max 顶上去，就再也分不清"新收入"和"云端陈旧大值"了 ——
+            //    而这个区分正是 v4 规则的立足点（见金币段 ③）。
+            const localEverBefore = state.coinsEver || 0;
             if (typeof data.coinsEver === 'number') state.coinsEver = Math.max(state.coinsEver || 0, data.coinsEver);
 
             // ===== 金币：把"花掉的钱"变成一条**永远回不来**的记录 =====
@@ -7399,14 +7418,80 @@
             const cloudIsLegacy = (cloudSpent === null);   // 云端从没写过这个字段 = 修复前的记录
 
             if (anySpent || !cloudIsLegacy) {
+                // ⚠️ `localEverBefore` 必须在 coinsEver 取 max **之前**捕获，
+                //    否则 everGain 恒为 0（新收入永远抬不起余额）。见其声明处。
                 // ① 花费取大（只增不减）—— 这是本 bug 的核心防线
                 state.coinsSpent = Math.max(localSpent || 0, cloudSpent || 0);
                 // ② 余额由「累计收入 − 累计花费」推出
                 const balance = Math.max(0, (state.coinsEver || 0) - state.coinsSpent);
-                // ③ 取两端余额里**较小**的那个：宁可少算，也绝不把钱退回来。
-                //    她"真的又赚了"会体现在 coinsEver 变大 → balance 变大，
-                //    所以这条不会把该涨的钱压住。
-                state.totalStars = Math.min(state.totalStars, balance);
+                // ③ 余额怎么定 —— 这一处**改了四版**，前三版各自制造过一次事故，
+                //    所以把四版的病根全部记在这里，防止再被"看着合理"的写法骗回去：
+                //
+                //    v1（修复前）：state.totalStars = Math.max(state.totalStars, data.totalStars)
+                //        ☠️ 病根：买完 87、云端旧值 207 → 退回 207。
+                //        她看到的就是"花了金币，一刷新又满了"。← 原始 bug
+                //
+                //    v2：Math.min(state.totalStars, balance)
+                //        ☠️ 病根：**全新设备/清缓存/换手机**时本机 ts=0，
+                //        min(0, 155)=0 → 金币归零，且下一轮 syncToCloud 会把 0 推上云端，
+                //        真把她的币洗掉（不可逆）。_diag_c3_0926.js 抓到的。
+                //
+                //    v3：floor = max(本机ts, 云端ts) → min(floor, balance)
+                //        ☠️ 病根：把**云端 totalStars 当成了下限**。云端 ts 常常是
+                //        "她买了东西、但花费还没同步上去"的旧大值，拿它当 floor
+                //        就等于**重新制造 v1 的 bug**：
+                //            刚买完本机 27、云端旧值 207 → floor=207 → min(207,155)=155
+                //            余额 27→155，凭空回血 128。_diag_v3_regression_0926.js 抓到的。
+                //        ⚠️ 这是唯一能复现原始 bug 的写法，比修之前更糟。
+                //
+                //    v4（现在这版）：只认「**单调量**」当依据 ——
+                //        · spent 单调递增（只增不减）→ 由它驱动余额**变小**（买东西）
+                //        · ever  单调递增（只增不减）→ 由它驱动余额**变大**（赚新星）
+                //        · 云端 totalStars **只当上限、绝不当下限**
+                //        余额 = min(记账口径 balance, 本机ts + 新收入 everGain)
+                //        本机完全空白时（全新设备）才采信云端，且用
+                //        min(balance, 云端ts, 云端ever) 三重封口，防云端记账不完整时多给。
+                //
+                //    ⇒ 用 _solve4_0926.js 的 14 条真值表穷举验证，v4 全过。
+                //      四条硬约束同时成立（前三版各自只满足其中两三条）：
+                //        H1 买了东西刷新后余额绝不被抬回    ← v1 破、v3 破
+                //        H2 全新设备/清缓存后余额能恢复      ← v2 破
+                //        H3 两端记账一致 → balance
+                //        H4 余额恒 <= ever − spent（不凭空造钱）、恒 >= 0
+                //      ⚠️ 判据顺序不能颠倒：**先算 balance / everGain，再取 min**。
+                //        任何 `Math.max(…云端ts…)` 的写法都会退回 v3 的 bug。
+                // ☠️ `localBlank` 的判据必须用 **`localEverBefore`**，不能用 `state.coinsEver`：
+                //    上面那段"整份重置分支"（`_rb > _lb`，全新设备必然命中，因为本机
+                //    `resetAt=''` 而云端有底线日期）会把 `state.coinsEver` 清成 0，
+                //    于是"本机是不是空白"根本看不出来 —— 踩过一次，表现为
+                //    "全新设备 + 云端{ts:207,spent:0,ever:335} 算出 335 而不是 207"，
+                //    凭空多给 128（那 128 是历史偏差，不是她的余额）。
+                //    用 `localEverBefore`（重置分支之前捕获的本机原值）才准。
+                const localBlank = (localEverBefore === 0 &&
+                                    (state.coinsSpent || 0) === 0);
+                let _ts4;
+                if (localBlank) {
+                    // 本机没有任何可用信息（全新设备 / 清缓存 / 换手机）：
+                    // 云端是唯一来源，但要用**三个口径**同时封口，宁可少给不多给：
+                    //   ① balance      —— 记账口径（云端 coinsEver − 合并后 coinsSpent）
+                    //   ② 云端 totalStars —— 云端**亲眼看到过**的余额
+                    //   ③ 云端 coinsEver  —— 她这辈子赚过的上限
+                    // ☠️ ②③ 必须取**云端的原值**，不能取 state.* ——
+                    //    state.* 在上面被重置/取大过了，用它封口等于没封。
+                    //    ② 的意义：云端 spent=0 时 balance 会高估（那 128 是历史偏差、
+                    //    不是她的余额），此时**只有**云端 totalStars 能给出正确上界。
+                    const _cTs = _num(data.totalStars);
+                    const _cEver = _num(data.coinsEver);
+                    _ts4 = Math.min(balance,
+                                    _cTs === null ? balance : _cTs,
+                                    _cEver === null ? balance : Math.max(0, _cEver));
+                } else {
+                    // 本机有信息：只允许「新收入 everGain」把余额抬起来，
+                    // 绝不允许"云端 ts 更大"当成依据（那正是 v1/v3 的病根）。
+                    const everGain = Math.max(0, (state.coinsEver || 0) - (localEverBefore || 0));
+                    _ts4 = Math.min(balance, (state.totalStars || 0) + everGain);
+                }
+                state.totalStars = Math.max(0, _ts4);
             } else if (typeof data.totalStars === 'number') {
                 // 老数据路径（云端没有 coinsSpent，且本机也没花过）：
                 // 保持原行为，零风险 —— 不知道她花过多少，就不猜。
