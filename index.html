@@ -8,7 +8,7 @@
     <meta http-equiv="Expires" content="0" data-page-node-id="YXlbOTFHU2Nr6SGRQHt7cy">
     <script>
         (function () {
-            var APP_VERSION = '20260923.6';
+            var APP_VERSION = '20260926.1';
             window.APP_VERSION_STR = APP_VERSION;   // 主脚本里做线上版本自检要用
             try {
                 var params = new URLSearchParams(location.search);
@@ -4358,6 +4358,9 @@
             checkPetAchv();
         }
 
+        // 「这台设备自己记过账吗」—— 由 loadState 读 localStorage 时置位，
+        // ensureValidState 用它决定要不要跑 coinsSpent 迁移。（理由见 loadState 里的长注释）
+        let migrateSpentDone = false;
         let state = {
             tasks: DEFAULT_TASKS,
             shop: DEFAULT_SHOP,
@@ -4456,10 +4459,23 @@
             syncToCloud();
         }
         function loadState() {
+            // ☠️ 这个标记必须在**任何合并之前**重置（见 ensureValidState 里 coinsSpent 迁移段）：
+            //    ensureValidState 有两条调用路径 ——
+            //      ① loadState 内部（读的是 localStorage，可能缺 coinsSpent → 该补）
+            //      ② init() 里、**云端合并之后**（此时 coinsSpent 已由 mergeCloudIntoState
+            //         按「取大」算好了，甚至可能是云端推过来的正数 → 绝不是"没记过账"）
+            //    若只有一个 `typeof === number` 判据，路径②会把已经算好的花费
+            //    重新用 (ever − ts) 覆盖掉 → 多端来回覆盖、余额抖动。
+            //    用这个标记把"要不要跑迁移"这件事显式化，别靠 typeof 猜。
+            migrateSpentDone = false;
             try {
                 const saved = localStorage.getItem('buding-afterschool-app');
                 if (saved) {
                     const parsed = JSON.parse(saved);
+                    // "这台设备自己存过 coinsSpent 吗" —— 在展开**之前**判，
+                    // 展开之后就看不出这个键是谁写的了（DEFAULT_STATE 也会填 0）。
+                    migrateSpentDone = Object.prototype.hasOwnProperty.call(parsed, 'coinsSpent')
+                                       && typeof parsed.coinsSpent === 'number';
                     state = { ...state, ...parsed };
                     // 版本更新时重置任务和奖励为新默认值
                     if (!state.appVersion || state.appVersion < APP_VERSION) {
@@ -4671,12 +4687,27 @@
             //   coinsSpent = coinsEver（累计赚到） − totalStars（当前余额）
             // 这个式子对所有设备、任何状态都成立，所以不写死数字。
             // ⚠️ 只补一次：有了 coinsSpent 之后就不再动它（它只增不减）。
-            if (typeof state.coinsSpent !== 'number') {
+            //
+            // ☠️☠️ 判据**绝不能**写成 `typeof state.coinsSpent !== 'number'`（第一版就是，从没生效过）。
+            //    因为本函数开头是 `state = { ...state, ...parsed }`：
+            //      · DEFAULT_STATE 里已有 `coinsSpent: 0`（number）
+            //      · 老 localStorage 的 parsed 里**没有这个键** → 覆盖不掉它
+            //    ⇒ 合并结果 coinsSpent 恒为数字 0，这个 if **永远进不去**，
+            //      于是所有已装设备都停在 "coinsSpent = 0"。
+            //    ⚠️ 更糟的是它会把"记账口径余额"抬成 "coinsEver"(335)：
+            //      mergeCloudIntoState 里 balance = ever − spent 算出 335，
+            //      而 localBlank 判据也看 coinsSpent —— 于是走了"本机有信息"那一支，
+            //      余额被抬到 335（= 凭空多出 128，她一眼就看出不对）。
+            //    ⇒ 正确判据：**这个设备有没有自己存过 coinsSpent**（看 parsed 有没有这个键），
+            //      以及**内存里的状态是不是刚被任何人显式设过**（migrateSpentDone 守卫）。
+            //      用 typeof 判"字段不存在"在这里**结构上不可能成立** —— 因为 merge 会把默认值填进来。
+            if (typeof state.coinsSpent !== 'number' || !migrateSpentDone) {
                 const earned0 = Math.max(0, state.coinsEver || 0);
                 const bal0 = Math.max(0, state.totalStars || 0);
                 // earned < bal 说明数据本身不一致（理论上不该发生）→ 保守取 0，不凭空造花费
                 state.coinsSpent = earned0 >= bal0 ? (earned0 - bal0) : 0;
             }
+            migrateSpentDone = true;   // 补过就收工：本机这份状态从此有了自己的记账，别再猜
             if (!Array.isArray(state.achv)) state.achv = [];
             if (state.pet) {
                 if (!Array.isArray(state.pet.story)) state.pet.story = [];
@@ -6046,7 +6077,20 @@
             // 1. 渲染待完成任务（按分类，只显示未完成的）
             for (const [catKey, tasks] of Object.entries(pendingByCat)) {
                 if (tasks.length === 0) continue;
-                const config = CATEGORY_CONFIG[catKey];
+                // ☠️ 2026-09-26 必须判空：上面第 6040 行用的是
+                //      `(pendingByCat[task.category] || (pendingByCat[task.category] = [])).push(task)`
+                //    —— 它会给**任意**未知分类现造一个桶，于是这里的 catKey 可能不在
+                //    CATEGORY_CONFIG 里 → config 为 undefined → 下一行 config.class 抛
+                //    TypeError。而这个函数是 renderAll() 的**第 7 个**调用，
+                //    renderAll 没有 try/catch 隔离 ⇒ 后面 renderMedals / renderHistory
+                //    永远执行不到（奖章墙、历史空白），init 里 7655 那次还会把
+                //    listenCloudChanges / checkLiveVersion 一起带崩。
+                //    ensureValidState 只在**加载时**把任务分类收敛到合法值，但
+                //    ① 编辑弹窗改分类的那一刻是直接写 state.tasks 的，
+                //    ② 若某次运行中 CATEGORY_CONFIG 被换掉 / 任务被注入，
+                //       ensureValidState 已经跑过了 —— 两条路都够不着这里。
+                //    所以这里必须自己守住：渲染层不能假设数据一定合法。
+                const config = CATEGORY_CONFIG[catKey] || { label: catKey, class: '' };
                 const allActiveInCat = state.tasks.filter(t => t.category === catKey && taskActiveToday(t));
                 const doneInCat = allActiveInCat.filter(t => state.todayChecks[t.id]).length;
 
@@ -7001,6 +7045,36 @@
                 }
                 html += `</div>`;
             }
+            // ☠️ 分类坏掉的任务必须在这里**显形**（2026-09-26）。
+            //    上面这个循环只遍历 CATEGORY_CONFIG 的 key，而 renderTasks 会给
+            //    未知分类现造一个桶把它渲染到主页 —— 两处口径不一致 ⇒
+            //    分类一旦坏掉，主页看得见、编辑弹窗里找不到，
+            //    **既改不回来也删不掉**，只能等下次加载被 ensureValidState 悄悄改成"兴趣"。
+            //    这里把它单列一段摆出来，她自己就能改回去。
+            const _orphans = state.tasks.filter(t => !CATEGORY_CONFIG[t.category]);
+            if (_orphans.length) {
+                html += `<div class="edit-section">
+                    <div class="edit-section-title">⚠️ 分类需要重新选（${_orphans.length} 项）</div>`;
+                for (const task of _orphans) {
+                    const weekendLabel = task.weekendOnly ? '📅仅周末✓' : '📅每天';
+                    html += `<div class="edit-task-row">
+                        <input class="edit-task-icon-input" value="${task.icon}" 
+                               onchange="updateTask('${task.id}', 'icon', this.value)">
+                        <input class="edit-task-name-input" value="${task.name}" 
+                               onchange="updateTask('${task.id}', 'name', this.value)">
+                        <input class="edit-task-stars-input" value="${task.stars}" type="number" min="1" max="5"
+                               onchange="updateTask('${task.id}', 'stars', parseInt(this.value))">
+                        <select class="edit-task-cat-select" onchange="updateTask('${task.id}', 'category', this.value)">
+                            ${Object.entries(CATEGORY_CONFIG).map(([k,v]) => 
+                                `<option value="${k}" ${k===task.category?'selected':''}>${v.label}</option>`
+                            ).join('')}
+                        </select>
+                        <button class="edit-task-weekend-btn" onclick="toggleWeekend('${task.id}')">${weekendLabel}</button>
+                        <button class="edit-task-delete" onclick="deleteTask('${task.id}')">🗑️</button>
+                    </div>`;
+                }
+                html += `</div>`;
+            }
             document.getElementById('editTaskList').innerHTML = html;
         }
         function toggleWeekend(taskId) {
@@ -7014,6 +7088,13 @@
         function updateTask(taskId, field, value) {
             const task = state.tasks.find(t => t.id === taskId);
             if (!task) return;
+            // ☠️ 分类必须校验（2026-09-26）：`task[field] = value` 是**盲写**，
+            //    而 select 的 option 是从 CATEGORY_CONFIG 生成的 —— 正常情况下只会
+            //    拿到合法值。但这里是唯一的写入口，一旦 value 不是合法分类
+            //    （远端 JSON 改了分组、旧版残留值、或将来加了新分组而 key 拼错），
+            //    任务就会掉进"未知分类"这个坑（见 renderTasks 的判空注释）。
+            //    与其等渲染层兜，不如在**写入时就拒绝**非法值。
+            if (field === 'category' && !CATEGORY_CONFIG[value]) return;
             task[field] = value;
             saveState();
             // 不立即重新渲染编辑列表，等关闭后统一渲染
@@ -7124,16 +7205,31 @@
         }
 
         // ========== 全部渲染 ==========
+        // ☠️ 每个渲染函数必须**互相隔离**（2026-09-26）。
+        //    原来这里是 9 个裸调用：任何一个抛错，后面的全部不执行。
+        //    实测后果（见 tools/_probe_render_crash_0926.js）：renderTasks 一抛，
+        //      → renderMedals / renderHistory 不执行 ⇒ 奖章墙与历史记录**整块空白**；
+        //      → init 里 syncFromCloud 回调那次 renderAll 抛错，会连带跳过
+        //        listenCloudChanges() / checkLiveVersion() / 首次选伙伴弹窗
+        //        ⇒ **多端同步直接不启动**，而且没有任何提示。
+        //    一个渲染分支的小毛病，不该让整页变成"数据坏了"的样子。
+        //    隔离后：坏掉的那块保留上一次的样子，其余照常刷新。
         function renderAll() {
-            renderHeader();
-            renderMotto();
-            renderPet();
-            renderCourses();
-            renderStats();
-            renderPoem();
-            renderTasks();
-            renderMedals();
-            renderHistory();
+            const _steps = [
+                ['renderHeader',  renderHeader],
+                ['renderMotto',   renderMotto],
+                ['renderPet',     renderPet],
+                ['renderCourses', renderCourses],
+                ['renderStats',   renderStats],
+                ['renderPoem',    renderPoem],
+                ['renderTasks',   renderTasks],
+                ['renderMedals',  renderMedals],
+                ['renderHistory', renderHistory]
+            ];
+            for (const [name, fn] of _steps) {
+                try { fn(); }
+                catch (e) { console.warn('渲染失败：' + name, e); }
+            }
         }
 
         // ========== 云端数据合并到本地（按天去重，防止覆盖丢历史） ==========
@@ -7422,6 +7518,26 @@
                 //    否则 everGain 恒为 0（新收入永远抬不起余额）。见其声明处。
                 // ① 花费取大（只增不减）—— 这是本 bug 的核心防线
                 state.coinsSpent = Math.max(localSpent || 0, cloudSpent || 0);
+                // ①b ☠️ 全新设备要**把云端的账本推出来**（2026-09-26 审计逮到的 S3b）：
+                //     全新设备本机 coinsSpent=0（只有 DEFAULT_STATE 的 0，没人记过账），
+                //     这时若只取 max 就会停在 0，而真实花费（128）只存在于
+                //     「云端 coinsEver − 云端 totalStars」这个差额里。
+                //     ⇒ 花费停 0 的后果不是"少扣一次钱"，而是：
+                //        `localBlank` 靠 `coinsSpent === 0` 判断，看见 0 就以为
+                //        "本机有信息、没花过钱"，于是走 else 分支
+                //        `_ts4 = min(balance, 本机ts + 0)`，而本机 ts=0
+                //        ⇒ **余额归零**，再把 0 推上云端，真把她的币洗掉（不可逆）。
+                //     所以这一句是"全新设备不归零"的**前置条件**，不是可选项。
+                //     ⚠️ 只在**本机确实没记过账**时推导，且取 max 保证不会把
+                //        已经记好的花费改小（单调不减铁律）。
+                //     ⚠️ 云端 coinsEver 也要有：没有就无从推导，保持原样。
+                if (localSpent === 0 && cloudSpent === 0) {
+                    const _cEv0 = _num(data.coinsEver);
+                    const _cTs0 = _num(data.totalStars);
+                    if (_cEv0 !== null && _cTs0 !== null && _cEv0 >= _cTs0) {
+                        state.coinsSpent = Math.max(state.coinsSpent, _cEv0 - _cTs0);
+                    }
+                }
                 // ② 余额由「累计收入 − 累计花费」推出
                 const balance = Math.max(0, (state.coinsEver || 0) - state.coinsSpent);
                 // ③ 余额怎么定 —— 这一处**改了四版**，前三版各自制造过一次事故，
@@ -7496,6 +7612,25 @@
                 // 老数据路径（云端没有 coinsSpent，且本机也没花过）：
                 // 保持原行为，零风险 —— 不知道她花过多少，就不猜。
                 state.totalStars = Math.max(state.totalStars, data.totalStars);
+                // ☠️ 但要**把云端的账本推出来**（2026-09-26 审计逮到的 S3b）：
+                //    这条分支正是「全新设备 + 修复前的云端」走的那一支
+                //    （云端缺 coinsSpent → cloudIsLegacy，本机 0 → anySpent 假）。
+                //    若只做上面的取 max，本机的 `coinsSpent` 会永远停在 0：
+                //      · `localBlank` 靠 `coinsSpent === 0` 判断 → 误以为"本机有信息"
+                //      · 以后布丁在这台设备上买第一件东西时，`claimReward` 会
+                //        先把花费 += cost（比如 128→138 变成 0→10），再合并时
+                //        balance = ever − 10 = 325，而云端 ts 只有 207 —— 记不清；
+                //      · 更直接的是"花费"这个账本丢了，多端对不上。
+                //    真实花费就藏在「云端 coinsEver − 云端 totalStars」这个差额里，
+                //    且这条路径的语义是"两端都没记过花费账"，推导是安全的。
+                //    ⚠️ 只在**本机花费为 0** 时推导；取 max 保证单调不减。
+                if ((state.coinsSpent || 0) === 0) {
+                    const _cEv1 = _num(data.coinsEver);
+                    const _cTs1 = _num(data.totalStars);
+                    if (_cEv1 !== null && _cTs1 !== null && _cEv1 >= _cTs1) {
+                        state.coinsSpent = _cEv1 - _cTs1;
+                    }
+                }
             }
             // 今日心愿：同一天的才合并；"已完成"一旦为真就不再被重置（避免多端互洗）
             if (data.petWishDate && data.petWishDate === state.todayDate) {
