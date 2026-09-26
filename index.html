@@ -8,7 +8,7 @@
     <meta http-equiv="Expires" content="0" data-page-node-id="YXlbOTFHU2Nr6SGRQHt7cy">
     <script>
         (function () {
-            var APP_VERSION = '20260923.4';
+            var APP_VERSION = '20260923.5';
             window.APP_VERSION_STR = APP_VERSION;   // 主脚本里做线上版本自检要用
             try {
                 var params = new URLSearchParams(location.search);
@@ -352,8 +352,19 @@
         .pp-badge { cursor: pointer; }
         /* 图鉴 */
         .pp-books { display: grid; grid-template-columns: repeat(9, 1fr); gap: 5px; }
-        .pp-book { text-align: center; font-size: 21px; line-height: 1; padding: 5px 0; border-radius: 10px; background: #F2FBF7; border: 1.5px solid #D6F2E6; }
+        .pp-book { text-align: center; font-size: 21px; line-height: 1; padding: 5px 0; border-radius: 10px; background: #F2FBF7; border: 1.5px solid #D6F2E6; position: relative; }
         .pp-book.lock { opacity: .3; filter: grayscale(1); background: #F4F7F5; }
+        /* 可换回的（收养过、且不是当前这只）—— 加粗边框提示"这个能点" */
+        .pp-book.back { border-color: #7BE0B5; box-shadow: 0 0 0 2px #E4F7EF inset; cursor: pointer; }
+        .pp-book.back:active { transform: scale(.92); }
+        /* 正在陪你：绿底 + 下面一行"现在"，避免她分不清哪只才是自己养的 */
+        .pp-book.cur { background: #E4F7EF; border-color: #3AA17E; }
+        .pp-book-cur { display: block; font-size: 7.5px; font-style: normal; color: #2E9E6B; font-weight: 700; line-height: 1.1; }
+        /* 换宠弹窗里那段代价说明 */
+        .pet-change-warn { font-size: 13px; color: #5A6B63; line-height: 1.85; text-align: left; background: #FFF8EC; border: 1.5px solid #FFE3B8; border-radius: 14px; padding: 12px 14px; margin: 4px 0 16px; }
+        /* 选伙伴格子里的小字（"正在陪你" / "换过去要从头长大"） */
+        .pet-opt-cur { font-size: 9.5px; color: #2E9E6B; font-weight: 700; margin-top: 3px; }
+        .pet-opt-sub { font-size: 9.5px; color: #9AB0A7; margin-top: 3px; }
         /* 成长日记 */
         .pp-story { border-left: 2px dashed #D6F2E6; padding-left: 12px; margin-left: 5px; }
         .pp-story-item { position: relative; padding-bottom: 10px; font-size: 12px; color: #4A5F57; }
@@ -2375,7 +2386,9 @@
         let isParentMode = false;     // 家长模式（只读取，不写入）
 
         // 上传到云端的数据只包含动态打卡记录（任务/奖励用本地默认值）
-        const SYNC_FIELDS = ['todayChecks', 'todayDate', 'totalStars', 'streak', 'history', 'claimedRewards', 'pet', 'medals', 'poemLog', 'owned', 'leftovers', 'petBook', 'maxExp', 'coinsEver', 'achv', 'petWish', 'petWishDate', 'petWishDone', 'resetAt', 'fourFullDate', 'checksUpdatedAt', 'wearing', 'foodToday', 'foodLog', 'petLegs'];
+        // ⚠️ coinsSpent（累计花费）必须在这里（2026-09-26）：它是"钱花掉了"的唯一记录，
+        //    不同步的话另一台设备永远不知道她花过钱，就会继续把钱退回给她。
+        const SYNC_FIELDS = ['todayChecks', 'todayDate', 'totalStars', 'streak', 'history', 'claimedRewards', 'pet', 'medals', 'poemLog', 'owned', 'leftovers', 'petBook', 'maxExp', 'coinsEver', 'coinsSpent', 'achv', 'petWish', 'petWishDate', 'petWishDone', 'resetAt', 'fourFullDate', 'checksUpdatedAt', 'wearing', 'foodToday', 'foodLog', 'petLegs'];
 
         // 上传数据到 Supabase（upsert 固定 id，多端共用同一份；只更新提供的列，不覆盖其它列）
         function syncToCloud() {
@@ -3472,12 +3485,181 @@
             return state.petWish || '';
         }
 
-        // 主动换一个学习伙伴（装扮和小屋会保留给新伙伴）
+        // ========== 换伙伴：把"不可逆"改成"要经过两道门"（2026-09-26）==========
+        //
+        // ☠️ 2026-09-23 布丁报的 bug：「养的本来是兔子，刷新后突然变成了小猫，
+        //    而且是从新孵蛋的小猫。」真因有三条，都在这一块：
+        //  ① 选伙伴弹窗里 `let sel = PET_KINDS[0].id;`，而 PET_KINDS[0] 就是 cat
+        //     ⇒ **她什么都不点、直接按绿色大按钮，得到的就是猫**。
+        //  ② `switchedAt: Date.now()` 让"后选的赢"，合并时必胜 ⇒ 兔子被永久顶掉，
+        //     而**界面上没有任何入口能把兔子换回来**（图鉴当时只是展示，点不动）。
+        //  ③ 入口太随便：宠物卡右上角一个 30×30 的 🔄 圆按钮，直接弹**原生 confirm**
+        //     四行长文字（7 岁读不懂），而"确定"还是默认焦点。
+        //
+        // 修法：① 默认选中**当前宠物**；② 换宠前先过"要付出什么代价"的自绘弹窗；
+        //      ③ 弹窗里再选一次；④ 图鉴里养过的伙伴可以点着换回来。
+        // ⚠️ 全程**不动**她现在的猫「一一」—— 只有她主动点"换伙伴"才会触发。
+
+        // 当前伙伴（没有就是 null）
+        function currentPetKind() {
+            if (!state.pet || !state.pet.kind) return null;
+            return PET_KINDS.find(function (k) { return k.id === state.pet.kind; }) || null;
+        }
+        // 弹窗打开时**默认选中谁**：必须是当前宠物本身。
+        // 找不到（老数据/异常）时退回第一项，但这只影响"选谁"，不再是"偷偷换成猫"。
+        function petPickerDefaultSel() {
+            const cur = currentPetKind();
+            return cur ? cur.id : PET_KINDS[0].id;
+        }
+        // 这个名字在文件里出现了 4 次以上，抽出来防漂
+        function speciesName(kindId) {
+            const k = PET_KINDS.find(function (x) { return x.id === kindId; });
+            return k ? k.name : '';
+        }
+        // 判断"这就是我现在养的伙伴"—— 用它来在弹窗/图鉴上标「正在陪着你」
+        function isCurrentPetKind(kindId) {
+            return !!(state.pet && state.pet.kind === kindId);
+        }
+        // 图鉴里这一只能不能点着换回来。
+        // 规则：① 收养过（在图鉴里）② 不是当前这只。
+        // ⚠️ 只认 petBook（"来过我们家"），不认"解锁过"——图鉴里没点亮的不给换。
+        function canSwitchBackTo(kindId) {
+            if (!kindId) return false;
+            if (isCurrentPetKind(kindId)) return false;
+            const book = state.petBook || [];
+            if (book.indexOf(kindId) < 0) return false;
+            return PET_KINDS.some(function (k) { return k.id === kindId; });
+        }
+        // 换宠代价文案（自绘弹窗用）。
+        // 必须说清两件她会难过的事：① 现在这只要去休息；② 新的要从头长大。
+        // 但也要说清"不会失去什么"，否则她不敢点：装扮/小屋/金币/图鉴都留着。
+        function petChangeWarningText(curName) {
+            return '现在陪着你的是「' + (curName || '') + '」。\n\n' +
+                   '换成别的小伙伴，它就要去宠物乐园休息了 ——\n' +
+                   '新伙伴要从「' + PET_STAGE_NAME[0] + '」重新长大，成长值从 0 开始。\n\n' +
+                   '不过别担心：已经买到的装扮、小屋、金币，还有图鉴，都会留着。';
+        }
+        // 「换到这里」按钮上的小字：让她知道自己现在养到多大了，换过去会损失多少
+        function petSwitchBackHint(kindId) {
+            if (!canSwitchBackTo(kindId)) return '';
+            return '从「' + PET_STAGE_NAME[0] + '」重新长大';
+        }
+
+        // ===== 执行选择：把一个 kind 真正应用成当前伙伴 =====
+        // 从 showPetPicker 的回调里抽出来，因为它现在有**两个**调用方：
+        //  ① 选伙伴弹窗的绿色按钮  ② 图鉴里点"换回这只"
+        // 抄两份迟早会漂（一处改了另一处忘改），所以只留一个实现。
+        //
+        // ⚠️ 三条不能丢的行为：
+        //   · 选了**当前已经在养**的那只 → 只改名字，**绝不重置 exp/图鉴/成长日记**。
+        //     这是"打开弹窗什么都不点就按确认"的路径 —— 2026-09-23 的 bug 就死在这条上。
+        //   · 选了别的动物 → 新伙伴从 0 开始（诚实：旧进度不迁移），写 switchedAt 让"后选的赢"。
+        //   · 图鉴永久点亮（换伙伴不是"丢弃"，是收集）。
+        function applyPetChoice(kindId, rawName) {
+            const kind = PET_KINDS.find(function (k) { return k.id === kindId; });
+            if (!kind) return false;
+            const name = String(rawName == null ? '' : rawName).trim();
+
+            // ---- 情况 1：就是现在养的这只 → 只更名 ----
+            if (isCurrentPetKind(kindId)) {
+                const newName = name || state.pet.name || kind.name;
+                const renamed = newName !== state.pet.name;
+                state.pet.name = newName;
+                if (Array.isArray(state.petBook) && state.petBook.indexOf(kindId) < 0) {
+                    state.petBook.push(kindId);
+                }
+                // 没改名就什么都不做：不写 story、不打卡、不刷 switchedAt
+                if (renamed) addPetStory('✏️', '改名叫「' + newName + '」啦');
+                saveState();
+                if (renamed) showToast('它现在叫「' + newName + '」啦');
+                else showToast('还是「' + newName + '」陪着你 😊');
+                return false;   // false = 没换伙伴（只是更名/无变化）
+            }
+
+            // ---- 情况 2：换成别的动物（或第一次选）----
+            const wasOwned = Array.isArray(state.petBook) && state.petBook.indexOf(kindId) >= 0;
+            state.pet = {
+                kind: kindId,
+                name: name || kind.name,
+                exp: 0,
+                bornAt: getTodayStr(),
+                nutri: { calcium: 0, wisdom: 0, energy: 0, peace: 0 },
+                story: [],
+                // 换/选伙伴的时间戳：多端合并时「后选的赢」。
+                // 绝不能按经验高低比——新伙伴 exp 恒为 0，永远打不过旧伙伴，旧伙伴会被云端拉回来"复活"。
+                switchedAt: Date.now()
+            };
+            // 图鉴：收养过的伙伴永久点亮 —— 换伙伴不是"丢弃"，而是收集
+            if (!Array.isArray(state.petBook)) state.petBook = [];
+            const isNewKind = state.petBook.indexOf(kindId) < 0;
+            if (isNewKind) state.petBook.push(kindId);
+            addPetStory('🎁', '「' + state.pet.name + '」来到我们家');
+            checkPetAchv(true);
+            saveState();
+            showToast('欢迎 ' + state.pet.name + ' 加入！开始打卡喂养它吧');
+            setTimeout(function () {
+                const many = (state.petBook || []).length > 1;
+                petSpeak((isNewKind && many) ? 'collect' : 'tap1',
+                         (isNewKind && many) ? '又有新伙伴来我们家啦！' : ('我是' + state.pet.name + '，请多关照！'),
+                         { hold: 5400 });
+            }, 800);
+            return true;        // true = 真的换了一只
+        }
+
+        // 图鉴里点一下已养过的伙伴 = 换回它。
+        // 必须先说清代价再换 —— 图鉴上全是 emoji，孩子会当"贴纸"随手点。
+        function switchPetFromBook(ev, kindId) {
+            if (ev && ev.stopPropagation) ev.stopPropagation();
+            if (!canSwitchBackTo(kindId)) return;
+            const nm = speciesName(kindId);
+            document.querySelectorAll('.pet-change-mask').forEach(function (m) { m.remove(); });
+            const mask = document.createElement('div');
+            mask.className = 'pet-pick-mask pet-change-mask';
+            mask.innerHTML =
+                '<div class="pet-pick-box">' +
+                    '<div class="pet-pick-title">换回' + nm + '吗？</div>' +
+                    '<div class="pet-change-warn">' +
+                        '现在陪着你的是「' + ((state.pet && state.pet.name) || '') + '」。<br><br>' +
+                        '<b>' + nm + '要重新长大</b> —— 它上次攒的成长值已经找不回来了，' +
+                        '这次要从「' + PET_STAGE_NAME[0] + '」重新开始。' +
+                    '</div>' +
+                    '<button class="pet-confirm" id="petBackGo">换回' + nm + '</button>' +
+                    '<button class="pet-cancel" id="petBackNo">先不换</button>' +
+                '</div>';
+            document.body.appendChild(mask);
+            document.getElementById('petBackNo').addEventListener('click', function () { mask.remove(); });
+            document.getElementById('petBackGo').addEventListener('click', function () {
+                applyPetChoice(kindId, nm);
+                mask.remove();
+                // 换完把图鉴关掉：回到主页看她新伙伴，而不是停在一堆 emoji 里
+                const prof = document.querySelector('.pet-pick-mask:not(.pet-change-mask)');
+                document.querySelectorAll('.pet-pick-mask').forEach(function (m) {
+                    if (!m.classList.contains('pet-change-mask')) m.remove();
+                });
+                renderPet();
+            });
+        }
+
+        // 换伙伴：第一道门 —— 先说清代价，她点了"知道了"才进选伙伴界面
         function confirmChangePet() {
             const cur = state.pet ? state.pet.name : '';
-            const ok = window.confirm('确定要收养一个新的小伙伴吗？\n\n现在的「' + cur + '」会去宠物乐园休息，它会永远留在图鉴里。\n新伙伴要从小宝宝重新长大。\n（已买到的装扮、小屋、金币都会保留）');
-            if (!ok) return;
-            showPetPicker(true);
+            // 自绘弹窗（不用原生 confirm）：原生弹窗按钮小、字小，7 岁读不懂还容易点错
+            document.querySelectorAll('.pet-change-mask').forEach(function (m) { m.remove(); });
+            const mask = document.createElement('div');
+            mask.className = 'pet-pick-mask pet-change-mask';
+            mask.innerHTML =
+                '<div class="pet-pick-box">' +
+                    '<div class="pet-pick-title">要换一个新的小伙伴吗？ 🤔</div>' +
+                    '<div class="pet-change-warn">' + petChangeWarningText(cur).replace(/\n/g, '<br>') + '</div>' +
+                    '<button class="pet-confirm" id="petChangeGo">好，我去挑一个</button>' +
+                    '<button class="pet-cancel" id="petChangeNo">不换了，就它</button>' +
+                '</div>';
+            document.body.appendChild(mask);
+            document.getElementById('petChangeNo').addEventListener('click', function () { mask.remove(); });
+            document.getElementById('petChangeGo').addEventListener('click', function () {
+                mask.remove();
+                showPetPicker(true);
+            });
         }
         // 点击宠物：跳一下 + 气泡 + 【语音】（v3 修复：之前只有文字、没有声音）
         function petInteract() {
@@ -3674,10 +3856,25 @@
                     '</div>';
             }).join('');
             // ⑥ 图鉴（收养过的伙伴永久点亮）
+            //   2026-09-26：点亮的不只是"看过"，**点一下能换回它**。
+            //   原来这里纯展示，"想换回兔子"没有任何入口 —— 这是 09-23 bug 的第三层原因。
+            //   ⚠️ 图鉴上全是 emoji，孩子会当贴纸随手点，所以换回必须走二次确认
+            //      （switchPetFromBook 里有代价提示），不能一点就换。
             const book = state.petBook || [];
             let books = PET_KINDS.map(function (k) {
                 const on = book.indexOf(k.id) >= 0;
-                return '<div class="pp-book' + (on ? '' : ' lock') + '" title="' + k.name + (on ? '（已收养）' : '（还没收养过）') + '">' + k.emoji + '</div>';
+                const cur = isCurrentPetKind(k.id);
+                const canBack = canSwitchBackTo(k.id);
+                let tip = k.name;
+                if (cur) tip += '（正在陪着你）';
+                else if (canBack) tip += '（点一下换回它 · 要从头长大）';
+                else if (on) tip += '（已收养）';
+                else tip += '（还没收养过）';
+                return '<div class="pp-book' + (on ? '' : ' lock') + (cur ? ' cur' : '') +
+                       (canBack ? ' back' : '') + '"' +
+                       (canBack ? ' onclick="switchPetFromBook(event,\'' + k.id + '\')"' : '') +
+                       ' title="' + tip + '">' + k.emoji +
+                       (cur ? '<i class="pp-book-cur">现在</i>' : '') + '</div>';
             }).join('');
             // ⑦ 成长日记
             const story = state.pet.story || [];
@@ -3914,61 +4111,64 @@
 
             const mask = document.createElement('div');
             mask.className = 'pet-pick-mask';
+            // ⚠️ 默认选中**当前宠物**（petPickerDefaultSel），不是 PET_KINDS[0]。
+            //    2026-09-23 的 bug 就是这里写死了第一项，而第一项是猫 ——
+            //    孩子打开弹窗、什么都不点、直接按绿色大按钮，得到的就变成了猫。
+            const defSel = petPickerDefaultSel();
             let opts = '';
-            PET_KINDS.forEach(function (k, i) {
-                opts += '<div class="pet-option' + (i === 0 ? ' sel' : '') + '" data-kind="' + k.id + '">' +
+            PET_KINDS.forEach(function (k) {
+                const on = (k.id === defSel);
+                // 已收养过、且不是当前这只 → 下面挂一行小字说明"换过去要从头长大"
+                const backHint = (canSwitchBackTo(k.id) && state.petBook && state.petBook.length > 1)
+                    ? '<div class="pet-opt-sub">换过去要从头长大</div>' : '';
+                opts += '<div class="pet-option' + (on ? ' sel' : '') + '" data-kind="' + k.id + '">' +
                             '<div class="pet-opt-emoji">' + k.emoji + '</div>' +
                             '<div class="pet-opt-name">' + k.name + '</div>' +
+                            (isCurrentPetKind(k.id) ? '<div class="pet-opt-cur">正在陪你</div>' : backHint) +
                         '</div>';
             });
+            // 标题：第一次选（还没宠物）和换伙伴（已有宠物）说的不是一件事
+            const hasPet = !!currentPetKind();
+            const titleTxt = hasPet
+                ? ('想让谁来陪你？现在养的是「' + (state.pet.name || speciesName(state.pet.kind)) + '」')
+                : '选一个学习伙伴 🎁';
+            const subTxt = hasPet
+                ? ('不换的话，直接点下面的按钮就行 —— 什么都不点就是继续养' + (state.pet.name || ''))
+                : '它会陪布丁一起长大，打卡就能喂养它';
             mask.innerHTML =
                 '<div class="pet-pick-box">' +
-                    '<div class="pet-pick-title">\u9009\u4e00\u4e2a\u5b66\u4e60\u4f19\u4f34 \uD83C\uDF81</div>' +
-                    '<div class="pet-pick-sub">\u5b83\u4f1a\u966a\u5e03\u4e01\u4e00\u8d77\u957f\u5927\uff0c\u6253\u5361\u5c31\u80fd\u5582\u517b\u5b83</div>' +
+                    '<div class="pet-pick-title">' + titleTxt + '</div>' +
+                    '<div class="pet-pick-sub">' + subTxt + '</div>' +
                     '<div class="pet-grid">' + opts + '</div>' +
                     '<input class="pet-name-input" id="petNameInput" placeholder="\u7ed9\u5b83\u53d6\u4e2a\u540d\u5b57\u5427\uff08\u53ef\u4ee5\u4e0d\u586b\uff09" maxlength="8">' +
-                    '<button class="pet-confirm" id="petConfirmBtn">\u5c31\u662f\u5b83\u5566\uff01</button>' +
+                    '<button class="pet-confirm" id="petConfirmBtn">' +
+                        (hasPet ? '就是它啦！' : '\u5c31\u662f\u5b83\u5566\uff01') +
+                    '</button>' +
                     (cancelable ? '<button class="pet-cancel" id="petCancelBtn">\u518d\u60f3\u60f3</button>' : '') +
                 '</div>';
             document.body.appendChild(mask);
-            let sel = PET_KINDS[0].id;
+            // 名字框预填当前名字，避免"直接确认就被改成小兔/小猫"
+            const nameInputInit = document.getElementById('petNameInput');
+            if (hasPet && state.pet.name) nameInputInit.value = state.pet.name;
+            let sel = defSel;
             mask.querySelectorAll('.pet-option').forEach(function (el) {
                 el.addEventListener('click', function () {
                     mask.querySelectorAll('.pet-option').forEach(function (o) { o.classList.remove('sel'); });
                     el.classList.add('sel');
                     sel = el.dataset.kind;
+                    // 换到别的动物时，名字框里的旧名字要跟上（否则会出现"叫一一的兔子"）
+                    const ni = document.getElementById('petNameInput');
+                    if (ni && !isCurrentPetKind(sel)) {
+                        const prev = speciesName(defSel);
+                        if (!ni.value.trim() || ni.value.trim() === prev) ni.value = '';
+                    }
                 });
             });
             document.getElementById('petConfirmBtn').addEventListener('click', function () {
                 const nameInput = document.getElementById('petNameInput');
-                const kind = PET_KINDS.find(function (k) { return k.id === sel; });
-                state.pet = {
-                    kind: sel,
-                    name: (nameInput.value || '').trim() || kind.name,
-                    exp: 0,
-                    bornAt: getTodayStr(),
-                    nutri: { calcium: 0, wisdom: 0, energy: 0, peace: 0 },
-                    story: [],
-                    // 换/选伙伴的时间戳：多端合并时「后选的赢」。
-                    // 绝不能按经验高低比——新伙伴 exp 恒为 0，永远打不过旧伙伴，旧伙伴会被云端拉回来"复活"。
-                    switchedAt: Date.now()
-                };
-                // 图鉴：收养过的伙伴永久点亮 —— 换伙伴不是"丢弃"，而是收集
-                if (!Array.isArray(state.petBook)) state.petBook = [];
-                const isNewKind = state.petBook.indexOf(sel) < 0;
-                if (isNewKind) state.petBook.push(sel);
-                addPetStory('\uD83C\uDF81', '「' + state.pet.name + '」来到我们家');
-                checkPetAchv(true);
-                saveState();
+                applyPetChoice(sel, nameInput ? nameInput.value : '');
                 mask.remove();
                 renderPet();
-                showToast('\u6b22\u8fce ' + state.pet.name + ' \u52a0\u5165\uff01\u5f00\u59cb\u6253\u5361\u5582\u517b\u5b83\u5427');
-                setTimeout(function () {
-                    const many = (state.petBook || []).length > 1;
-                    petSpeak((isNewKind && many) ? 'collect' : 'tap1',
-                             (isNewKind && many) ? '又有新伙伴来我们家啦！' : ('我是' + state.pet.name + '，请多关照！'),
-                             { hold: 5400 });
-                }, 800);
             });
             if (cancelable) {
                 const cancelBtn = document.getElementById('petCancelBtn');
@@ -4169,6 +4369,7 @@
             petBook: [],
             maxExp: 0,
             coinsEver: 0,
+            coinsSpent: 0,   // 累计花掉的金币（单调不减）—— 2026-09-26 修"花钱被退回"引入
             achv: [],
             petGreetDate: '',
             petWish: '',
@@ -4448,6 +4649,19 @@
             if (!Array.isArray(state.petBook)) state.petBook = [];
             if (typeof state.maxExp !== 'number') state.maxExp = 0;
             if (typeof state.coinsEver !== 'number') state.coinsEver = Math.max(0, state.totalStars || 0);
+            // ===== 金币 v2 迁移：补上「累计花掉」这条记录（2026-09-26）=====
+            // 背景：修 "买了东西刷新后金币又满了" 需要 coinsSpent。
+            // 老数据里它不存在 —— 初值**必须让她现在看到的余额保持不变**，
+            // 否则就是凭空改她的钱（少了她会哭，多了等于白送）。
+            //   coinsSpent = coinsEver（累计赚到） − totalStars（当前余额）
+            // 这个式子对所有设备、任何状态都成立，所以不写死数字。
+            // ⚠️ 只补一次：有了 coinsSpent 之后就不再动它（它只增不减）。
+            if (typeof state.coinsSpent !== 'number') {
+                const earned0 = Math.max(0, state.coinsEver || 0);
+                const bal0 = Math.max(0, state.totalStars || 0);
+                // earned < bal 说明数据本身不一致（理论上不该发生）→ 保守取 0，不凭空造花费
+                state.coinsSpent = earned0 >= bal0 ? (earned0 - bal0) : 0;
+            }
             if (!Array.isArray(state.achv)) state.achv = [];
             if (state.pet) {
                 if (!Array.isArray(state.pet.story)) state.pet.story = [];
@@ -5995,7 +6209,7 @@
 
             const FRESH = {
                 todayChecks: {}, totalStars: 0, streak: 0, history: [], claimedRewards: [],
-                pet: null, medals: [], petBook: [], maxExp: 0, coinsEver: 0, achv: [],
+                pet: null, medals: [], petBook: [], maxExp: 0, coinsEver: 0, coinsSpent: 0, achv: [],
                 poemLog: {}, owned: [], leftovers: [], petWish: '', petWishDate: '',
                 petWishDone: false, freeSettledDate: '', breakfastFast: '', petGreetDate: '', fourFullDate: ''
             };
@@ -6689,6 +6903,11 @@
             if (it.type !== 'food' && (state.owned || []).indexOf(it.id) >= 0) return;
 
             state.totalStars -= it.cost;
+            // 记一笔「花掉的钱」（2026-09-26）—— 单调不减的累计值。
+            // 这是修 "买了东西刷新后金币又满了" 的核心：光扣 totalStars 是不够的，
+            // 因为它是"余额"，多端一合并就会被取大的逻辑顶回来；
+            // coinsSpent 只增不减，合并时取 max，另一端不可能把它退回去。
+            state.coinsSpent = (state.coinsSpent || 0) + it.cost;
             if (it.type === 'food') {
                 if (!state.pet) {
                     showToast('\u8fd8\u6ca1\u6709\u5b66\u4e60\u4f19\u4f34\uff0c\u5148\u53bb\u4e3b\u9875\u9009\u4e00\u4e2a\u518d\u6765\u5582\u5b83\u5427\uff5e');
@@ -6964,7 +7183,7 @@
                 state.pet = null; state.owned = []; state.achv = []; state.medals = [];
                 state.petBook = []; state.history = []; state.leftovers = []; state.poemLog = {};
                 state.claimedRewards = []; state.totalStars = 0; state.streak = 0;
-                state.coinsEver = 0; state.maxExp = 0; state.todayChecks = {};
+                state.coinsEver = 0; state.coinsSpent = 0; state.maxExp = 0; state.todayChecks = {};
                 state.petWish = ''; state.petWishDate = ''; state.petWishDone = false;
                 state.freeSettledDate = ''; state.fourFullDate = '';
                 state.wearing = { decor: '', scene: '', medal: '', at: 0 };
@@ -7018,10 +7237,6 @@
 
                 state.history = Array.from(byDate.values())
                     .sort((a, b) => b.date.localeCompare(a.date));
-            }
-            // 累计星星取较大值（单调不减）
-            if (typeof data.totalStars === 'number') {
-                state.totalStars = Math.max(state.totalStars, data.totalStars);
             }
             // 云端显式把伙伴设为 null（远程清空/重置）→ 本机跟着清，否则老宠物会在某一端"复活"
             if (data.pet === null) state.pet = null;
@@ -7140,6 +7355,63 @@
             if (Array.isArray(data.achv))    state.achv    = Array.from(new Set([...(state.achv || []), ...data.achv]));
             if (typeof data.maxExp === 'number')    state.maxExp    = Math.max(state.maxExp || 0, data.maxExp);
             if (typeof data.coinsEver === 'number') state.coinsEver = Math.max(state.coinsEver || 0, data.coinsEver);
+
+            // ===== 金币：把"花掉的钱"变成一条**永远回不来**的记录 =====
+            // ☠️ 2026-09-26 布丁报的 bug：「买了东西，刷新后金币并没有少」。
+            //    真因是原本这里写着一句
+            //        state.totalStars = Math.max(state.totalStars, data.totalStars);
+            //    它的本意是"累计星星单调不减、防某台设备把总数洗小"，
+            //    可**购买恰恰是一次合法的变小**：
+            //        本机买完 = 87  →  另一端还写着 207  →  max(87,207) = 207
+            //    ⇒ 钱原样退回。她看到的就是"花了金币，一刷新又满了"。
+            //    更根本的问题：系统里**没有任何字段记录"她花掉过多少钱"**，
+            //    所以合并时没法区分「买东西花的」和「数据被洗坏的」，只能一律取大。
+            //    修法：新增 coinsSpent（累计花费，**单调不减**），余额由
+            //        「coinsEver（累计已赚，已有字段） − coinsSpent」推出。
+            //    ⚠️ 复用 coinsEver，不另造 coinsEarned —— 它已经是"累计已赚"，
+            //       已在 SYNC_FIELDS 里、已在上行按 max 合并、加星时同步增长。
+            //       再建一个只会有两份真相，迟早对不上。
+            //    ⚠️ 必须放在 coinsEver 合并**之后**：否则用旧收入算出的余额偏小，
+            //       会造成一次"余额忽然变少"的闪烁（虽然下一轮会修正）。
+            //
+            // ☠️☠️ 两个**不能混为一谈**的概念（2026-09-26 第二版修，第一版就死在这）：
+            //   · 「**没花过钱**」—— 她是新设备/新状态，或确实一分没花。
+            //     这时"余额取 max"是**错的**（会退回钱），必须走新分支按余额算。
+            //     ⚠️ 判断依据是 **`coinsSpent === 0`**，而不是"字段不存在"！
+            //        因为 DEFAULT_STATE / ensureValidState 一定会把这个 key 补成 0，
+            //        所以"字段不存在"这个条件**在本机永远不成立**。
+            //        （第一版就是写成 `localSpent !== null`，结果 B 段真实买了 120 的场景
+            //         被误判成"老数据"走了旧分支 → 钱照旧被退回 → bug 没修好。
+            //         是 _verify_coin_spend_0926.js 的 B 段把它逮出来的。）
+            //   · 「**老数据**」—— 修复前就在用的那台设备/那份云端记录。
+            //     它"花掉过但没记账"，是**未知量**，不能假设为 0。
+            //     这时"余额取 max"反而**是对的**（保持原行为，不猜、不凭空还钱）。
+            //     ⚠️ 判断依据是 **`data.coinsSpent` 这个字段本身存不存在**
+            //        （只有"修复前写的 payload"才会缺这个 key）。
+            //
+            //   ⇒ 于是规则是：
+            //      本机/云端有任意一方**真花过钱**（>0）→ 按「收入 − 花费」算，绝不取大
+            //      云端缺 coinsSpent（真老数据）且本机也没花过 → 退回旧的取 max，零风险
+            const _num = function (v) { return (typeof v === 'number' && isFinite(v)) ? v : null; };
+            const localSpent = _num(state.coinsSpent);
+            const cloudSpent = _num(data.coinsSpent);
+            const anySpent   = (localSpent || 0) > 0 || (cloudSpent || 0) > 0;
+            const cloudIsLegacy = (cloudSpent === null);   // 云端从没写过这个字段 = 修复前的记录
+
+            if (anySpent || !cloudIsLegacy) {
+                // ① 花费取大（只增不减）—— 这是本 bug 的核心防线
+                state.coinsSpent = Math.max(localSpent || 0, cloudSpent || 0);
+                // ② 余额由「累计收入 − 累计花费」推出
+                const balance = Math.max(0, (state.coinsEver || 0) - state.coinsSpent);
+                // ③ 取两端余额里**较小**的那个：宁可少算，也绝不把钱退回来。
+                //    她"真的又赚了"会体现在 coinsEver 变大 → balance 变大，
+                //    所以这条不会把该涨的钱压住。
+                state.totalStars = Math.min(state.totalStars, balance);
+            } else if (typeof data.totalStars === 'number') {
+                // 老数据路径（云端没有 coinsSpent，且本机也没花过）：
+                // 保持原行为，零风险 —— 不知道她花过多少，就不猜。
+                state.totalStars = Math.max(state.totalStars, data.totalStars);
+            }
             // 今日心愿：同一天的才合并；"已完成"一旦为真就不再被重置（避免多端互洗）
             if (data.petWishDate && data.petWishDate === state.todayDate) {
                 if (!state.petWishDate || state.petWishDate !== state.todayDate) {
