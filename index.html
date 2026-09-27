@@ -8,7 +8,7 @@
     <meta http-equiv="Expires" content="0" data-page-node-id="YXlbOTFHU2Nr6SGRQHt7cy">
     <script>
         (function () {
-            var APP_VERSION = '20260926.1';
+            var APP_VERSION = '20260927.1';
             window.APP_VERSION_STR = APP_VERSION;   // 主脚本里做线上版本自检要用
             try {
                 var params = new URLSearchParams(location.search);
@@ -483,15 +483,21 @@
            外观（颜色）交给她 → 满足"我的兔子"。
            色块即按钮：选中的加 .on 环。最后一个 🎨 里藏原生取色器（想要什么色都行）。 */
         .pet-color-btn {
-            width: 30px; height: 30px; padding: 0; cursor: pointer; border-radius: 50%;
+            width: 26px; height: 26px; padding: 0; cursor: pointer; border-radius: 50%;
             border: 2px solid #fff; box-shadow: 0 1px 4px rgba(46,158,107,.22);
             position: relative; overflow: hidden; flex-shrink: 0;
         }
         .pet-color-btn.on { box-shadow: 0 0 0 2px #2E9E6B, 0 1px 4px rgba(46,158,107,.30); }
+        /* 「原本」和「🎨」不是色块而是按钮：色块是 26px 圆，它俩装的是字/图标，
+           挤进圆里会被裁 → 前者给药丸宽度（.wide），后者留圆形但缩字号（.pick）。 */
         .pet-color-btn.orig {
-            background: #fff; color: #7E948B; font-size: 11px; font-weight: 700;
+            background: #fff; color: #7E948B; font-weight: 700;
             display: inline-flex; align-items: center; justify-content: center;
         }
+        .pet-color-btn.orig.wide {
+            width: auto; min-width: 34px; padding: 0 8px; border-radius: 13px; font-size: 10.5px;
+        }
+        .pet-color-btn.orig.pick { font-size: 14px; }
         .pet-color-btn input[type=color] {
             position: absolute; inset: 0; width: 100%; height: 100%;
             opacity: 0; cursor: pointer; border: 0; padding: 0;
@@ -554,27 +560,68 @@
         .pet-scene-layer svg { width: 100%; height: 100%; display: block; }
         .pet-stage-wrap .pet-avatar-holder { z-index: 2; }
 
-        /* ===== 收藏格（2026-09-22 P1）=====
-           替代原来"买几件就平铺几个小图标"：现在点一下就能换上/住进去。 */
-        .pet-collect { margin-top: 9px; display: flex; flex-direction: column; gap: 7px; align-items: center; }
-        .pet-collect-row { display: flex; align-items: center; justify-content: center; gap: 7px; flex-wrap: wrap; }
-        .pet-collect-label { font-size: 12px; color: #7E948B; font-weight: 700; }
-        /* ⚠️ 涂色行：容器里"标签 + 8 个色块"是**平级兄弟节点**（没有内层包裹），
-           所以**绝不能**用 `flex-direction: column` —— 那会把 9 个元素**全部竖着堆成一列**。
-           正解：让标签独占整行（flex-basis:100%），靠父级的 flex-wrap 把色块挤到第二行。
-           宽度核算：8 个 32px 色块 + 7 个 7px 间距 = 305px ≤ 卡片内宽 314px → 一行放得下。 */
-        .pet-color-row .pet-collect-label { flex-basis: 100%; text-align: center; }
+        /* ===== 收藏格（2026-09-22 P1；2026-09-26 重新排版）=====
+           替代原来"买几件就平铺几个小图标"：现在点一下就能换上/住进去。
+
+           ☠️ 旧排版为什么"乱"+"占地方"（2026-09-26 天姝反馈）：
+             每行都是 justify-content:center，而各行长度差很多（颜色行 10 个元素、
+             装扮只有 1 个）→ **每行从左到右的起点都不同**，5 个标签水平位置各飘一处
+             （实测左缘散开 48.7~88.7px）；
+             而且涂色行的标签被 flex-basis:100% 顶成独占一行，其余 4 行标签是行内的
+             → 两种排法混在一起，进一步加重参差。
+             再加上 slot 42px + gap 7px，5 行吃掉 271px，其中大半是空白。
+
+           新排法：**grid 两列（max-content + 1fr）+ 每行 display:contents**：
+             标签自动占第一列、内容占第二列，第一列宽 = 最长的那个标签
+             → 5 行标签严格一条竖线（实测散开 0px），且**不需要任何写死的像素值**。
+             slot 42→32、gap 7→4，整块加浅底收成一个面板。
+             宽屏（≥620px）切成四列 → 并成两栏，5 行压成 3 行。
+             实测面板高：1000px 屏 271→138px（省 49%）；390px 手机 271→234px（省 14%）。 */
+        .pet-collect {
+            margin-top: 9px; padding: 7px 9px 6px;
+            display: grid;
+            grid-template-columns: max-content 1fr;
+            align-items: center;
+            gap: 4px 10px;
+            background: rgba(255,255,255,.62);
+            border: 1.5px solid #E4F4EC; border-radius: 15px;
+            text-align: left;
+        }
+        /* ☠️ 每行用 display:contents 把「标签 / 内容」两个子元素**直接交给上面的 grid**：
+           grid 第一列是 max-content，会自动取"最长那个标签"的宽度，
+           于是 5 行标签天然对齐 —— **一个写死的像素值都不需要**。
+           （写死会踩 flex 的 min-width:auto：`🎨 腿的颜色` 实测 62.39px，
+            会顶开列宽 → 它的内容比别的行右移 2.39px，正是"看着还是有点错位"的来源。） */
+        .pet-collect-row { display: contents; }
+        .pet-collect-label {
+            font-size: 11px; line-height: 1.2; color: #7E948B; font-weight: 700;
+            text-align: right; white-space: nowrap;
+        }
+        .pet-collect-items {
+            display: flex; align-items: center; gap: 4px; flex-wrap: wrap; min-width: 0;
+        }
         .pet-slot {
-            width: 42px; height: 42px; padding: 0; cursor: pointer;
+            width: 32px; height: 32px; padding: 0; cursor: pointer;
             display: inline-flex; align-items: center; justify-content: center;
-            font-size: 21px; line-height: 1;
-            background: rgba(255,255,255,.88); border: 2px solid #D6F2E6; border-radius: 13px;
+            font-size: 16px; line-height: 1;
+            background: rgba(255,255,255,.92); border: 2px solid #D6F2E6; border-radius: 10px;
             transition: transform .12s ease, border-color .12s ease, box-shadow .12s ease;
             -webkit-tap-highlight-color: transparent;
         }
         .pet-slot.on { border-color: #3AA17E; box-shadow: 0 0 0 3px rgba(58,161,126,.22); }
         .pet-slot:active { transform: scale(.9); }
-        .pet-collect-hint { font-size: 11px; color: #9AAFA6; }
+        .pet-collect-hint {
+            grid-column: 1 / -1;
+            font-size: 10.5px; color: #9AAFA6; text-align: center; margin-top: 1px;
+        }
+        /* 宽屏（她看预览 / 平板就是这个宽度）并成两栏，省掉一半高度；
+           窄屏（布丁的手机）保持单栏，标签列不会被挤到没地方放。 */
+        @media (min-width: 620px) {
+            .pet-collect {
+                grid-template-columns: max-content 1fr max-content 1fr;
+                gap: 4px 14px;
+            }
+        }
 
         /* 「今天吃过什么」—— 食物唯一的痕迹。装扮买完能一直戴着，食物吃完就没了，
            所以它必须靠这行字存在，否则孩子眼里就是"金币消失了"。 */
@@ -2971,14 +3018,23 @@
                      + '" onclick="setLegsColor(this.dataset.c)" title="' + p.name + '"></button>';
             }).join('');
             // 最后一个按钮里藏着原生取色器 —— 想要什么颜色都可以
-            const pick = '<button class="pet-color-btn orig" style="border-color:#D8E4DE;font-size:15px"'
+            const pick = '<button class="pet-color-btn orig pick" style="border-color:#D8E4DE"'
                 + ' title="我自己挑颜色">\uD83C\uDFA8'
                 + '<input type="color" value="' + (cur.custom ? cur.c : fig.body.c)
                 + '" onchange="setLegsColor(this.value)"></button>';
+            // ⚠️ 标签与物品**分两段**（物品包进 .pet-collect-items）—— 这样两者才能成为
+            //    grid 的第一列（max-content）和第二列，5 行标签自动对齐成一条竖线。
+            //    旧版把 9 个元素平级塞进一个 flex 行里，靠 flex-wrap 让标签独占一行，
+            //    于是它跟另外 4 行的排法不一致（详见 CSS 注释"旧排版为什么乱"）。
+            // ⚠️ `pet-color-row` 这个类名**继续保留**：2026-09-26 重排版后它已经没有对应
+            //    CSS 规则了（旧的 flex-basis:100% 已删），但 `_verify_petbody.js` 拿它
+            //    当"这是涂色行"的语义钩子（断言涂色面板 + 原生取色器渲染出来了）。
+            //    删掉它 = 弄红那个测试，且以后也没有稳定的选择器可用。
             return '<div class="pet-collect-row pet-color-row"><span class="pet-collect-label">\uD83C\uDFA8 腿的颜色</span>'
-                 + '<button class="pet-color-btn orig' + (cur.custom ? '' : ' on')
+                 + '<span class="pet-collect-items">'
+                 + '<button class="pet-color-btn orig wide' + (cur.custom ? '' : ' on')
                  + '" title="变回本来的颜色" onclick="setLegsColor()">原本</button>'
-                 + pal + pick + '</div>';
+                 + pal + pick + '</span></div>';
         }
 
         // 当前该戴哪件 / 该住哪个家：
@@ -4037,26 +4093,26 @@
             const legRow = legColorRowHTML();
             const collectHTML = (decorList.length || sceneList.length || medalAll.length || fedList.length || legRow)
                 ? '<div class="pet-collect">' + legRow +
-                    (decorList.length ? '<div class="pet-collect-row"><span class="pet-collect-label">🎀 装扮</span>' +
+                    (decorList.length ? '<div class="pet-collect-row"><span class="pet-collect-label">🎀 装扮</span><span class="pet-collect-items">' +
                         decorList.map(function (d) {
                             return '<button class="pet-slot' + (decor && d.id === decor.id ? ' on' : '') +
                                 '" onclick="wearItem(\'decor\',\'' + d.id + '\')" title="换上' + d.name + '">' + decorIconHTML(d) + '</button>';
-                        }).join('') + '</div>' : '') +
-                    (sceneList.length ? '<div class="pet-collect-row"><span class="pet-collect-label">🏡 小家</span>' +
+                        }).join('') + '</span></div>' : '') +
+                    (sceneList.length ? '<div class="pet-collect-row"><span class="pet-collect-label">🏡 小家</span><span class="pet-collect-items">' +
                         sceneList.map(function (s) {
                             return '<button class="pet-slot' + (scene && s.id === scene.id ? ' on' : '') +
                                 '" onclick="wearItem(\'scene\',\'' + s.id + '\')" title="住进' + s.name + '">' + s.icon + '</button>';
-                        }).join('') + '</div>' : '') +
-                    (medalAll.length ? '<div class="pet-collect-row"><span class="pet-collect-label">🏅 勋章</span>' +
+                        }).join('') + '</span></div>' : '') +
+                    (medalAll.length ? '<div class="pet-collect-row"><span class="pet-collect-label">🏅 勋章</span><span class="pet-collect-items">' +
                         medalAll.map(function (m) {
                             return '<button class="pet-slot' + (medal && m.id === medal.id ? ' on' : '') +
                                 '" onclick="wearItem(\'medal\',\'' + m.id + '\')" title="别上' + m.name + '">' + m.icon + '</button>';
-                        }).join('') + '</div>' : '') +
-                    (fedList.length ? '<div class="pet-collect-row"><span class="pet-collect-label">🍽 吃过</span>' +
+                        }).join('') + '</span></div>' : '') +
+                    (fedList.length ? '<div class="pet-collect-row"><span class="pet-collect-label">🍽 吃过</span><span class="pet-collect-items">' +
                         fedList.map(function (f) {
                             return '<span class="pet-slot fed-slot" title="吃过 ' + f.count + ' 次">' +
                                 f.icon + '<i class="fed-n">' + f.count + '</i></span>';
-                        }).join('') + '</div>' : '') +
+                        }).join('') + '</span></div>' : '') +
                     ((decorList.length + sceneList.length + medalAll.length) > 1 ? '<div class="pet-collect-hint">点一下就能换上 ✨</div>' : '') +
                   '</div>'
                 : '';
