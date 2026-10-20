@@ -39,6 +39,15 @@
     "weekendOnly": false
   },
   {
+    "id": "m_enread",
+    "name": "英语晨读 10 分钟",
+    "icon": "🔤",
+    "category": "morning",
+    "stars": 2,
+    "nutri": "wisdom",
+    "weekendOnly": false
+  },
+  {
     "id": "m_read_cn",
     "name": "语文朗读 10 分钟 ·《金波四季美文》",
     "icon": "📖",
@@ -49,20 +58,6 @@
       1,
       3,
       5
-    ],
-    "weekendOnly": false
-  },
-  {
-    "id": "m_read_en",
-    "name": "英语朗读 10 分钟 ·《星火100篇》",
-    "icon": "🔤",
-    "category": "after",
-    "stars": 2,
-    "nutri": "wisdom",
-    "days": [
-      2,
-      4,
-      6
     ],
     "weekendOnly": false
   },
@@ -83,7 +78,7 @@
     "id": "a_calc",
     "name": "数学计算题 1 页",
     "icon": "🧮",
-    "category": "morning",
+    "category": "after",
     "stars": 2,
     "nutri": "wisdom",
     "days": [
@@ -172,8 +167,26 @@
     "weekendOnly": false
   },
   {
+    "id": "e_math_talk",
+    "name": "数学说题",
+    "icon": "💬",
+    "category": "evening",
+    "stars": 2,
+    "nutri": "wisdom",
+    "weekendOnly": false
+  },
+  {
+    "id": "e_cn_review",
+    "name": "语文课文复习",
+    "icon": "📄",
+    "category": "evening",
+    "stars": 2,
+    "nutri": "wisdom",
+    "weekendOnly": false
+  },
+  {
     "id": "e_read",
-    "name": "课外阅读 15 分钟 ·《西游记》",
+    "name": "课外阅读 15 分钟",
     "icon": "📚",
     "category": "after",
     "stars": 2,
