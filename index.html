@@ -8,7 +8,7 @@
     <meta http-equiv="Expires" content="0" data-page-node-id="YXlbOTFHU2Nr6SGRQHt7cy">
     <script>
         (function () {
-            var APP_VERSION = '20260927.1';
+            var APP_VERSION = '20261020.1';
             window.APP_VERSION_STR = APP_VERSION;   // 主脚本里做线上版本自检要用
             try {
                 var params = new URLSearchParams(location.search);
@@ -414,7 +414,16 @@
            不能按盒模型算 —— 这也是必须实拍的另一个原因。 */
         .pet-wear.pw-body { z-index: 6; left: 50%; bottom: -16%; font-size: .60em; transform: translateX(-50%); }
         .pet-wear.pw-neck { z-index: 6; left: 50%; bottom: 22%; font-size: .50em; transform: translateX(-50%); }
-        .pet-wear.pw-head { z-index: 6; left: 66%; top: -2%;     font-size: .46em; transform: translateX(-50%); }
+        /* 蝴蝶结落点：改成**逐只可调**（--bx/--by 由 PET_FIGURE 的 bh/bt 内联写入）。
+           原来 9 只动物共用 left:66%/top:-2%，实拍确认 🦖 飘在尾巴上方、🐸 压右眼、
+           🐧 挂到头侧（三个错位形态全对上了）。
+           ⚠️ 用 CSS 变量而不是内联 left/top：商店预览有一条只改字号的相关规则，
+              内联的 left/top 优先级更高、会把预览的坐标一起顶掉 ——
+              而三处宿主本来就该共用同一套 PET_FIGURE 坐标。 */
+        .pet-wear.pw-head {
+            z-index: 6; left: var(--bx, 66%); top: var(--by, -2%);
+            font-size: .46em; transform: translateX(-50%);
+        }
         /* ===== 宠物「长身子」几何层（2026-09-23 方案 A）=====
            【为什么要这一层】.pet-avatar 里原来只有**一个 emoji 字符**，而 9 种动物全是"脸"，
            所以"脖子 / 身体"这两个部位此前**根本不存在** —— 围巾只能落在脸下沿（压嘴），
@@ -458,24 +467,62 @@
 
         /* 自绘围巾：🧣 这个 emoji 是"叠好的围巾"商品图（斜放带流苏），
            从 top:50% 到 68% 逐档实拍**没有一档能用**，放哪都像一个红块贴在脸上。
-           而且 emoji 的脸从额头直贯到底、没有"脖子"那段空隙，
-           所以**细围巾**同样像贴在嘴筒上 —— 宽度必须 ≈ 脸宽（1em）才读成"围了一圈"。
-           这一档是拿 3 宽 × 3 落点 = 9 格矩阵实拍比出来的。 */
+
+           ☠️ 2026-09-27 重画 —— 布丁的原话是「围巾、披风和裙子好丑」。
+           这一件试了五个候选方案、逐个 A/B 实拍（tools/_shots/scarf_plans.png），
+           结论反直觉，**下次别重复走这三条死路**：
+             · **加宽** → 窄的像"红横棒"、宽了像"红碟子/热狗"（plan1 1.50em、plan2 1.46em 弧形）✗
+             · **加垂尾** → 只要"主带 + 两条垂尾"同时存在，无论角度圆角颜色，
+               整体必然读成**一张小凳子/小桌子**（横杠 + 两条腿）（plan4/plan5）✗
+             · **加厚、加深红** → 越"醒目"越像贴上去的贴纸，和皮肤没有关系 ✗
+           最后留下的是**最克制的那个**：窄细带 + 柔和珊瑚色渐变 + 顶部提亮/底部压暗。
+           ⚠️ 真正让"丑"消失的是**落点 nk**（这次全部逐只重扫过），不是形状 ——
+              形状这版尺寸不要随手改，五个方案里没有一个比它更像围巾。
+           ⚠️ 而且 emoji 的脸**从额头直贯到底、没有"脖子"那段凹陷**，
+              所以围巾永远是"贴在脸下沿的一条带" —— 这是这套素材的物理上限。 */
         .pa-scarf {
             position: absolute; left: 50%; transform: translateX(-50%);
-            width: 1em; height: .14em; border-radius: 999px;
-            background: linear-gradient(180deg, #FF8A8A 0%, #E8453F 55%, #C42F2B 100%);
-            box-shadow: 0 1px 2px rgba(0,0,0,.25), inset 0 -1px 1px rgba(0,0,0,.10);
+            width: 1.12em; height: .14em; border-radius: 999px;
+            background: linear-gradient(180deg, #FFC9BE 0%, #EE8A78 55%, #D96B58 100%);
+            box-shadow: 0 1px 2px rgba(0,0,0,.20), inset 0 1px 1px rgba(255,255,255,.50);
             z-index: 4;
         }
-        .pa-scarf::before, .pa-scarf::after {
-            content: ''; position: absolute; top: 55%;
-            width: .13em; height: .25em;
-            background: linear-gradient(180deg, #E8453F, #B92F2B);
-            border-radius: .02em .02em .05em .05em;
+        /* ☠️☠️ 千万别给围巾加"垂下来的两条尾"：2026-09-27 拿三个候选方案做过
+           A/B 对比实拍（tools/_shots/scarf_plans.png），**只要"主带 + 两条垂尾"
+           同时存在，整体就必然读成一张小凳子／小桌子**（横杠 + 两条腿），
+           跟颜色、宽度、圆角、垂尾角度都无关 —— plan4/plan5 两版全部翻车。
+           结论：在 74px 的宠物头上，围巾只能是**一圈带子**，做不出"两端垂下来"。
+           （原版就是"细带 + 两条方形柱"，布丁说"好丑"，根子在这里。） */
+
+        /* 自绘小裙子（2026-09-27 重画）：原来 d_dress 是**直接贴 👗 emoji** ——
+           那是"挂在衣架上的连衣裙商品图"，贴在宠物身上就是一张贴纸，下摆还悬在脚外。
+           跟披风当初的 🦸 是**同一个错**：拿商品图当"穿着"。
+           ☠️☠️ **丑的根因是"太高"，不是形状** —— 身子本体只有 .46em 高（占 figure 57%），
+              而第一版裙子给了 .44em 高、落点 dt=76 → 裙摆垂到 figure 的 130%（地面），
+              于是横向对比 A/B/C 三版（梯形、圆摆、半裙）**全部读成"地上的粉色圆锥/底座"**，
+              怎么改轮廓都没用（tools/_shots/dressA|C_matrix.png 坐实）。
+              定版是**只包住胯的短裙**：高 .24em（≈身子高的一半）+ 平下摆 + 细腰带。
+           ⚠️ 落点 dt 用公式推：**dt = 身子底边% − 裙高%** → 裙摆正好盖住身子的圆弧底边、
+              两只小爪子露在下摆外（这才是"穿着裙子"的读法）。
+              🦖/🐧 没有自绘身子（body:null），只有 emoji 自己的腰腹 → 值单独实拍标定。
+              逐只复核用 tools/_scan_wear_matrix.py（9 只 × 5 档一次拍完）。 */
+        .pa-dress {
+            position: absolute; left: 50%; transform: translateX(-50%);
+            width: .64em; height: .24em; z-index: 5;
+            background: linear-gradient(176deg, #FFD9E8 0%, #FB9FC6 52%, #ED74A6 100%);
+            /* 梯形裁切 = 布料：上口略窄于身子、下摆是一条**平线**。
+               圆弧底 + 顶部亮环会读成"粉色小桶/容器口"（dressB 那版），别改回去。 */
+            clip-path: polygon(11% 0%, 89% 0%, 100% 100%, 0% 100%);
+            filter: drop-shadow(0 1px 2px rgba(206,84,134,.26));
         }
-        .pa-scarf::before { left: .06em;  transform: rotate(7deg); }
-        .pa-scarf::after  { right: .06em; transform: rotate(-7deg); }
+        .pa-dress::before {          /* 腰带：贴着上口，读成"腰" */
+            content: ''; position: absolute; left: 11%; right: 11%; top: 0; height: .055em;
+            background: rgba(255,255,255,.9); border-radius: 0 0 3px 3px;
+        }
+        .pa-dress::after {           /* 下摆：压暗。提亮会读成容器的口沿 */
+            content: ''; position: absolute; left: 3%; right: 3%; bottom: 6%; height: .035em;
+            background: rgba(0,0,0,.07);
+        }
 
         /* ===== 涂色面板（2026-09-23）=====
            布丁说"想让我的兔子长出身子"、"四肢能不能我自己画"。
@@ -516,19 +563,30 @@
             width: 22px; height: 19px;
         }
         /* ⚠️ 尺寸要按**实拍的 emoji 实际宽度**来定：74px 字号下 emoji 实宽 106px（≈1.43 倍），
-           披风只有比它更宽才能从宠物两侧露出来 —— 否则整块被挡住，等于没戴。 */
-        .pet-cape { width: 2.05em; height: .94em; background: none; }
-        /* 单类选择器打不过 .pet-wear.pw-back，位置得用同等特异性覆盖 */
-        .pet-wear.pw-back.pet-cape { bottom: -2%; }
+           披风只有比它更宽才能从宠物两侧露出来 —— 否则整块被挡住，等于没戴。
+           ☠️ 2026-09-27 收形（布丁："围巾、披风和裙子好丑"）：
+              第一版 2.05em 宽、两片各 44% 且 top:4%，矩阵实拍里读成
+              **两片大花瓣／两只耳朵**（比宠物宽 43%，旋转 ±14° 张得像翅膀）。
+              改三处：① 宽 2.05 → **1.80em**（比宠物宽约 26%，仍能从两侧露出，但不再像翅膀）；
+                     ② 两片各 **50%** 并从 **-1%** 起 —— 顶部在中间接上，看着是**一整片**
+                        披风被身体挡住，而不是两片分开的叶子；
+                     ③ 旋转 ±14° → ±15° 但**下沿圆角加大**，让下摆有"垂坠 + 外扩"。 */
+        .pet-cape { width: 1.80em; height: .86em; background: none; }
+        /* 单类选择器打不过 .pet-wear.pw-back，位置得用同等特异性覆盖。
+           ☠️ 2026-09-27 实拍定档（_scan_wear_matrix.py --sel .pet-cape --prop bottom 扫 -20~20 五档）：
+              -2%（原值）/0%/10% 时披风顶得太高，像"蓝布包住下巴"；20% 更糊。
+              **-20% 最好**：披风落在后背下半部，脸和脚都完整露出来。
+              ⚠️ 披风锚的是 bottom 不是 top —— 扫它必须 `--prop bottom`，写死 top 会扫出假结论。 */
+        .pet-wear.pw-back.pet-cape { bottom: -20%; }
         .pet-cape::before, .pet-cape::after {
-            content: ''; position: absolute; top: 4%;
-            width: 44%; height: 96%;
-            background: linear-gradient(175deg, #8FB6FF 0%, #4A6FE0 55%, #3450C4 100%);
-            border-radius: 46% 46% 26% 26%;
+            content: ''; position: absolute; top: 2%;
+            width: 50%; height: 98%;
+            background: linear-gradient(175deg, #A9C7FF 0%, #5E84E8 52%, #3C5CC8 100%);
+            border-radius: 44% 44% 24% 24% / 22% 22% 36% 36%;
             box-shadow: 0 2px 5px rgba(52,80,196,.25);
         }
-        .pet-cape::before { left: 0;  transform: rotate(-14deg); transform-origin: top right; }
-        .pet-cape::after  { right: 0; transform: rotate(14deg);  transform-origin: top left; }
+        .pet-cape::before { left: -1%;  transform: rotate(-15deg); transform-origin: top right; }
+        .pet-cape::after  { right: -1%; transform: rotate(15deg);  transform-origin: top left; }
         /* 勋章（2026-09-22 P1）：荣誉别在胸口 —— 与我买来的装扮同处一身，
            但语义不同：装扮是"妈妈买的"，勋章是"我自己坚持出来的"。
            ⚠️ 实拍第一版是 left:26% / bottom:0 / .40em —— 那枚勋章**正压在兔子的脸颊上**，
@@ -2083,7 +2141,10 @@
         .shop-preview .pet-wear.pw-back { font-size: .70em; bottom: 6%; }
         .shop-preview .pet-wear.pw-body { font-size: .54em; bottom: 3%; }
         .shop-preview .pet-wear.pw-neck { font-size: .44em; bottom: 26%; }
-        .shop-preview .pet-wear.pw-head { font-size: .42em; top: 5%; left: 66%; }
+        /* ⚠️ 2026-09-27：这里原先还写死 top:5%/left:66% —— 现在蝴蝶结的落点走
+           PET_FIGURE 的 bh/bt（CSS 变量 --bx/--by），**只留字号**，位置交给同一套坐标。
+           否则预览里的蝴蝶结会和主界面不一致（三处宿主本就该共用一套落点）。 */
+        .shop-preview .pet-wear.pw-head { font-size: .42em; }
         .shop-exp { font-size:11px;color:#854F0B;background:#FAEEDA;padding:1px 6px;border-radius:8px;margin-left:6px; }
         .nutri-row { display:flex;gap:6px;justify-content:center;margin-top:9px;flex-wrap:wrap; }
         .nutri-pill { font-size:11px;padding:3px 10px;border-radius:12px;background:#F1EFE8;color:#5F5E5A; }
@@ -2615,11 +2676,11 @@
             { id:'m_break',   name:'早餐 15 分钟内吃完',           icon:'\u23F1\uFE0F', category:'morning', stars:3, nutri:'calcium', timer:900 },
             { id:'m_milk',    name:'牛奶喝完 1 盒',                icon:'\uD83E\uDD5B', category:'morning', stars:2, nutri:'calcium', plate:true },
             { id:'m_egg',     name:'炒蛋吃完 1 个',                icon:'\uD83C\uDF73', category:'morning', stars:1, nutri:'calcium', plate:true },
+            { id:'m_enread',  name:'英语晨读 10 分钟',              icon:'\uD83D\uDD24', category:'morning', stars:2, nutri:'wisdom' },
             { id:'m_read_cn', name:'语文朗读 10 分钟 ·《金波四季美文》', icon:'\uD83D\uDCD6', category:'after',   stars:2, nutri:'wisdom', days:[1,3,5] },
-            { id:'m_read_en', name:'英语朗读 10 分钟 ·《星火100篇》',   icon:'\uD83D\uDD24', category:'after',   stars:2, nutri:'wisdom', days:[2,4,6] },
             // 放学后
             { id:'a_sport',   name:'户外运动 30 分钟',             icon:'\uD83D\uDEB4', category:'after',   stars:2, nutri:'energy', days:[1,2] },
-            { id:'a_calc',    name:'数学计算题 1 页',              icon:'\uD83E\uDDEE', category:'morning', stars:2, nutri:'wisdom', days:[1,2,3,4] },
+            { id:'a_calc',    name:'数学计算题 1 页',              icon:'\uD83E\uDDEE', category:'after',   stars:2, nutri:'wisdom', days:[1,2,3,4] },
             { id:'a_abc',     name:'ABC Reading 2 个',            icon:'\uD83D\uDD24', category:'weekend', stars:2, nutri:'wisdom', days:[6,0] },
             { id:'a_dog',     name:'百词斩（单词小狗）',            icon:'\uD83D\uDC36', category:'after',   stars:1, nutri:'wisdom' },
             { id:'a_weiyang', name:'未泱英文阅读 2 个',              icon:'\uD83D\uDCDA', category:'after',   stars:2, nutri:'wisdom' },
@@ -2627,7 +2688,9 @@
             { id:'e_hw',      name:'校内作业（有则先做）',          icon:'\uD83D\uDCDD', category:'evening', stars:3, nutri:'wisdom', days:[1,2,3,4,5] },
             { id:'e_53',      name:'53 天天练 · 数学同步',         icon:'\uD83D\uDCD8', category:'evening', stars:2, nutri:'wisdom', days:[1,2,3,4] },
             { id:'e_words',   name:'认识生字 6 个',                icon:'\u270F\uFE0F', category:'evening', stars:1, nutri:'wisdom', days:[1,2,3,4] },
-            { id:'e_read',    name:'课外阅读 15 分钟 ·《西游记》',   icon:'\uD83D\uDCDA', category:'after',   stars:2, nutri:'wisdom' },
+            { id:'e_math_talk', name:'数学说题',                    icon:'\uD83D\uDCAC', category:'evening', stars:2, nutri:'wisdom' },
+            { id:'e_cn_review', name:'语文课文复习',                  icon:'\uD83D\uDCC4', category:'evening', stars:2, nutri:'wisdom' },
+            { id:'e_read',    name:'课外阅读 15 分钟',              icon:'\uD83D\uDCDA', category:'after',   stars:2, nutri:'wisdom' },
             { id:'e_engread', name:'英语阅读《星火100篇》1 篇',      icon:'\uD83D\uDCD5', category:'evening', stars:3, nutri:'wisdom', days:[1,2,6,0] },
             { id:'a_dictation', name:'词语听写 10 个', icon:'✍️', category:'evening', stars:2, nutri:'wisdom', modal:'dictation' },
             { id:'e_pack',    name:'整理书包',                    icon:'\uD83C\uDF92', category:'evening', stars:1, nutri:'peace',  days:[1,2,3,4] },
@@ -2704,7 +2767,14 @@
         // top/w/h  自绘身子的起始高度%、宽、高（em）
         // c/p  身子主体色 / 爪子色（也可被"布丁自己涂的颜色"覆盖）
         // nk   围巾落点 top%（= .pa-scarf 这条带的顶边位置）
-        // dt   裙子落点 top%（= 👗 emoji 盒的顶边位置）
+        // dt   裙子落点 top%（= .pa-dress 自绘裙子的顶边位置）
+        // dw   裙子宽度 em（只给「没有自绘身子」的动物用：🦖 腰身特别窄，
+        //      用统一的 .64em 会横向戳出体外 → 读成「一块板」而不是「穿着裙子」）
+        // cp   披风落点 bottom%（= .pet-cape 底边位置）；不写就用 CSS 的 -2%
+        // bh/bt  蝴蝶结落点 left%/top%（写成 CSS 变量 --bx/--by）；不写就用 CSS 的 66%/-2%
+        //     ⚠️ bh/bt 是 2026-09-27 才拆成逐只的：此前 9 只共用 66%/-2%，实拍确认
+        //        🦖 飘在尾巴上方、🐸 压右眼、🐧 挂到头侧（AGENTS.md 待办 #76）。
+        //     ⚠️ cp 同理 —— 原来披风也是全动物共用一套坐标，对 body:null 的 🦖/🐧 必然错位。
         //
         // ⚠️ **这组数是在真实应用里实测定死的，不能照搬原型页的值**。
         //    原型（独立 HTML）与真机的画布基准不同，而且 emoji 的**视觉**绘制范围
@@ -2733,18 +2803,30 @@
         //
         // body:null 的两种 = 🦖 小恐龙 / 🐧 企鹅，它们**本身就是完整全身 emoji**，
         //    再画身子会变成"脸下面又粘一个身子"（实拍确认），所以只把围巾戴到真脖子上。
+        //
+        // ===== 2026-09-27 配饰观感重画（布丁的原话："围巾、披风和裙子好丑"）=====
+        // 根因**不是落点偏了，而是形态本身**（放大实拍才看清）：
+        //   围巾  1em×.14em 的细横条 + 两条方形短柱 → 整体读成一张「红色小长凳」
+        //   裙子  直接贴 👗 emoji（挂在衣架上的连衣裙商品图）→ 一张贴纸，下摆还悬在脚外
+        //   披风  2.05em 宽的两片圆瓣 → 像两片叶子／两只耳朵，不像斗篷
+        // 三件现在**全部自绘** —— 和披风当初去掉 🦸 是同一条理由：
+        //   **emoji 商品图不能当"穿着"用**（它画的是商品本身，不是穿在身上的样子）。
+        // 验证工具换成 tools/_scan_wear_matrix.py（9 只动物 × 素体+四件，一次 Chrome 拍完）。
+        // ☠️ 用它时别把「素体」格当成"没穿任何装扮"：currentDecorItem() 会在 wearing 为空时
+        //    兜底成「owned 里最新买到的那件」（设计如此：买完立刻能看见），
+        //    所以要拍素体就得让该动物**一件都不拥有**（state.owned = []）。
         const PET_FIGURE = {
-            cat:     { id:'cat',     hs:.80, nk:73, dt:74, body:{ c:'#F0A552', p:'#FFE6C4', top:48, w:.62, h:.46 } },
-            rabbit:  { id:'rabbit',  hs:.80, nk:76, dt:76, body:{ c:'#E6E1EC', p:'#FFC2D4', top:50, w:.62, h:.46 } },
-            unicorn: { id:'unicorn', hs:.78, nk:80, dt:81, body:{ c:'#D8C9F2', p:'#BFA3EC', top:55, w:.58, h:.44 } },
-            panda:   { id:'panda',   hs:.80, nk:80, dt:78, body:{ c:'#3B3B45', p:'#26262E', top:52, w:.62, h:.46 } },
-            fox:     { id:'fox',     hs:.80, nk:77, dt:78, body:{ c:'#E8823C', p:'#FFFFFF', top:52, w:.62, h:.46 } },
-            hamster: { id:'hamster', hs:.80, nk:75, dt:76, body:{ c:'#E3B27C', p:'#FFF1DE', top:50, w:.62, h:.46 } },
-            frog:    { id:'frog',    hs:.80, nk:63, dt:72, body:{ c:'#8FD14F', p:'#6FB32F', top:38, w:.66, h:.48 } },
-            dino:    { id:'dino',    hs:1,   nk:44, dt:44, body:null },
-            penguin: { id:'penguin', hs:1,   nk:48, dt:50, body:null },
+            cat:     { id:'cat',     hs:.80, nk:73, dt:75, bh:66, bt:-2, body:{ c:'#F0A552', p:'#FFE6C4', top:48, w:.62, h:.46 } },
+            rabbit:  { id:'rabbit',  hs:.80, nk:76, dt:75, bh:68, bt:-2, body:{ c:'#E6E1EC', p:'#FFC2D4', top:50, w:.62, h:.46 } },
+            unicorn: { id:'unicorn', hs:.78, nk:80, dt:78, bh:66, bt:-2, body:{ c:'#D8C9F2', p:'#BFA3EC', top:55, w:.58, h:.44 } },
+            panda:   { id:'panda',   hs:.80, nk:80, dt:75, bh:60, bt:-2, body:{ c:'#3B3B45', p:'#26262E', top:52, w:.62, h:.46 } },
+            fox:     { id:'fox',     hs:.80, nk:77, dt:75, bh:66, bt:-2, body:{ c:'#E8823C', p:'#FFFFFF', top:52, w:.62, h:.46 } },
+            hamster: { id:'hamster', hs:.80, nk:75, dt:75, bh:66, bt:-2, body:{ c:'#E3B27C', p:'#FFF1DE', top:50, w:.62, h:.46 } },
+            frog:    { id:'frog',    hs:.80, nk:63, dt:66, bh:50, bt:-2, body:{ c:'#8FD14F', p:'#6FB32F', top:38, w:.66, h:.48 } },
+            dino:    { id:'dino',    hs:1,   nk:44, dt:60, dw:.40, bh:56, bt:2, body:null },
+            penguin: { id:'penguin', hs:1,   nk:48, dt:66, bh:50, bt:2, body:null },
             // 兜底：远端 data/pets.json 若新增了动物，给一套中性参数（灰白身子），绝不抛错
-            __default:{ id:'',       hs:.80, nk:76, dt:76, body:{ c:'#D8D8DE', p:'#F2F2F6', top:50, w:.62, h:.46 } }
+            __default:{ id:'',       hs:.80, nk:76, dt:75, bh:66, bt:-2, body:{ c:'#D8D8DE', p:'#F2F2F6', top:50, w:.62, h:.46 } }
         };
         const LEG_COLORS = [
             { c: '#FFC2D4', p: '#FF8FB1', name: '粉粉' },
@@ -2961,16 +3043,31 @@
             const isBack = (slot === 'pw-back');
             if ((which === 'back') !== isBack) return '';
             // 披风：🦸 是"完整小人"emoji，当披风会像身后站了另一个人 → 自绘
-            if (decor.id === 'd_cape') return '<span class="pet-wear pw-back pet-cape"></span>';
+            if (decor.id === 'd_cape') {
+                // 落点走 PET_FIGURE 的 cp（逐只动物标定）；没给就沿用 CSS 里的 bottom:-2%
+                const cb = (fig && typeof fig.cp === 'number') ? (' style="bottom:' + fig.cp + '%"') : '';
+                return '<span class="pet-wear pw-back pet-cape"' + cb + '></span>';
+            }
             // 围巾：🧣 是"叠好的围巾"商品图，放哪都是一个红块 → 自绘（详见 .pa-scarf 注释）
             if (decor.id === 'd_scarf') {
                 return '<span class="pa-scarf" style="top:' + (fig.nk || 62) + '%"></span>';
             }
-            // 裙子：落点从"糊在脸上"移到身子上。
-            // 内联 top 覆盖 CSS 的 bottom:-16%（内联优先级更高，三处宿主通用）。
+            // 裙子：👗 是"挂在衣架上的连衣裙商品图"，贴在身上就是一张贴纸，下摆还悬空
+            // → 自绘（详见 .pa-dress 注释）。落点走 PET_FIGURE 的 dt，逐只标定。
             if (decor.id === 'd_dress') {
-                return '<span class="pet-wear pw-body" style="top:' + (fig.dt || 60) + '%;bottom:auto;'
-                     + 'font-size:.54em">' + decor.icon + '</span>';
+                let ds = 'top:' + (fig.dt || 60) + '%';
+                // dw 是逐只裙宽（em）—— 只有"没有自绘身子"的动物需要收窄，见 PET_FIGURE 注释
+                if (fig && typeof fig.dw === 'number') ds += ';width:' + fig.dw + 'em';
+                return '<span class="pa-dress" style="' + ds + '"></span>';
+            }
+            // 蝴蝶结：落点逐只可调（CSS 变量 --bx/--by 覆盖 .pet-wear.pw-head 的默认值）。
+            // 用变量而不是内联 left/top —— 商店预览有一条同类规则，内联会把它一起顶掉。
+            if (decor.id === 'd_bow') {
+                let bv = '';
+                if (fig && typeof fig.bh === 'number') bv += '--bx:' + fig.bh + '%;';
+                if (fig && typeof fig.bt === 'number') bv += '--by:' + fig.bt + '%;';
+                return '<span class="pet-wear pw-head"' + (bv ? ' style="' + bv + '"' : '') + '>'
+                     + decor.icon + '</span>';
             }
             if (isBack) return '<span class="pet-wear pw-back">' + decor.icon + '</span>';
             return '<span class="pet-wear ' + slot + '">' + decor.icon + '</span>';
@@ -3230,7 +3327,7 @@
         const TASK_LINE = {          // 任务 → 确实成立的那几句（没列出的走维度通用句）
             m_break:   ['task_calcium1'],            // 「早餐吃完啦」只对早餐成立
             m_milk:    ['task_calcium2'],            // 「喝了好喝的牛奶」只对牛奶成立
-            m_read_cn: ['task_wisdom1'], m_read_en: ['task_wisdom1'],
+            m_read_cn: ['task_wisdom1'], m_enread: ['task_wisdom1'],
             e_read:    ['task_wisdom1'], e_engread: ['task_wisdom1'],
             a_abc:     ['task_wisdom1'], a_weiyang: ['task_wisdom1'],
             w_weiyang6:['task_wisdom1'], w_weiyang0:['task_wisdom1'],
@@ -4566,7 +4663,7 @@
         }
 
         // 一次性任务参数校准（ensureValidState 里调用，只跑一遍）
-        const TASK_PATCH_VER = 4;
+        const TASK_PATCH_VER = 5;
         function applyTaskPatches() {
             if ((state.taskPatchVer || 0) >= TASK_PATCH_VER) return;
             if (!Array.isArray(state.tasks)) state.tasks = [];
@@ -4605,6 +4702,39 @@
             //    动它反而会顶 checksUpdatedAt，可能反过来压掉别的设备的有效记录）。
             //    历史里她真做过的那条也不动。
             state.tasks = state.tasks.filter(function (x) { return !x || x.id !== 'a_oral'; });
+            // v5（2026-10-20，天姝）：任务表重整
+            //   ① 取消「放学后 · 英语朗读 10 分钟」（m_read_en）
+            //   ② 早晨新增「英语晨读 10 分钟」（m_enread，**每天**）
+            //   ③ 数学计算题 1 页（a_calc）放学后 ← 早晨（v3 曾把它挪到早晨，这次挪回去）
+            //   ④ 课外阅读去掉固定书目：·《西游记》→ 只留「课外阅读 15 分钟」
+            //   ⑤ 晚间陪学新增「数学说题」「语文课文复习」（**每天**）
+            // ⚠️ 同 v4：mergeDefaultTasks() 只补不删 → 「删任务」必须在这里显式剔除。
+            // ⚠️ 新增项**不依赖 DEFAULT_TASKS**：applyStaticOverrides 会拿 fetch 到的 tasks.json
+            //    整个替换 DEFAULT_TASKS，若那次 fetch 失败、退回的是旧缓存，DEFAULT_TASKS 就是旧版
+            //    → 从它身上取定义会取到空。这里自带完整定义，只把已存在的那条校准一下。
+            // ⚠️ 只动 state.tasks，不碰 todayChecks（残留 id 不进统计：只认 getActiveTasks()；
+            //    动它反而会顶 checksUpdatedAt，可能压掉别的设备的有效记录）。
+            state.tasks = state.tasks.filter(function (x) { return !x || x.id !== 'm_read_en'; });
+            [
+                { id: 'm_enread',    name: '英语晨读 10 分钟', icon: '\uD83D\uDD24', category: 'morning', stars: 2, nutri: 'wisdom' },
+                { id: 'e_math_talk', name: '数学说题',        icon: '\uD83D\uDCAC', category: 'evening', stars: 2, nutri: 'wisdom' },
+                { id: 'e_cn_review', name: '语文课文复习',      icon: '\uD83D\uDCC4', category: 'evening', stars: 2, nutri: 'wisdom' }
+            ].forEach(function (def) {
+                const got = state.tasks.find(function (x) { return x && x.id === def.id; });
+                if (got) {
+                    got.name = def.name;          // 名称与分组是这次改动的本意
+                    got.category = def.category;
+                    if (!got.icon) got.icon = def.icon;
+                    if (typeof got.stars !== 'number') got.stars = def.stars;
+                    if (!got.nutri) got.nutri = def.nutri;
+                } else {
+                    state.tasks.push(Object.assign({ weekendOnly: false }, def));
+                }
+            });
+            const calcV5 = state.tasks.find(function (x) { return x && x.id === 'a_calc'; });
+            if (calcV5) calcV5.category = 'after';            // 显示进「放学后」分组
+            const readV5 = state.tasks.find(function (x) { return x && x.id === 'e_read'; });
+            if (readV5) readV5.name = '课外阅读 15 分钟';      // 去掉固定书目（书由她自己挑）
             state.taskPatchVer = TASK_PATCH_VER;
         }
 
@@ -4998,7 +5128,7 @@
         }
         // 2026-09-23：warn_calcium「牛奶还没喝完」/ warn_wisdom「想听你讲一个故事」都点了具体的事，
         // 判据必须落到具体任务上，否则维度被判"未完成"时会说出与事实不符的提醒。
-        const READING_IDS = ['m_read_cn', 'm_read_en', 'e_read', 'e_engread',
+        const READING_IDS = ['m_read_cn', 'm_enread', 'e_read', 'e_engread',
                              'a_abc', 'a_weiyang', 'w_weiyang6', 'w_weiyang0'];
         function hasPendingTask(id) {
             return calcTodayPending().some(function (t) { return t.id === id; });
@@ -5241,11 +5371,11 @@
             { id:'fast5',  name:'闪电早餐',   icon:'\u26A1',      need:5, mode:'total',  desc:'一共做到 5 天，早餐都在 15 分钟内吃完',
               check:function(ids){ return !!(ids['m_break'] && ids['m_break'].flag === 'ok'); } },
             { id:'read5',  name:'小书虫',     icon:'\uD83D\uDC1B', need:5, mode:'streak', desc:'连着 5 天读书',
-              check:function(ids){ return !!(ids['e_read'] || ids['m_read_cn'] || ids['m_read_en']); } },
+              check:function(ids){ return !!(ids['e_read'] || ids['m_read_cn'] || ids['m_enread']); } },
             { id:'sport5', name:'运动小将',   icon:'\uD83C\uDFC5', need:5, mode:'total',  desc:'一共做到 5 天，出去玩或和爸妈一起运动',
               check:function(ids){ return !!(ids['a_sport'] || ids['w_family']); } },
             { id:'eng5',   name:'英语小达人', icon:'\uD83E\uDD9C', need:5, mode:'streak', desc:'连着 5 天学英语',
-              check:function(ids){ return !!(ids['a_abc'] || ids['a_weiyang'] || ids['e_engread'] || ids['m_listen']); } },
+              check:function(ids){ return !!(ids['a_abc'] || ids['a_weiyang'] || ids['e_engread'] || ids['m_listen'] || ids['m_enread']); } },
             { id:'sleep5', name:'早睡星人',   icon:'\uD83C\uDF19', need:5, mode:'total',  desc:'一共做到 5 天，21 点前上床',
               check:function(ids){ return !!ids['n_sleep']; } },
             { id:'all7',   name:'全勤王',     icon:'\uD83D\uDC51', need:7, mode:'streak', desc:'连着 7 天至少完成 1 项',
@@ -7742,7 +7872,7 @@
         // ⚠️ 只在 data/*.json 真的改了内容时才 bump（它只是 fetch 的 ?v= 缓存破除键）。
         //    2026-09-23 bump：data/shop.json 小家三档价格 200/350/500 → 120/180/250。
         //    （围巾落点 nk 改动在 HTML 里，不涉及 data/，靠 APP_VERSION 破除即可。）
-        const STATIC_DATA_VER = '20260923.3';
+        const STATIC_DATA_VER = '20261020.1';
         const STATIC_FILES = {
             tasks:     'data/tasks.json',
             shop:      'data/shop.json',
