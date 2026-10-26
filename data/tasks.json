@@ -4,6 +4,7 @@
     "name": "英语熏听 30 分钟",
     "icon": "🎧",
     "category": "morning",
+    "subject": "english",
     "stars": 1,
     "nutri": "wisdom",
     "weekendOnly": false
@@ -13,6 +14,7 @@
     "name": "早餐 15 分钟内吃完",
     "icon": "⏱️",
     "category": "morning",
+    "subject": "life",
     "stars": 3,
     "nutri": "calcium",
     "timer": 900,
@@ -23,6 +25,7 @@
     "name": "牛奶喝完 1 盒",
     "icon": "🥛",
     "category": "morning",
+    "subject": "life",
     "stars": 2,
     "nutri": "calcium",
     "plate": true,
@@ -33,6 +36,7 @@
     "name": "炒蛋吃完 1 个",
     "icon": "🍳",
     "category": "morning",
+    "subject": "life",
     "stars": 1,
     "nutri": "calcium",
     "plate": true,
@@ -43,42 +47,145 @@
     "name": "英语晨读 10 分钟",
     "icon": "🔤",
     "category": "morning",
+    "subject": "english",
     "stars": 2,
     "nutri": "wisdom",
     "weekendOnly": false
   },
   {
-    "id": "m_read_cn",
-    "name": "语文朗读 10 分钟 ·《金波四季美文》",
-    "icon": "📖",
+    "id": "e_read",
+    "name": "课外阅读 15 分钟",
+    "icon": "📚",
     "category": "after",
+    "subject": "chinese",
     "stars": 2,
+    "nutri": "wisdom",
+    "weekendOnly": false
+  },
+  {
+    "id": "e_words",
+    "name": "认识生字 6 个",
+    "icon": "✏️",
+    "category": "after",
+    "subject": "chinese",
+    "stars": 1,
     "nutri": "wisdom",
     "days": [
       1,
+      2,
       3,
-      5
+      4
     ],
+    "startMin": 1140,
     "weekendOnly": false
   },
   {
-    "id": "a_sport",
-    "name": "户外运动 30 分钟",
-    "icon": "🚴",
+    "id": "e_cn_review",
+    "name": "语文当日课文复习",
+    "icon": "📄",
     "category": "after",
+    "subject": "chinese",
     "stars": 2,
-    "nutri": "energy",
+    "nutri": "wisdom",
     "days": [
       1,
-      2
+      2,
+      3,
+      4
+    ],
+    "startMin": 1140,
+    "weekendOnly": false
+  },
+  {
+    "id": "e_cn_dict",
+    "name": "语文当日字词听写",
+    "icon": "📝",
+    "category": "after",
+    "subject": "chinese",
+    "stars": 3,
+    "nutri": "wisdom",
+    "days": [
+      1,
+      2,
+      3,
+      4
+    ],
+    "startMin": 1140,
+    "weekendOnly": false
+  },
+  {
+    "id": "a_dictation",
+    "name": "词语听写 10 个",
+    "icon": "✍️",
+    "category": "after",
+    "subject": "chinese",
+    "stars": 2,
+    "nutri": "wisdom",
+    "modal": "dictation",
+    "days": [
+      6,
+      0
     ],
     "weekendOnly": false
   },
   {
-    "id": "a_calc",
-    "name": "数学计算题 1 页",
-    "icon": "🧮",
+    "id": "w_weiyang6",
+    "name": "未泱中文阅读 2 个",
+    "icon": "📚",
     "category": "after",
+    "subject": "chinese",
+    "stars": 2,
+    "nutri": "wisdom",
+    "days": [
+      6
+    ],
+    "weekendOnly": false
+  },
+  {
+    "id": "w_weiyang0",
+    "name": "未泱中文阅读 3 个",
+    "icon": "📚",
+    "category": "after",
+    "subject": "chinese",
+    "stars": 3,
+    "nutri": "wisdom",
+    "days": [
+      0
+    ],
+    "weekendOnly": false
+  },
+  {
+    "id": "a_dog",
+    "name": "百词斩（单词小狗）",
+    "icon": "🐶",
+    "category": "after",
+    "subject": "english",
+    "stars": 1,
+    "nutri": "wisdom",
+    "weekendOnly": false
+  },
+  {
+    "id": "a_weiyang",
+    "name": "未泱英文 3 个",
+    "icon": "📚",
+    "category": "after",
+    "subject": "english",
+    "stars": 2,
+    "nutri": "wisdom",
+    "days": [
+      1,
+      2,
+      3,
+      4
+    ],
+    "weekendOnly": false
+  },
+  {
+    "id": "a_en_dict",
+    "name": "英语班单词默写复习 3 个",
+    "icon": "📔",
+    "category": "after",
+    "subject": "english",
     "stars": 2,
     "nutri": "wisdom",
     "days": [
@@ -91,9 +198,10 @@
   },
   {
     "id": "a_abc",
-    "name": "ABC Reading 2 个",
+    "name": "ABC Reading 3 个",
     "icon": "🔤",
-    "category": "weekend",
+    "category": "after",
+    "subject": "english",
     "stars": 2,
     "nutri": "wisdom",
     "days": [
@@ -103,36 +211,48 @@
     "weekendOnly": false
   },
   {
-    "id": "a_dog",
-    "name": "百词斩（单词小狗）",
-    "icon": "🐶",
+    "id": "e_engread",
+    "name": "英语阅读《星火100篇》1 篇",
+    "icon": "📕",
     "category": "after",
-    "stars": 1,
-    "nutri": "wisdom",
-    "weekendOnly": false
-  },
-  {
-    "id": "a_weiyang",
-    "name": "未泱英文阅读 2 个",
-    "icon": "📚",
-    "category": "after",
-    "stars": 2,
-    "nutri": "wisdom",
-    "weekendOnly": false
-  },
-  {
-    "id": "e_hw",
-    "name": "校内作业（有则先做）",
-    "icon": "📝",
-    "category": "evening",
+    "subject": "english",
     "stars": 3,
     "nutri": "wisdom",
     "days": [
       1,
       2,
+      6,
+      0
+    ],
+    "startMin": 1140,
+    "weekendOnly": false
+  },
+  {
+    "id": "w_eng_hw",
+    "name": "英语培训班作业",
+    "icon": "📕",
+    "category": "after",
+    "subject": "english",
+    "stars": 3,
+    "nutri": "wisdom",
+    "days": [
+      0
+    ],
+    "weekendOnly": false
+  },
+  {
+    "id": "a_calc",
+    "name": "数学计算题 1 页",
+    "icon": "🧮",
+    "category": "after",
+    "subject": "math",
+    "stars": 2,
+    "nutri": "wisdom",
+    "days": [
+      1,
+      2,
       3,
-      4,
-      5
+      4
     ],
     "weekendOnly": false
   },
@@ -140,7 +260,8 @@
     "id": "e_53",
     "name": "53 天天练 · 数学同步",
     "icon": "📘",
-    "category": "evening",
+    "category": "after",
+    "subject": "math",
     "stars": 2,
     "nutri": "wisdom",
     "days": [
@@ -149,152 +270,32 @@
       3,
       4
     ],
-    "weekendOnly": false
-  },
-  {
-    "id": "e_words",
-    "name": "认识生字 6 个",
-    "icon": "✏️",
-    "category": "evening",
-    "stars": 1,
-    "nutri": "wisdom",
-    "days": [
-      1,
-      2,
-      3,
-      4
-    ],
+    "startMin": 1140,
     "weekendOnly": false
   },
   {
     "id": "e_math_talk",
-    "name": "数学说题",
+    "name": "数学说题（当日例题）",
     "icon": "💬",
-    "category": "evening",
-    "stars": 2,
-    "nutri": "wisdom",
-    "weekendOnly": false
-  },
-  {
-    "id": "e_cn_review",
-    "name": "语文课文复习",
-    "icon": "📄",
-    "category": "evening",
-    "stars": 2,
-    "nutri": "wisdom",
-    "weekendOnly": false
-  },
-  {
-    "id": "e_read",
-    "name": "课外阅读 15 分钟",
-    "icon": "📚",
     "category": "after",
+    "subject": "math",
     "stars": 2,
     "nutri": "wisdom",
-    "weekendOnly": false
-  },
-  {
-    "id": "e_engread",
-    "name": "英语阅读《星火100篇》1 篇",
-    "icon": "📕",
-    "category": "evening",
-    "stars": 3,
-    "nutri": "wisdom",
-    "days": [
-      1,
-      2,
-      6,
-      0
-    ],
-    "weekendOnly": false
-  },
-  {
-    "id": "a_dictation",
-    "name": "词语听写 10 个",
-    "icon": "✍️",
-    "category": "evening",
-    "stars": 2,
-    "nutri": "wisdom",
-    "modal": "dictation",
-    "weekendOnly": false
-  },
-  {
-    "id": "e_pack",
-    "name": "整理书包",
-    "icon": "🎒",
-    "category": "evening",
-    "stars": 1,
-    "nutri": "peace",
     "days": [
       1,
       2,
       3,
       4
     ],
-    "weekendOnly": false
-  },
-  {
-    "id": "n_sleep",
-    "name": "21:00 前上床睡觉",
-    "icon": "🌙",
-    "category": "night",
-    "stars": 2,
-    "nutri": "peace",
-    "weekendOnly": false
-  },
-  {
-    "id": "w_weiyang6",
-    "name": "未泱中文阅读 2 个",
-    "icon": "📚",
-    "category": "weekend",
-    "stars": 2,
-    "nutri": "wisdom",
-    "days": [
-      6
-    ],
-    "weekendOnly": false
-  },
-  {
-    "id": "w_weiyang0",
-    "name": "未泱中文阅读 3 个",
-    "icon": "📚",
-    "category": "weekend",
-    "stars": 3,
-    "nutri": "wisdom",
-    "days": [
-      0
-    ],
-    "weekendOnly": false
-  },
-  {
-    "id": "w_review",
-    "name": "复习上周语文 + 数学",
-    "icon": "🔁",
-    "category": "weekend",
-    "stars": 3,
-    "nutri": "wisdom",
-    "days": [
-      6
-    ],
+    "startMin": 1140,
     "weekendOnly": false
   },
   {
     "id": "w_math_hw",
     "name": "数学思维课作业",
     "icon": "✏️",
-    "category": "weekend",
-    "stars": 3,
-    "nutri": "wisdom",
-    "days": [
-      0
-    ],
-    "weekendOnly": false
-  },
-  {
-    "id": "w_eng_hw",
-    "name": "英语培训班作业",
-    "icon": "📕",
-    "category": "weekend",
+    "category": "after",
+    "subject": "math",
     "stars": 3,
     "nutri": "wisdom",
     "days": [
@@ -304,15 +305,66 @@
   },
   {
     "id": "w_family",
-    "name": "亲子运动时间 30 分钟",
+    "name": "运动 30 分钟",
     "icon": "🤸",
-    "category": "weekend",
+    "category": "after",
+    "subject": "sport",
     "stars": 3,
     "nutri": "energy",
     "days": [
       6,
       0
     ],
+    "weekendOnly": false
+  },
+  {
+    "id": "w_review",
+    "name": "复习上周语文 + 数学",
+    "icon": "🔁",
+    "category": "after",
+    "subject": "mixed",
+    "stars": 3,
+    "nutri": "wisdom",
+    "days": [
+      6
+    ],
+    "weekendOnly": false
+  },
+  {
+    "id": "e_pack",
+    "name": "整理书包",
+    "icon": "🎒",
+    "category": "after",
+    "subject": "life",
+    "stars": 1,
+    "nutri": "peace",
+    "days": [
+      1,
+      2,
+      3,
+      4
+    ],
+    "startMin": 1140,
+    "weekendOnly": false
+  },
+  {
+    "id": "n_sleep",
+    "name": "21:00 前上床睡觉",
+    "icon": "🌙",
+    "category": "night",
+    "subject": "life",
+    "stars": 2,
+    "nutri": "peace",
+    "weekendOnly": false
+  },
+  {
+    "id": "n_eyedrop",
+    "name": "滴眼药水",
+    "icon": "💧",
+    "category": "night",
+    "subject": "life",
+    "stars": 1,
+    "nutri": "peace",
     "weekendOnly": false
   }
 ]
