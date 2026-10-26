@@ -8,7 +8,7 @@
     <meta http-equiv="Expires" content="0" data-page-node-id="YXlbOTFHU2Nr6SGRQHt7cy">
     <script>
         (function () {
-            var APP_VERSION = '20261020.1';
+            var APP_VERSION = '20261026.1';
             window.APP_VERSION_STR = APP_VERSION;   // 主脚本里做线上版本自检要用
             try {
                 var params = new URLSearchParams(location.search);
@@ -1136,6 +1136,33 @@
             margin-left: auto;
         }
         .cat-life .category-count { background: rgba(0,0,0,0.1); color: #6D4C00; }
+
+        /* ===== 学科小标题（2026-10-26：放学后 / 周末学习 二级分组）=====
+           比 .category-header 矮一档：不做整条色块，只留一条虚线分隔 + 小字，
+           否则「时段框」里再套「学科框」会看成一堆盒子。 */
+        .subject-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 12px 8px 5px;
+            border-bottom: 1px dashed rgba(108, 92, 231, 0.18);
+            margin-top: 2px;
+        }
+        .subject-header .subject-label {
+            font-size: 13.5px;
+            font-weight: 700;
+            color: #5A6B85;
+            letter-spacing: 0.5px;
+        }
+        .subject-header .subject-count {
+            font-size: 11px;
+            font-weight: 700;
+            color: #8E9DAF;
+            background: rgba(108, 92, 231, 0.08);
+            border-radius: 8px;
+            padding: 1px 8px;
+        }
+        .subject-header:first-child { margin-top: 0; padding-top: 6px; }
 
         /* 周末任务标记 */
         .task-card.weekend-task {
@@ -2671,38 +2698,44 @@
 
         // ========== 默认数据 ==========
         let DEFAULT_TASKS = [
-            // 早晨 6:50-7:45
-            { id:'m_listen',  name:'英语熏听 30 分钟',            icon:'\uD83C\uDFA7', category:'morning', stars:1, nutri:'wisdom' },
-            { id:'m_break',   name:'早餐 15 分钟内吃完',           icon:'\u23F1\uFE0F', category:'morning', stars:3, nutri:'calcium', timer:900 },
-            { id:'m_milk',    name:'牛奶喝完 1 盒',                icon:'\uD83E\uDD5B', category:'morning', stars:2, nutri:'calcium', plate:true },
-            { id:'m_egg',     name:'炒蛋吃完 1 个',                icon:'\uD83C\uDF73', category:'morning', stars:1, nutri:'calcium', plate:true },
-            { id:'m_enread',  name:'英语晨读 10 分钟',              icon:'\uD83D\uDD24', category:'morning', stars:2, nutri:'wisdom' },
-            { id:'m_read_cn', name:'语文朗读 10 分钟 ·《金波四季美文》', icon:'\uD83D\uDCD6', category:'after',   stars:2, nutri:'wisdom', days:[1,3,5] },
-            // 放学后
-            { id:'a_sport',   name:'户外运动 30 分钟',             icon:'\uD83D\uDEB4', category:'after',   stars:2, nutri:'energy', days:[1,2] },
-            { id:'a_calc',    name:'数学计算题 1 页',              icon:'\uD83E\uDDEE', category:'after',   stars:2, nutri:'wisdom', days:[1,2,3,4] },
-            { id:'a_abc',     name:'ABC Reading 2 个',            icon:'\uD83D\uDD24', category:'weekend', stars:2, nutri:'wisdom', days:[6,0] },
-            { id:'a_dog',     name:'百词斩（单词小狗）',            icon:'\uD83D\uDC36', category:'after',   stars:1, nutri:'wisdom' },
-            { id:'a_weiyang', name:'未泱英文阅读 2 个',              icon:'\uD83D\uDCDA', category:'after',   stars:2, nutri:'wisdom' },
-            // 晚间陪学 19:00-20:30
-            { id:'e_hw',      name:'校内作业（有则先做）',          icon:'\uD83D\uDCDD', category:'evening', stars:3, nutri:'wisdom', days:[1,2,3,4,5] },
-            { id:'e_53',      name:'53 天天练 · 数学同步',         icon:'\uD83D\uDCD8', category:'evening', stars:2, nutri:'wisdom', days:[1,2,3,4] },
-            { id:'e_words',   name:'认识生字 6 个',                icon:'\u270F\uFE0F', category:'evening', stars:1, nutri:'wisdom', days:[1,2,3,4] },
-            { id:'e_math_talk', name:'数学说题',                    icon:'\uD83D\uDCAC', category:'evening', stars:2, nutri:'wisdom' },
-            { id:'e_cn_review', name:'语文课文复习',                  icon:'\uD83D\uDCC4', category:'evening', stars:2, nutri:'wisdom' },
-            { id:'e_read',    name:'课外阅读 15 分钟',              icon:'\uD83D\uDCDA', category:'after',   stars:2, nutri:'wisdom' },
-            { id:'e_engread', name:'英语阅读《星火100篇》1 篇',      icon:'\uD83D\uDCD5', category:'evening', stars:3, nutri:'wisdom', days:[1,2,6,0] },
-            { id:'a_dictation', name:'词语听写 10 个', icon:'✍️', category:'evening', stars:2, nutri:'wisdom', modal:'dictation' },
-            { id:'e_pack',    name:'整理书包',                    icon:'\uD83C\uDF92', category:'evening', stars:1, nutri:'peace',  days:[1,2,3,4] },
-            // 睡前
-            { id:'n_sleep',   name:'21:00 前上床睡觉',            icon:'\uD83C\uDF19', category:'night',   stars:2, nutri:'peace' },
-            // 周末专属
-            { id:'w_weiyang6',name:'未泱中文阅读 2 个',            icon:'\uD83D\uDCDA', category:'weekend', stars:2, nutri:'wisdom', days:[6] },
-            { id:'w_weiyang0',name:'未泱中文阅读 3 个',            icon:'\uD83D\uDCDA', category:'weekend', stars:3, nutri:'wisdom', days:[0] },
-            { id:'w_review',  name:'复习上周语文 + 数学',           icon:'\uD83D\uDD01', category:'weekend', stars:3, nutri:'wisdom', days:[6] },
-            { id:'w_math_hw', name:'数学思维课作业',               icon:'\u270F\uFE0F', category:'weekend', stars:3, nutri:'wisdom', days:[0] },
-            { id:'w_eng_hw',  name:'英语培训班作业',               icon:'\uD83D\uDCD5', category:'weekend', stars:3, nutri:'wisdom', days:[0] },
-            { id:'w_family',  name:'亲子运动时间 30 分钟',            icon:'\uD83E\uDD38', category:'weekend', stars:3, nutri:'energy', days:[6,0] },
+            // ===== 早上 6:50-7:45（这一段平铺，不按学科分组）=====
+            { id:'m_listen',  name:'英语熏听 30 分钟',      icon:'\uD83C\uDFA7', category:'morning', subject:'english', stars:1, nutri:'wisdom' },
+            { id:'m_break',   name:'早餐 15 分钟内吃完',     icon:'\u23F1\uFE0F', category:'morning', subject:'life',    stars:3, nutri:'calcium', timer:900 },
+            { id:'m_milk',    name:'牛奶喝完 1 盒',          icon:'\uD83E\uDD5B', category:'morning', subject:'life',    stars:2, nutri:'calcium', plate:true },
+            { id:'m_egg',     name:'炒蛋吃完 1 个',          icon:'\uD83C\uDF73', category:'morning', subject:'life',    stars:1, nutri:'calcium', plate:true },
+            { id:'m_enread',  name:'英语晨读 10 分钟',        icon:'\uD83D\uDD24', category:'morning', subject:'english', stars:2, nutri:'wisdom' },
+
+            // ===== 放学后（工作日 16:00-21:00）/ 周末学习：按学科分组 =====
+            // —— 语文 ——
+            { id:'e_read',      name:'课外阅读 15 分钟',          icon:'\uD83D\uDCDA', category:'after', subject:'chinese', stars:2, nutri:'wisdom' },
+            { id:'e_words',     name:'认识生字 6 个',             icon:'\u270F\uFE0F', category:'after', subject:'chinese', stars:1, nutri:'wisdom', days:[1,2,3,4], startMin:1140 },
+            { id:'e_cn_review', name:'语文当日课文复习',           icon:'\uD83D\uDCC4', category:'after', subject:'chinese', stars:2, nutri:'wisdom', days:[1,2,3,4], startMin:1140 },
+            { id:'e_cn_dict',   name:'语文当日字词听写',           icon:'\uD83D\uDCDD', category:'after', subject:'chinese', stars:3, nutri:'wisdom', days:[1,2,3,4], startMin:1140 },
+            { id:'a_dictation', name:'词语听写 10 个',            icon:'\u270D\uFE0F', category:'after', subject:'chinese', stars:2, nutri:'wisdom', days:[6,0], modal:'dictation' },
+            { id:'w_weiyang6',  name:'未泱中文阅读 2 个',          icon:'\uD83D\uDCDA', category:'after', subject:'chinese', stars:2, nutri:'wisdom', days:[6] },
+            { id:'w_weiyang0',  name:'未泱中文阅读 3 个',          icon:'\uD83D\uDCDA', category:'after', subject:'chinese', stars:3, nutri:'wisdom', days:[0] },
+            // —— 英语 ——
+            { id:'a_dog',       name:'百词斩（单词小狗）',         icon:'\uD83D\uDC36', category:'after', subject:'english', stars:1, nutri:'wisdom' },
+            { id:'a_weiyang',   name:'未泱英文 3 个',             icon:'\uD83D\uDCDA', category:'after', subject:'english', stars:2, nutri:'wisdom', days:[1,2,3,4] },
+            { id:'a_en_dict',  name:'英语班单词默写复习 3 个',   icon:'\uD83D\uDCD4', category:'after', subject:'english', stars:2, nutri:'wisdom', days:[1,2,3,4] },
+            { id:'a_abc',       name:'ABC Reading 3 个',         icon:'\uD83D\uDD24', category:'after', subject:'english', stars:2, nutri:'wisdom', days:[6,0] },
+            { id:'e_engread',   name:'英语阅读《星火100篇》1 篇',   icon:'\uD83D\uDCD5', category:'after', subject:'english', stars:3, nutri:'wisdom', days:[1,2,6,0], startMin:1140 },
+            { id:'w_eng_hw',    name:'英语培训班作业',             icon:'\uD83D\uDCD5', category:'after', subject:'english', stars:3, nutri:'wisdom', days:[0] },
+            // —— 数学 ——
+            { id:'a_calc',      name:'数学计算题 1 页',            icon:'\uD83E\uDDEE', category:'after', subject:'math',    stars:2, nutri:'wisdom', days:[1,2,3,4] },
+            { id:'e_53',        name:'53 天天练 · 数学同步',       icon:'\uD83D\uDCD8', category:'after', subject:'math',    stars:2, nutri:'wisdom', days:[1,2,3,4], startMin:1140 },
+            { id:'e_math_talk', name:'数学说题（当日例题）',        icon:'\uD83D\uDCAC', category:'after', subject:'math',    stars:2, nutri:'wisdom', days:[1,2,3,4], startMin:1140 },
+            { id:'w_math_hw',   name:'数学思维课作业',             icon:'\u270F\uFE0F', category:'after', subject:'math',    stars:3, nutri:'wisdom', days:[0] },
+            // —— 运动 ——
+            { id:'w_family',    name:'运动 30 分钟',              icon:'\uD83E\uDD38', category:'after', subject:'sport',   stars:3, nutri:'energy', days:[6,0] },
+            // —— 综合（跨学科）——
+            { id:'w_review',    name:'复习上周语文 + 数学',        icon:'\uD83D\uDD01', category:'after', subject:'mixed',   stars:3, nutri:'wisdom', days:[6] },
+            // —— 生活 ——
+            { id:'e_pack',      name:'整理书包',                  icon:'\uD83C\uDF92', category:'after', subject:'life',    stars:1, nutri:'peace',  days:[1,2,3,4], startMin:1140 },
+
+            // ===== 睡前 21:00 =====
+            { id:'n_sleep',     name:'21:00 前上床睡觉',          icon:'\uD83C\uDF19', category:'night', subject:'life', stars:2, nutri:'peace' },
+            { id:'n_eyedrop',   name:'滴眼药水',                  icon:'\uD83D\uDCA7', category:'night', subject:'life', stars:1, nutri:'peace' },
         ];
 
         let DEFAULT_SHOP = [
@@ -2726,13 +2759,30 @@
             { id:'s_star',  name:'星空房',    icon:'\uD83C\uDF0C', cost:250, type:'scene', desc:'躺在里面看星星' },
         ];
 
+        // ===== 时段（2026-10-26 收敛为三段：早上 / 放学后 / 睡前）=====
+        //   after 在周末显示成「周末学习」，用 weekendLabel；同一分类、同一配色。
+        //   ⚠️ 原来的 evening（晚间陪学）与 weekend（周末专属）已并入 after —— 它们不再是分组，
+        //      而是靠每个任务的 days / startMin 控制「哪天显示、几点算到点」。
         const CATEGORY_CONFIG = {
-            morning: { label:'\uD83C\uDF05 早晨',     class:'cat-morning',  time:'6:50-7:45' },
-            after:   { label:'\uD83C\uDF92 放学后',   class:'cat-english',  time:'16:00-19:00' },
-            evening: { label:'\uD83C\uDF19 晚间陪学', class:'cat-math',     time:'19:00-20:30' },
-            night:   { label:'\uD83D\uDE34 睡前',     class:'cat-life',     time:'21:00' },
-            weekend: { label:'\uD83C\uDF8A 周末专属', class:'cat-hobby',    time:'周六日' },
+            morning: { label:'\uD83C\uDF05 早上',   class:'cat-morning', time:'6:50-7:45' },
+            after:   { label:'\uD83C\uDF92 放学后', class:'cat-english', time:'16:00-21:00',
+                       weekendLabel:'\uD83C\uDF92 周末学习' },
+            night:   { label:'\uD83D\uDE34 睡前',   class:'cat-life',    time:'21:00' },
         };
+
+        // ===== 学科（只在「放学后 / 周末学习」段内做二级分组）=====
+        const SUBJECT_CONFIG = {
+            chinese: { label:'\uD83D\uDCD6 语文' },
+            english: { label:'\uD83D\uDD24 英语' },
+            math:    { label:'\uD83D\uDD22 数学' },
+            sport:   { label:'\uD83C\uDFC3 运动' },
+            mixed:   { label:'\uD83E\uDDE9 综合' },
+            life:    { label:'\uD83E\uDDFA 生活' },
+        };
+        // 渲染顺序（孩子关心的是"这科还有几项"，所以同科聚在一起）
+        const SUBJECT_ORDER = ['chinese', 'english', 'math', 'sport', 'mixed', 'life'];
+        // 只有这些时段按学科分组；早上和睡前平铺（避免为两三项再造一层标题）
+        const SUBJECT_GROUPED_CATS = ['after'];
 
         // ========== 培训班课程表 ==========
         // 新学期课后班/兴趣班：如需显示，按下面格式添加（periods 为上课日期区间）
@@ -2884,7 +2934,9 @@
             return ['calcium', 'wisdom', 'energy', 'peace'].filter(function (k) { return nutriToday(k).total > 0; });
         }
         // 四维全满：四个方向今天都有任务，且全部达标。
-        // 活力任务只在周一/二/六/日有 → 全满天然只发生在周末或周一二，这是周节奏不是缺陷
+        // ⚠️ 2026-10-26 起「活力(energy)」只剩周末的「运动 30 分钟」→ 工作日四维里缺一维，
+        //    四维全满**只会在周六日发生**。这是任务表调整的直接后果（天姝要求工作日取消户外运动），
+        //    不是判定逻辑出错。要恢复工作日全满，得给工作日加一项 energy 任务。
         function nutriAllFull() {
             const judged = nutriJudged();
             if (judged.length < 4) return false;
@@ -3327,11 +3379,12 @@
         const TASK_LINE = {          // 任务 → 确实成立的那几句（没列出的走维度通用句）
             m_break:   ['task_calcium1'],            // 「早餐吃完啦」只对早餐成立
             m_milk:    ['task_calcium2'],            // 「喝了好喝的牛奶」只对牛奶成立
-            m_read_cn: ['task_wisdom1'], m_enread: ['task_wisdom1'],
+            m_enread:  ['task_wisdom1'],
             e_read:    ['task_wisdom1'], e_engread: ['task_wisdom1'],
             a_abc:     ['task_wisdom1'], a_weiyang: ['task_wisdom1'],
             w_weiyang6:['task_wisdom1'], w_weiyang0:['task_wisdom1'],
-            a_sport:   ['task_energy1', 'task_energy2'],
+            // 2026-10-26：a_sport（户外运动）已从任务库删除，周末运动改用 w_family ——
+            //   台词表里留着已删 id 是死条目（永远不会命中），一并清掉。
             w_family:  ['task_energy1', 'task_energy2']
         };
         // 维度通用句：句子里**不含"具体做了哪一项"**，该维任何任务都成立
@@ -4663,7 +4716,7 @@
         }
 
         // 一次性任务参数校准（ensureValidState 里调用，只跑一遍）
-        const TASK_PATCH_VER = 5;
+        const TASK_PATCH_VER = 6;
         function applyTaskPatches() {
             if ((state.taskPatchVer || 0) >= TASK_PATCH_VER) return;
             if (!Array.isArray(state.tasks)) state.tasks = [];
@@ -4735,6 +4788,111 @@
             if (calcV5) calcV5.category = 'after';            // 显示进「放学后」分组
             const readV5 = state.tasks.find(function (x) { return x && x.id === 'e_read'; });
             if (readV5) readV5.name = '课外阅读 15 分钟';      // 去掉固定书目（书由她自己挑）
+            // ============================================================
+            // v6（2026-10-26，天姝）：任务表重整 + 布局改成「三个时段 × 学科」
+            //   ① 删：户外运动 30 分钟(a_sport)、语文朗读 10 分钟·金波四季美文(m_read_cn)、
+            //        校内作业有则先做(e_hw)
+            //   ② 周末「亲子运动时间 30 分钟」(w_family) 改名「运动 30 分钟」—— 工作日不再有运动
+            //   ③ 未泱英文阅读 2 个 -> 「未泱英文 3 个」，周一到周四(a_weiyang)
+            //   ④ ABC Reading 2 个 -> 「ABC Reading 3 个」，周六日(a_abc)
+            //   ⑤ 新增「语文当日字词听写」(e_cn_dict)，周一到周四，3 金币（普通打勾，不带听写弹窗）
+            //   ⑥ 语文课文复习 -> 「语文当日课文复习」；数学说题 -> 「数学说题（当日例题）」，
+            //      两条都改成周一到周四
+            //   ⑦ 词语听写 10 个(a_dictation) -> 只在周六日
+            //   ⑧ 新增「滴眼药水」(n_eyedrop)，每天，1 金币
+            //   ⑨ 分类收敛：evening(晚间陪学) / weekend(周末专属) 全部并入 after(放学后)；
+            //      原本 19:00 才"到点"的任务补 startMin:1140，保住「现在该做还有 N 项」的口径
+            //   ⑩ 每个任务补 subject（语文/英语/数学/运动/综合/生活），放学后段按它分组
+            // ⚠️ 同 v4/v5：mergeDefaultTasks() 只补不删 → 删任务必须在这里显式 filter。
+            // ⚠️ 新增项**自带完整定义**，不从 DEFAULT_TASKS 取 —— applyStaticOverrides 会用
+            //    fetch 到的 tasks.json 整个替换 DEFAULT_TASKS，那次 fetch 失败退回旧缓存时，
+            //    DEFAULT_TASKS 就是旧版，从它身上取定义会取到空。
+            // ⚠️ 只动 state.tasks，不碰 todayChecks。
+            // ============================================================
+            state.tasks = state.tasks.filter(function (x) {
+                return !x || ['a_sport', 'm_read_cn', 'e_hw'].indexOf(x.id) < 0;
+            });
+            // 分类收敛 + 学科标注（按 id 精确落；不认识的保持原样，交给 ensureValidState 兜底）
+            // 每个 id 的最终形态一次写全（category 也显式给），不依赖 v1~v5 的历史路径 ——
+            // 只要走到 v6，任务就一定是这个样子，不需要推演"这台设备之前跑过哪几版"。
+            const V6_META = {
+                m_listen:    { category: 'morning', subject: 'english' },
+                m_break:     { category: 'morning', subject: 'life' },
+                m_milk:      { category: 'morning', subject: 'life' },
+                m_egg:       { category: 'morning', subject: 'life' },
+                m_enread:    { category: 'morning', subject: 'english' },
+                e_read:      { category: 'after', subject: 'chinese' },
+                e_words:     { category: 'after', subject: 'chinese', days: [1, 2, 3, 4], startMin: 1140 },
+                e_cn_review: { category: 'after', name: '语文当日课文复习', subject: 'chinese', days: [1, 2, 3, 4], startMin: 1140 },
+                a_dictation: { category: 'after', name: '词语听写 10 个', subject: 'chinese', days: [6, 0] },
+                w_weiyang6:  { category: 'after', subject: 'chinese' },
+                w_weiyang0:  { category: 'after', subject: 'chinese' },
+                a_dog:       { category: 'after', subject: 'english' },
+                a_weiyang:   { category: 'after', name: '未泱英文 3 个', subject: 'english', days: [1, 2, 3, 4] },
+                a_abc:       { category: 'after', name: 'ABC Reading 3 个', subject: 'english' },
+                e_engread:   { category: 'after', subject: 'english', startMin: 1140 },
+                w_eng_hw:    { category: 'after', subject: 'english' },
+                a_calc:      { category: 'after', subject: 'math', days: [1, 2, 3, 4] },
+                e_53:        { category: 'after', subject: 'math', days: [1, 2, 3, 4], startMin: 1140 },
+                e_math_talk: { category: 'after', name: '数学说题（当日例题）', subject: 'math', days: [1, 2, 3, 4], startMin: 1140 },
+                w_math_hw:   { category: 'after', subject: 'math' },
+                w_family:    { category: 'after', name: '运动 30 分钟', subject: 'sport', days: [6, 0] },
+                w_review:    { category: 'after', subject: 'mixed' },
+                e_pack:      { category: 'after', subject: 'life', days: [1, 2, 3, 4], startMin: 1140 },
+                n_sleep:     { category: 'night', subject: 'life' }
+            };
+            state.tasks.forEach(function (x) {
+                if (!x) return;
+                if (x.category === 'evening' || x.category === 'weekend') x.category = 'after';
+                const meta = V6_META[x.id];
+                if (!meta) return;
+                if (meta.category) x.category = meta.category;
+                if (meta.name) x.name = meta.name;
+                if (meta.subject) x.subject = meta.subject;
+                if (meta.days) x.days = meta.days.slice();
+                if (typeof meta.startMin === 'number') x.startMin = meta.startMin;
+            });
+            // 新增两条（自带完整定义，不依赖 DEFAULT_TASKS）
+            [{
+                id: 'e_cn_dict', name: '语文当日字词听写', icon: '\uD83D\uDCDD',
+                category: 'after', subject: 'chinese', stars: 3, nutri: 'wisdom',
+                days: [1, 2, 3, 4], startMin: 1140
+            }, {
+                // 周一到周四 · 英语组：英语班单词默写复习 3 个（2 金币）
+                id: 'a_en_dict', name: '英语班单词默写复习 3 个', icon: '\uD83D\uDCD4',
+                category: 'after', subject: 'english', stars: 2, nutri: 'wisdom',
+                days: [1, 2, 3, 4]
+            }, {
+                id: 'n_eyedrop', name: '滴眼药水', icon: '\uD83D\uDCA7',
+                category: 'night', subject: 'life', stars: 1, nutri: 'peace'
+            }].forEach(function (def) {
+                const got = state.tasks.find(function (x) { return x && x.id === def.id; });
+                if (got) {
+                    got.name = def.name;
+                    got.category = def.category;
+                    got.subject = def.subject;
+                    if (typeof got.stars !== 'number') got.stars = def.stars;
+                    if (!got.nutri) got.nutri = def.nutri;
+                    if (def.days) got.days = def.days.slice();
+                    if (typeof def.startMin === 'number') got.startMin = def.startMin;
+                } else {
+                    state.tasks.push(Object.assign({ weekendOnly: false }, def));
+                }
+            });
+            // 顺序按「时段 → 学科 → 科内」重排一次：老设备的顺序是旧混排，
+            // 不重排会让每个学科组内部乱序（她手动调过的顺序在这里会被重置，属本次重构代价）
+            const V6_SEQ = [
+                'm_listen', 'm_break', 'm_milk', 'm_egg', 'm_enread',
+                'e_read', 'e_words', 'e_cn_review', 'e_cn_dict', 'a_dictation', 'w_weiyang6', 'w_weiyang0',
+                'a_dog', 'a_weiyang', 'a_en_dict', 'a_abc', 'e_engread', 'w_eng_hw',
+                'a_calc', 'e_53', 'e_math_talk', 'w_math_hw',
+                'w_family', 'w_review', 'e_pack', 'n_sleep', 'n_eyedrop'
+            ];
+            state.tasks.sort(function (a, b) {
+                const ia = a ? V6_SEQ.indexOf(a.id) : -1;
+                const ib = b ? V6_SEQ.indexOf(b.id) : -1;
+                return (ia < 0 ? 9000 : ia) - (ib < 0 ? 9000 : ib);
+            });
             state.taskPatchVer = TASK_PATCH_VER;
         }
 
@@ -4795,7 +4953,12 @@
             }
             // 修正无效分类 / 缺失字段，防止渲染时崩溃
             state.tasks.forEach(t => {
-                if (!CATEGORY_CONFIG[t.category]) t.category = 'hobby';
+                // 2026-10-26：兜底值必须**本身合法**。原来兜到 'hobby'，可 'hobby' 从来不在
+                //   CATEGORY_CONFIG 里 ⇒ 兜完仍非法（渲染层再兜一次、编辑弹窗还单列一段
+                //   「分类需要重新选」）。分类体系收敛成三段后，法定兜底就是 after。
+                if (!CATEGORY_CONFIG[t.category]) t.category = 'after';
+                // 学科兜底：没写或写坏的按「生活」，绝不能因为缺字段掉出分组
+                if (!SUBJECT_CONFIG[t.subject]) t.subject = 'life';
                 if (typeof t.weekendOnly !== 'boolean') t.weekendOnly = false;
                 if (typeof t.stars !== 'number') t.stars = 1;
             });
@@ -5100,17 +5263,29 @@
         }
 
         // ========== 时段感知：只把"现在做得了的事"算给孩子看 ==========
-        // 各分类的起始时间（分钟）；未列出的分类（如 weekend）视为全天有效
-        const PERIOD_START_MIN = { morning: 6 * 60 + 50, after: 16 * 60, evening: 19 * 60, night: 21 * 60 };
-        function periodStarted(cat) {
-            const st = PERIOD_START_MIN[cat];
-            if (st === undefined) return true;
+        // 各时段的默认起始时间（分钟）；未列出的视为全天有效
+        const PERIOD_START_MIN = { morning: 6 * 60 + 50, after: 16 * 60, night: 21 * 60 };
+        // ☠️ 2026-10-26：时段合并成三段后，「到点」必须改成**按任务**算。
+        //    原「晚间陪学」(19:00 到点) 已并入放学后；若仍按分类判，下午 16:00 就会把
+        //    晚上那 6 项一起算进「现在该做还有 N 项」→ 孩子一进门就被 11 项压住。
+        //    ⇒ 这些任务自带 startMin:1140(19:00)，到点口径与合并前**完全一致**。
+        //    周末的放学后 = 周末学习，全天都能做（合并前的 weekend 分类本来就不看时间）。
+        function startMinOf(t) {
+            // ☠️ 顺序不能反：周末判断必须**优先于**任务级 startMin。
+            //    先判 startMin 会让 e_engread 这类"周六日也做、又带 19:00 门禁"的任务
+            //    在周末被压到晚上七点才出现在「现在该做」里 —— 与上面那句注释矛盾。
+            if (t.category === 'after' && isWeekend()) return 0;
+            if (typeof t.startMin === 'number') return t.startMin;
+            const st = PERIOD_START_MIN[t.category];
+            return st === undefined ? 0 : st;
+        }
+        function periodStarted(t) {
             const n = new Date();
-            return (n.getHours() * 60 + n.getMinutes()) >= st;
+            return (n.getHours() * 60 + n.getMinutes()) >= startMinOf(t);
         }
         // 已经"到点"的激活任务（睡前任务在 21:00 前不计入，白天不会被误判成没完成）
         function calcDueTasks() {
-            return getActiveTasks().filter(function (t) { return periodStarted(t.category); });
+            return getActiveTasks().filter(periodStarted);
         }
         function calcDueCompleted() {
             return calcDueTasks().filter(function (t) { return state.todayChecks[t.id]; }).length;
@@ -5128,7 +5303,8 @@
         }
         // 2026-09-23：warn_calcium「牛奶还没喝完」/ warn_wisdom「想听你讲一个故事」都点了具体的事，
         // 判据必须落到具体任务上，否则维度被判"未完成"时会说出与事实不符的提醒。
-        const READING_IDS = ['m_read_cn', 'm_enread', 'e_read', 'e_engread',
+        // 2026-10-26：m_read_cn（语文朗读·金波四季美文）已删，从判定表里移除
+        const READING_IDS = ['m_enread', 'e_read', 'e_engread',
                              'a_abc', 'a_weiyang', 'w_weiyang6', 'w_weiyang0'];
         function hasPendingTask(id) {
             return calcTodayPending().some(function (t) { return t.id === id; });
@@ -5371,9 +5547,11 @@
             { id:'fast5',  name:'闪电早餐',   icon:'\u26A1',      need:5, mode:'total',  desc:'一共做到 5 天，早餐都在 15 分钟内吃完',
               check:function(ids){ return !!(ids['m_break'] && ids['m_break'].flag === 'ok'); } },
             { id:'read5',  name:'小书虫',     icon:'\uD83D\uDC1B', need:5, mode:'streak', desc:'连着 5 天读书',
-              check:function(ids){ return !!(ids['e_read'] || ids['m_read_cn'] || ids['m_enread']); } },
+              check:function(ids){ return !!(ids['e_read'] || ids['m_enread']); } },
+            // 2026-10-26：工作日不再有运动任务，运动只剩周末的「运动 30 分钟」(w_family)。
+            //   勋章判据只看 w_family —— 攒 5 天要跨 3 个周末，比原来慢，但仍可达。
             { id:'sport5', name:'运动小将',   icon:'\uD83C\uDFC5', need:5, mode:'total',  desc:'一共做到 5 天，出去玩或和爸妈一起运动',
-              check:function(ids){ return !!(ids['a_sport'] || ids['w_family']); } },
+              check:function(ids){ return !!ids['w_family']; } },
             { id:'eng5',   name:'英语小达人', icon:'\uD83E\uDD9C', need:5, mode:'streak', desc:'连着 5 天学英语',
               check:function(ids){ return !!(ids['a_abc'] || ids['a_weiyang'] || ids['e_engread'] || ids['m_listen'] || ids['m_enread']); } },
             { id:'sleep5', name:'早睡星人',   icon:'\uD83C\uDF19', need:5, mode:'total',  desc:'一共做到 5 天，21 点前上床',
@@ -6068,7 +6246,7 @@
                 return;
             }
             var task = state.tasks.filter(function (t) { return t.id === 'a_dictation'; })[0]
-                    || { id: 'a_dictation', name: '词语听写 10 个', icon: '\u270D\uFE0F', category: 'evening', stars: 2, nutri: 'wisdom' };
+                    || { id: 'a_dictation', name: '词语听写 10 个', icon: '\u270D\uFE0F', category: 'after', subject: 'chinese', stars: 2, nutri: 'wisdom' };
             closeDictation();   // 先关弹窗（同时停掉朗读），再走打卡动画
             // 走与普通任务完全相同的链路：营养/勋章/时间结算/四维全满/全部完成庆祝/宠物成就
             finishCheck(task, task.stars, 'ok');
@@ -6159,14 +6337,24 @@
 
         // ========== 渲染任务 ==========
         // ========== 自主权：顺序她自己定 ==========
-        // 时段框架不变（早晨/放学后/晚间/睡前），但"框里先做哪个"由布丁说了算
+        // 时段框架（2026-10-26 起：早上 / 放学后 / 睡前 三段；放学后段内再按学科分），
+        // 但"框里先做哪个"由布丁说了算
         function moveTask(taskId, dir) {
             const arr = state.tasks;
             const i = arr.findIndex(function (t) { return t.id === taskId; });
             if (i < 0) return;
             const cat = arr[i].category;
+            // 2026-10-26：按学科分组的段里，上下移动只在**同学科内**换位
+            //   （否则「语文第 2 项」按一下 ▼ 会跳到英语组去，孩子会以为任务没了）
+            const grouped = SUBJECT_GROUPED_CATS.indexOf(cat) >= 0;
+            const sub = arr[i].subject || 'life';
+            const sameGroup = function (t) {
+                if (!t || t.category !== cat) return false;
+                if (!grouped) return true;
+                return (SUBJECT_CONFIG[t.subject] ? t.subject : 'life') === sub;
+            };
             let j = i + dir;
-            while (j >= 0 && j < arr.length && arr[j].category !== cat) j += dir;
+            while (j >= 0 && j < arr.length && !sameGroup(arr[j])) j += dir;
             if (j < 0 || j >= arr.length) return;
             const tmp = arr[i]; arr[i] = arr[j]; arr[j] = tmp;
             saveState();
@@ -6176,7 +6364,7 @@
         // ========== 自主权：她自己加任务 ==========
         let _myTaskCat = 'after', _myTaskNutri = 'wisdom';
         const MY_CAT_OPTS = [
-            ['morning', '🌅 早晨'], ['after', '🎒 放学后'], ['evening', '🌙 晚间'], ['night', '😴 睡前']
+            ['morning', '🌅 早上'], ['after', '🎒 放学后'], ['night', '😴 睡前']
         ];
         function pickMyChip(el) {
             const kind = el.getAttribute('data-kind');
@@ -6277,19 +6465,22 @@
                 //       ensureValidState 已经跑过了 —— 两条路都够不着这里。
                 //    所以这里必须自己守住：渲染层不能假设数据一定合法。
                 const config = CATEGORY_CONFIG[catKey] || { label: catKey, class: '' };
+                // 周末把「放学后」显示成「周末学习」：同一分类、同一配色，只是换个说法
+                const catLabel = (weekend && config.weekendLabel) ? config.weekendLabel : config.label;
                 const allActiveInCat = state.tasks.filter(t => t.category === catKey && taskActiveToday(t));
                 const doneInCat = allActiveInCat.filter(t => state.todayChecks[t.id]).length;
 
                 html += `<div class="category ${config.class}">
                     <div class="category-header">
-                        ${config.label}
+                        ${catLabel}
                         <span class="category-count">${doneInCat}/${allActiveInCat.length}</span>
                     </div>
                     <div class="task-list">`;
 
-                for (const task of tasks) {
+                // 一张任务卡（平铺和按学科分组两条路都要用，所以抽出来）
+                const cardHTML = function (task) {
                     const tag = task.plate ? '<span class="weekend-tag">光盘才算</span>' : '';
-                    html += `<div class="task-card" 
+                    return `<div class="task-card" 
                                 id="task-${task.id}" 
                                 onclick="toggleTask('${task.id}')">
                             <div class="check-circle"></div>
@@ -6307,6 +6498,32 @@
                                 <button onclick="event.stopPropagation();moveTask('${task.id}',1)">▼</button>
                             </div>
                         </div>`;
+                };
+
+                // 2026-10-26：放学后 / 周末学习 按学科做二级分组；早上、睡前平铺
+                if (SUBJECT_GROUPED_CATS.indexOf(catKey) >= 0) {
+                    const bySubject = {};
+                    for (const task of tasks) {
+                        const sk = SUBJECT_CONFIG[task.subject] ? task.subject : 'life';
+                        if (!bySubject[sk]) bySubject[sk] = [];
+                        bySubject[sk].push(task);
+                    }
+                    for (const sk of SUBJECT_ORDER) {
+                        const arr = bySubject[sk];
+                        if (!arr || !arr.length) continue;
+                        // 每科自己的 x/y：让她一眼看出「语文还剩 2 项」，而不用数
+                        const allInSub = allActiveInCat.filter(function (t) {
+                            return (SUBJECT_CONFIG[t.subject] ? t.subject : 'life') === sk;
+                        });
+                        const doneInSub = allInSub.filter(function (t) { return state.todayChecks[t.id]; }).length;
+                        html += `<div class="subject-header">
+                            <span class="subject-label">${SUBJECT_CONFIG[sk].label}</span>
+                            <span class="subject-count">${doneInSub}/${allInSub.length}</span>
+                        </div>`;
+                        for (const task of arr) html += cardHTML(task);
+                    }
+                } else {
+                    for (const task of tasks) html += cardHTML(task);
                 }
                 html += `</div></div>`;
             }
@@ -7301,7 +7518,8 @@
                 id: newId,
                 name: '新任务',
                 icon: '📝',
-                category: 'hobby',
+                category: 'after',
+                subject: 'life',
                 stars: 1,
             });
             saveState();
@@ -7872,7 +8090,7 @@
         // ⚠️ 只在 data/*.json 真的改了内容时才 bump（它只是 fetch 的 ?v= 缓存破除键）。
         //    2026-09-23 bump：data/shop.json 小家三档价格 200/350/500 → 120/180/250。
         //    （围巾落点 nk 改动在 HTML 里，不涉及 data/，靠 APP_VERSION 破除即可。）
-        const STATIC_DATA_VER = '20261020.1';
+        const STATIC_DATA_VER = '20261026.1';
         const STATIC_FILES = {
             tasks:     'data/tasks.json',
             shop:      'data/shop.json',
