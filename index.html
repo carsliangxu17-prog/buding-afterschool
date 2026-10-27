@@ -8,7 +8,7 @@
     <meta http-equiv="Expires" content="0" data-page-node-id="YXlbOTFHU2Nr6SGRQHt7cy">
     <script>
         (function () {
-        var APP_VERSION = '20261027.4';
+        var APP_VERSION = '20261027.5';
             window.APP_VERSION_STR = APP_VERSION;   // 主脚本里做线上版本自检要用
             try {
                 var params = new URLSearchParams(location.search);
@@ -2902,7 +2902,9 @@
 
         // ========== 线上版本自检（治"改了但页面还是旧版"） ==========
         // 页面可能被浏览器缓存住旧代码（尤其是一直开着的标签页），这里主动问一次线上 version.json：
-        // 版本不一致就用带 ?v= 的新 URL 重新加载（新 URL 天然绕开缓存）。
+        // 版本不一致就换一个**带随机 token 的新 URL** 重新加载。
+        // ☠️ 别以为"带参数的新 URL 天然绕开缓存"就一定成立 —— 2026-10-27 实测：
+        //    只用版本号做参数时，重载后仍可能拿到缓存的旧文件，而旧判据会因此永久卡死（见下）。
         // 只在 http(s) 下生效，10 分钟内最多查一次，避免反复刷新；查不到就安静放弃。
         function checkLiveVersion() {
             if (location.protocol.indexOf('http') !== 0) return;
@@ -2917,9 +2919,24 @@
                 .then(function (r) { return r.ok ? r.json() : null; })
                 .then(function (d) {
                     if (!d || !d.v || d.v === live) return;
+                    // ⚠️ 2026-10-27（错误 46）：这里原来的判据是
+                    //      if (u.searchParams.get('v') === d.v) return;
+                    //    本意防"重载死循环"，实际把两种失败模式混在一个判据里：
+                    //    ① 重载后已经拿到新版（本该停）② 重载了但缓存又给旧文件（本来还要再试）
+                    //    → 实测后果：布丁的页面永久停在旧版（`6/7`），切前后台、关标签重开都不动，
+                    //      因为 URL 里已经带着 ?v=<新版本号>，条件恒成立。
+                    //    正确判据是「**这个目标版本已经试过没有**」，而不是「URL 里有没有它」。
+                    //    并且重载 URL 必须带随机 token —— 否则同一个 URL 可能命中同一条缓存。
+                    let tried = '';
+                    try { tried = sessionStorage.getItem('liveVerTried') || ''; } catch (e) {}
+                    const tk = tried.split('|');
+                    // 同一目标版本 30 分钟内只重载一次：既躲开死循环，又不永久放弃
+                    // （缓存总会过期，30 分钟后再给一次机会）
+                    if (tk[0] === d.v && Date.now() - (parseInt(tk[1], 10) || 0) < 1800000) return;
+                    try { sessionStorage.setItem('liveVerTried', d.v + '|' + Date.now()); } catch (e) {}
                     const u = new URL(location.href);
-                    if (u.searchParams.get('v') === d.v) return;
                     u.searchParams.set('v', d.v);
+                    u.searchParams.set('r', String(Date.now()));
                     location.replace(u.toString());
                 })
                 .catch(function () {});
