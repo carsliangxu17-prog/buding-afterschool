@@ -1,33 +1,49 @@
 [
   {
+    "id": "c_chorus",
     "name": "合唱团训练",
     "icon": "🎵",
     "time": "放学后-17:30",
+    "startMin": 960,
+    "endMin": 1050,
+    "stars": 1,
     "days": [
       3,
       4
     ]
   },
   {
+    "id": "c_english",
     "name": "英语培训班",
     "icon": "📕",
     "time": "18:00-20:30",
+    "startMin": 1080,
+    "endMin": 1230,
+    "stars": 1,
     "days": [
       5
     ]
   },
   {
+    "id": "c_math",
     "name": "数学思维课",
     "icon": "🔢",
     "time": "15:20-17:30",
+    "startMin": 920,
+    "endMin": 1050,
+    "stars": 1,
     "days": [
       6
     ]
   },
   {
+    "id": "c_reading",
     "name": "学而思大阅读",
     "icon": "📖",
     "time": "9:00-10:10",
+    "startMin": 540,
+    "endMin": 610,
+    "stars": 1,
     "days": [
       0
     ]
