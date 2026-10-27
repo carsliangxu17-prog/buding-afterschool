@@ -8,7 +8,7 @@
     <meta http-equiv="Expires" content="0" data-page-node-id="YXlbOTFHU2Nr6SGRQHt7cy">
     <script>
         (function () {
-        var APP_VERSION = '20261027.1';
+        var APP_VERSION = '20261027.2';
             window.APP_VERSION_STR = APP_VERSION;   // 主脚本里做线上版本自检要用
             try {
                 var params = new URLSearchParams(location.search);
@@ -2298,9 +2298,13 @@
         }
 
         /* ---------- 科目独立卡片 ---------- */
+        /* ☠️ 列数**不写死**：auto-fill + minmax(min(100%,260px), 1fr)
+           → 手机 390 自动 1 列；平板 760 自动 2 列；1024 自动 3 列；1440 自动 4 列。
+           低于 260px 就退回 1 列（min(100%,…) 保证永不溢出），所以**任何宽度都不会挤压**。
+           写死 repeat(2, minmax(0,1fr)) 会允许列宽缩到 0 —— 那是 10-27 塌陷的直接原因。 */
         .subject-grid {
             display: grid;
-            grid-template-columns: 1fr;
+            grid-template-columns: repeat(auto-fill, minmax(min(100%, 260px), 1fr));
             gap: 10px;
             margin-top: 10px;
             align-items: start;
@@ -2361,6 +2365,8 @@
         .category .task-card .task-order { gap: 3px; margin-left: 2px; }
         .category .task-card .task-order button { width: 26px; height: 20px; font-size: 9px; }
         .category .task-card .star-mini { font-size: 12px; }
+        /* 金币点 + 光环标签多的时候允许换行；.task-card 有 overflow:hidden，不换行会被裁掉 */
+        .category .task-card .task-stars-row { flex-wrap: wrap; row-gap: 2px; }
         .category .task-card .nutri-tag { font-size: 10px; padding: 1px 6px; margin-left: 4px; }
 
         /* ---------- 今日课程 / 连续打卡徽章：原为灰绿色块，跟暖橘底撞色 → 一起暖化 ----------
@@ -2388,12 +2394,23 @@
         /* 「还剩 N 项」原来是青绿（跟完成态撞），改成主色 —— 它是提示，不是"已完成" */
         .progress-percent { color: var(--v7-primary); }
 
-        /* ---------- 宽屏（平板横屏 / 电脑）：两列并排，纵向长度再砍一半 ----------
-           #app 原来是 max-width:480px，两列在 480 里放不下（每列仅 215px），
-           所以只在 >=700px 的屏上放宽容器；手机（含平板竖屏 768 以下）完全不受影响。 */
-        @media (min-width: 700px) {
-            #app { max-width: 760px; }
-            .subject-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+        /* ---------- 宽屏：时段竖排各占满宽，学科卡在时段内部自适应多列 ----------
+           ☠️ 2026-10-27 塌陷复盘：老的 @media(≥768 / ≥1024) 把三个时段并成 2/3 列，
+              放学后只剩 ~290px；上一版又在里面写死 2 列学科 → 每列 ~110px，字被挤成一字一行。
+           现在：**外层 1 列（时段竖排） + 内层 auto-fill 自适应**。
+           同时**撤掉**上一版加的 #app{max-width:760px} —— 老的 ≥768 规则是 max-width:none
+           （桌面铺满），我那条把它压成了 760px 窄条，是这次一起暴露出来的第二个问题。 */
+        @media (min-width: 768px) {
+            /* 覆盖老规则 #categoriesContainer{display:grid; 2/3 列}：同特异性 + 后写者赢 */
+            #categoriesContainer { display: block; }
+            /* 平铺段（早上 / 睡前 / 今日已完成）在宽屏也铺成多列，别再一条长龙 */
+            #categoriesContainer > .category > .task-list {
+                display: grid;
+                grid-template-columns: repeat(auto-fill, minmax(min(100%, 260px), 1fr));
+                gap: 10px;
+                align-items: start;
+            }
+            #categoriesContainer > .category > .task-list > .task-card { margin: 0; }
         }
         /* <<<V7_SKIN_END>>> */
 </style>
