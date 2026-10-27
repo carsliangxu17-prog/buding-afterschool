@@ -8,7 +8,7 @@
     <meta http-equiv="Expires" content="0" data-page-node-id="YXlbOTFHU2Nr6SGRQHt7cy">
     <script>
         (function () {
-        var APP_VERSION = '20261027.2';
+        var APP_VERSION = '20261027.3';
             window.APP_VERSION_STR = APP_VERSION;   // 主脚本里做线上版本自检要用
             try {
                 var params = new URLSearchParams(location.search);
@@ -1111,6 +1111,7 @@
         .category-header {
             font-size: 17px;
             font-weight: 600;
+            flex-wrap: wrap;          /* 2026-10-27 v8：多了「今天有课」标注，窄屏要能折 */
             padding: 10px 16px;
             border-radius: 14px;
             color: white;
@@ -2413,6 +2414,85 @@
             #categoriesContainer > .category > .task-list > .task-card { margin: 0; }
         }
         /* <<<V7_SKIN_END>>> */
+        /* <<<V8_COURSE_START>>> */
+        /* 今日课程升级成「能打勾的日程」（2026-10-27 v8）
+           ⚠️ 这一整块是**追加覆盖层**：旧规则一个字没动，删掉本块即回滚到上一版样式。
+           卡片结构变了（icon + .course-main[名称/时段] + .course-check 按钮）；
+           旧的 .course-name{flex:1} / .course-time 是为「一行三个 span」写的，这里要盖掉。 */
+        .course-total {
+            margin-left: auto;
+            font-size: 12px;
+            font-weight: 500;
+            color: #8C6A52;
+            background: rgba(232, 115, 74, 0.10);
+            border-radius: 999px;
+            padding: 2px 9px;
+            white-space: nowrap;
+        }
+        .course-main {
+            flex: 1;
+            min-width: 0;
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+        }
+        .course-card .course-name {
+            flex: none;
+            font-size: 15px;
+            font-weight: 600;
+            color: var(--v7-ink, #4A3428);
+            line-height: 1.25;
+        }
+        .course-meta {
+            font-size: 12.5px;
+            color: #A08168;
+            line-height: 1.3;
+        }
+        .course-check {
+            flex: none;
+            border: 1px solid #F0B695;
+            background: #FFFFFF;
+            color: #C25A32;
+            font-size: 13px;
+            font-weight: 600;
+            font-family: inherit;
+            border-radius: 999px;
+            padding: 7px 14px;
+            cursor: pointer;
+            white-space: nowrap;
+            -webkit-tap-highlight-color: transparent;
+            transition: transform .12s ease, background .12s ease;
+        }
+        .course-check:active { transform: scale(0.95); }
+        .course-check.done {
+            background: #E8734A;
+            border-color: #E8734A;
+            color: #FFFFFF;
+        }
+        /* 已上完：整张卡淡一点，让「还没上的那节」自己跳出来 */
+        .course-card.done { opacity: 0.72; }
+        .course-card.done .course-name {
+            text-decoration: line-through;
+            text-decoration-thickness: 2px;
+            text-decoration-color: rgba(232, 115, 74, 0.45);
+        }
+        /* 放学后标题上的「今天有课」—— 只告知，不减少项（天姝 2026-10-27 定） */
+        .cat-course-note {
+            font-size: 11.5px;
+            font-weight: 500;
+            color: #8C5A2B;
+            background: rgba(255, 255, 255, 0.55);
+            border: 1px solid rgba(255, 255, 255, 0.7);
+            border-radius: 999px;
+            padding: 2px 8px;
+            white-space: nowrap;
+        }
+        /* 窄屏：按钮别把课程名挤成竖排 */
+        @media (max-width: 380px) {
+            .course-check { padding: 6px 10px; font-size: 12.5px; }
+            .cat-course-note { font-size: 11px; padding: 2px 6px; }
+        }
+        /* <<<V8_COURSE_END>>> */
 </style>
     <!-- 云端同步改用 LeanCloud（纯 REST，无需 SDK；配置见下方 LC 对象） -->
 </head>
@@ -2727,7 +2807,7 @@
         // 上传到云端的数据只包含动态打卡记录（任务/奖励用本地默认值）
         // ⚠️ coinsSpent（累计花费）必须在这里（2026-09-26）：它是"钱花掉了"的唯一记录，
         //    不同步的话另一台设备永远不知道她花过钱，就会继续把钱退回给她。
-        const SYNC_FIELDS = ['todayChecks', 'todayDate', 'totalStars', 'streak', 'history', 'claimedRewards', 'pet', 'medals', 'poemLog', 'owned', 'leftovers', 'petBook', 'maxExp', 'coinsEver', 'coinsSpent', 'achv', 'petWish', 'petWishDate', 'petWishDone', 'resetAt', 'fourFullDate', 'checksUpdatedAt', 'wearing', 'foodToday', 'foodLog', 'petLegs'];
+        const SYNC_FIELDS = ['todayChecks', 'todayDate', 'totalStars', 'streak', 'history', 'claimedRewards', 'pet', 'medals', 'poemLog', 'owned', 'leftovers', 'petBook', 'maxExp', 'coinsEver', 'coinsSpent', 'courseDate', 'courseChecks', 'courseChecksAt', 'achv', 'petWish', 'petWishDate', 'petWishDone', 'resetAt', 'fourFullDate', 'checksUpdatedAt', 'wearing', 'foodToday', 'foodLog', 'petLegs'];
 
         // 上传数据到 Supabase（upsert 固定 id，多端共用同一份；只更新提供的列，不覆盖其它列）
         function syncToCloud() {
@@ -2994,11 +3074,21 @@
 
         // ========== 培训班课程表 ==========
         // 新学期课后班/兴趣班：如需显示，按下面格式添加（periods 为上课日期区间）
+        // 2026-10-27 v8：课程从「纯展示」升级成「能打勾的日程」——
+        //   · id      稳定标识。打卡记录按它存，以后改课程名不会丢已打的卡。
+        //   · startMin / endMin  用「当天 0 点起的分钟数」表达时段，这才是能算的值：
+        //     时段占用、到点推迟、"今天光上课占了几小时"全靠它。time 只留作展示兜底
+        //     （老的 data/courses.json 缓存里没有这两个字段 → 退回显示 time）。
+        //   · stars   上完一节给几颗星。默认 1：比"自己读完 15 分钟书"(2) 低一档，
+        //     因为上课不是她自己发起的行为；但也不让这份付出完全隐形。
+        // ⚠️ 课程**不进 todayChecks、不进完成度分母**（天姝 2026-10-27 定）。
+        //    打卡项的口径是"我自己做到的事"，把"被送去上课"混进去会让
+        //    「还剩 N 项」和「每日完成度」一起失真 —— 那是这个系统的核心指标。
         let COURSE_SCHEDULE = [
-            { name:'合唱团训练',   icon:'\uD83C\uDFB5', time:'放学后-17:30', days:[3,4] },
-            { name:'英语培训班',   icon:'\uD83D\uDCD5', time:'18:00-20:30', days:[5] },
-            { name:'数学思维课',   icon:'\uD83D\uDD22', time:'15:20-17:30', days:[6] },
-            { name:'学而思大阅读', icon:'\uD83D\uDCD6', time:'9:00-10:10',  days:[0] },
+            { id:'c_chorus',  name:'合唱团训练',   icon:'\uD83C\uDFB5', time:'放学后-17:30', startMin:16*60,    endMin:17*60+30, stars:1, days:[3,4] },
+            { id:'c_english', name:'英语培训班',   icon:'\uD83D\uDCD5', time:'18:00-20:30',  startMin:18*60,    endMin:20*60+30, stars:1, days:[5] },
+            { id:'c_math',    name:'数学思维课',   icon:'\uD83D\uDD22', time:'15:20-17:30',  startMin:15*60+20, endMin:17*60+30, stars:1, days:[6] },
+            { id:'c_reading', name:'学而思大阅读', icon:'\uD83D\uDCD6', time:'9:00-10:10',   startMin:9*60,     endMin:10*60+10, stars:1, days:[0] },
         ];
 
         // ========== 应用版本（更新任务时递增，自动刷新本地数据） ==========
@@ -4802,6 +4892,17 @@
             maxExp: 0,
             coinsEver: 0,
             coinsSpent: 0,   // 累计花掉的金币（单调不减）—— 2026-09-26 修"花钱被退回"引入
+            // ===== 今日课程打卡（2026-10-27 v8）=====
+            // 为什么独立一套、不塞进 todayChecks：课程不计入完成度分母，
+            //   混进去会让「还剩 N 项」/completedCount/勋章/宠物经验全都要额外过滤，
+            //   漏一处就是错账；独立字段最坏情况只是课程那块显示不对。
+            // courseDate：这批打卡属于哪一天。只有 === state.todayDate 才采信
+            //   （照 todayChecks 的 todayDate 口径：跨天残留一律当没打卡）。
+            // courseChecksAt：最后变动时间戳。多端合并靠它判新旧——
+            //   **撤销课程打卡必须能传出去**（照 checksUpdatedAt 的教训）。
+            courseDate: '',
+            courseChecks: {},
+            courseChecksAt: 0,
             achv: [],
             petGreetDate: '',
             petWish: '',
@@ -5243,6 +5344,15 @@
                 state.appVersion = APP_VERSION;
             }
             if (state.poemLibVer !== POEM_LIB_VERSION) { state.poemLog = {}; state.poemLibVer = POEM_LIB_VERSION; }
+            // ===== 今日课程打卡（2026-10-27 v8）：老设备没这三个字段 → 补默认；坏值也在这里纠正 =====
+            // ⚠️ 不能只写 typeof === 'object'：null 的 typeof 也是 'object'，
+            //    Arrays 也是（云端/手工修数据都可能弄成数组）→ 下游
+            //    的 Object.keys / 索引写入会在渲染期间抛错。
+            if (typeof state.courseDate !== 'string') state.courseDate = '';
+            if (!state.courseChecks || typeof state.courseChecks !== 'object' || Array.isArray(state.courseChecks)) {
+                state.courseChecks = {};
+            }
+            if (typeof state.courseChecksAt !== 'number') state.courseChecksAt = 0;
             // ===== 当前穿戴（2026-09-22 P0）：老设备没有这个字段 → 补默认；坏值也在这里纠正 =====
             if (!state.wearing || typeof state.wearing !== 'object') {
                 state.wearing = { decor: '', scene: '', medal: '', at: 0 };
@@ -5441,6 +5551,10 @@
                 state.todayDate = today;
                 state.todayChecks = {};
                 state.checksUpdatedAt = Date.now();
+                // 2026-10-27 v8：课程打卡跟着换天。courseDate 一改，昨天那批立刻失效。
+                state.courseChecks = {};
+                state.courseDate = '';
+                state.courseChecksAt = Date.now();
                 state.streak = calcStreak();
                 saveState();
             } else if (purgeStaleChecks() > 0) {
@@ -5500,6 +5614,12 @@
                 lastAt: dayTimes.lastAt,
                 doneAt: dayTimes.doneAt,
                 freeMin: dayTimes.freeMin,
+                // 2026-10-27 v8：当天课程上了几节 —— 课程不进任务分母，但得留痕迹，
+                // 否则"这周上了几节课"在历史里完全看不到。只读不参与合并。
+                courses: (function () {
+                    const cs = getTodayCourses();
+                    return { done: cs.filter(function (c) { return courseChecked(c.id); }).length, total: cs.length };
+                })(),
                 updatedAt: Date.now(),    // 任何写入都盖时间戳（合并用它判新旧）
             };
             if (staleNow) record.stale = true;   // 补归档标记（见函数头注释）
@@ -5541,14 +5661,40 @@
         //    晚上那 6 项一起算进「现在该做还有 N 项」→ 孩子一进门就被 11 项压住。
         //    ⇒ 这些任务自带 startMin:1140(19:00)，到点口径与合并前**完全一致**。
         //    周末的放学后 = 周末学习，全天都能做（合并前的 weekend 分类本来就不看时间）。
+        // 课程把「放学后」段的起点整体顶掉多少分钟（2026-10-27 v8）。
+        // 只推**被完整覆盖**的那一段：课程开始 <= 段起点 且 课程结束 > 段起点。
+        //   · 周三合唱团 16:00-17:30、段起点 16:00 → 顶到 17:30（那一段她确实不在家）
+        //   · 周五英语 18:00-20:30、段起点 16:00 → **不动**（16:00-18:00 她是在家的；
+        //     把起点一律推成"课程结束"会凭空吞掉两小时可做时间）
+        // ⚠️ 只改"几点算到点"，**不改项数、不改分母** —— 天姝 2026-10-27 定的是
+        //    「只标注不减负」：时间口径要对，计划本身不减。
+        function courseShiftMin(base) {
+            let cur = base;
+            const cs = getTodayCourses().slice().sort(function (a, b) {
+                return (courseStartMin(a) === null ? 0 : courseStartMin(a))
+                     - (courseStartMin(b) === null ? 0 : courseStartMin(b));
+            });
+            for (let i = 0; i < cs.length; i++) {
+                const a = courseStartMin(cs[i]), b = courseEndMin(cs[i]);
+                if (a === null || b === null) continue;
+                if (a <= cur && b > cur) cur = b;
+            }
+            return cur;
+        }
         function startMinOf(t) {
             // ☠️ 顺序不能反：周末判断必须**优先于**任务级 startMin。
             //    先判 startMin 会让 e_engread 这类"周六日也做、又带 19:00 门禁"的任务
             //    在周末被压到晚上七点才出现在「现在该做」里 —— 与上面那句注释矛盾。
             if (t.category === 'after' && isWeekend()) return 0;
-            if (typeof t.startMin === 'number') return t.startMin;
-            const st = PERIOD_START_MIN[t.category];
-            return st === undefined ? 0 : st;
+            let base;
+            if (typeof t.startMin === 'number') base = t.startMin;
+            else {
+                const st = PERIOD_START_MIN[t.category];
+                base = (st === undefined ? 0 : st);
+            }
+            // 2026-10-27 v8：有课的日子，放学后的"到点"不能早于课程结束
+            if (t.category === 'after') base = courseShiftMin(base);
+            return base;
         }
         function periodStarted(t) {
             const n = new Date();
@@ -5628,22 +5774,129 @@
         // ========== 今日课程 ==========
         function getTodayCourses() {
             const wd = new Date(state.todayDate).getDay();
-            return COURSE_SCHEDULE.filter(function (c) { return c.days && c.days.indexOf(wd) >= 0; });
+            const raw = COURSE_SCHEDULE.filter(function (c) { return c && c.days && c.days.indexOf(wd) >= 0; });
+            // 老的 data/courses.json 缓存里没有 id → 兜一个**纯 ASCII 的稳定 id**
+            // （不能用中文名直接进 onclick 属性，也别用下标：课程顺序一调就串账）
+            raw.forEach(function (c) {
+                if (!c.id) {
+                    let h = 0;
+                    const nm = String(c.name || '');
+                    for (let i = 0; i < nm.length; i++) h = (h * 31 + nm.charCodeAt(i)) % 1000000;
+                    c.id = 'c_l' + h;
+                }
+                if (typeof c.stars !== 'number') c.stars = 1;
+            });
+            return raw;
+        }
+        // ===== 课程时段的结构化取值（2026-10-27 v8）=====
+        // ⚠️ 远端 data/courses.json 是**整份覆盖** COURSE_SCHEDULE 的，老缓存里没有
+        //    startMin/endMin ⇒ 这里必须能退回解析字符串 time，不能因为缺字段就崩：
+        //    课程区是 renderAll 的第 4 步，抛错会带走后面全部渲染。
+        function courseStartMin(c) {
+            if (c && typeof c.startMin === 'number') return c.startMin;
+            const m = /(\d{1,2}):(\d{2})/.exec(String((c && c.time) || ''));
+            return m ? (parseInt(m[1], 10) * 60 + parseInt(m[2], 10)) : null;
+        }
+        function courseEndMin(c) {
+            if (c && typeof c.endMin === 'number') return c.endMin;
+            const all = String((c && c.time) || '').match(/\d{1,2}:\d{2}/g);
+            if (all && all.length >= 2) {
+                const p = all[1].split(':');
+                return parseInt(p[0], 10) * 60 + parseInt(p[1], 10);
+            }
+            return null;
+        }
+        function fmtMinHM(m) {
+            const v = Math.max(0, Math.round(m || 0));
+            return Math.floor(v / 60) + ':' + ('0' + (v % 60)).slice(-2);
+        }
+        function hasCourseToday() {
+            return getTodayCourses().length > 0;
+        }
+        // ☠️ 课程打卡必须**绑日期**（照 todayChecks 的教训）：courseDate 不是今天就一律
+        //    当没打卡。跨天残留没清干净时，这一句是最后一道防线。
+        function courseChecked(id) {
+            if (!id) return false;
+            if (state.courseDate !== state.todayDate) return false;
+            const rec = (state.courseChecks || {})[id];
+            return !!(rec && typeof rec === 'object');
+        }
+        function courseDoneCount() {
+            return getTodayCourses().filter(function (c) { return courseChecked(c.id); }).length;
+        }
+        // 上完一节 / 取消。课程不写 todayChecks，所以自己管账。
+        function toggleCourse(courseId) {
+            ensureToday();   // 页面常驻后台不重载 → 必须先保证这一笔记在「今天」的账上
+            const c = getTodayCourses().find(function (x) { return x.id === courseId; });
+            if (!c || !c.id) return;
+            // 换过天：昨天那批立即作废，再记今天这一笔
+            if (state.courseDate !== state.todayDate) {
+                state.courseDate = state.todayDate;
+                state.courseChecks = {};
+            }
+            const rec = state.courseChecks[courseId];
+            if (rec) {
+                // ☠️ 撤销必须 delete，禁止 =false（幽灵记录会污染合并与统计）
+                const got = (typeof rec.stars === 'number') ? rec.stars : (c.stars || 1);
+                state.totalStars = Math.max(0, state.totalStars - got);
+                delete state.courseChecks[courseId];
+                state.courseChecksAt = Date.now();
+                playSound('uncheck');
+                saveState();
+                saveTodayToHistory();
+                saveState();
+                renderCourses();
+                renderStats();
+                renderHistory();
+                return;
+            }
+            const gain = (typeof c.stars === 'number') ? c.stars : 1;
+            state.courseChecks[courseId] = { stars: gain, at: Date.now() };
+            state.courseChecksAt = Date.now();
+            state.totalStars += gain;
+            // ⚠️ 加星必须同时加 coinsEver：余额口径是 coinsEver − coinsSpent，
+            //    只加 totalStars 会让"累计赚到的"和"手里有的"对不上（守门脚本会报错）
+            state.coinsEver = (state.coinsEver || 0) + gain;
+            playSound('check');
+            showToast('🎵 ' + c.name + ' 上完了，+' + gain + ' 金币', 'linear-gradient(135deg,#7F77DD,#534AB7)');
+            saveState();
+            saveTodayToHistory();
+            saveState();
+            renderCourses();
+            renderStats();
+            renderHistory();
         }
         function renderCourses() {
             const courses = getTodayCourses();
             const container = document.getElementById('courseSection');
+            if (!container) return;
             if (courses.length === 0) {
                 container.innerHTML = `<div class="course-header">📋 今日课程</div>
                     <div class="course-empty">今天没有培训班，自由安排 🎈</div>`;
                 return;
             }
-            let html = `<div class="course-header">📋 今日课程（${courses.length}节）</div><div class="course-list">`;
+            const done = courseDoneCount();
+            // 课程总占用：让她（和家长）一眼看到"今天光上课就占了几小时"
+            let usedMin = 0;
+            courses.forEach(function (c) {
+                const a = courseStartMin(c), b = courseEndMin(c);
+                if (a !== null && b !== null && b > a) usedMin += (b - a);
+            });
+            let html = `<div class="course-header">📋 今日课程（${done}/${courses.length} 节）`
+                     + (usedMin > 0 ? `<span class="course-total">占用 ${fmtDuration(usedMin)}</span>` : '')
+                     + `</div><div class="course-list">`;
             for (const c of courses) {
-                html += `<div class="course-card">
-                    <span class="course-icon">${c.icon}</span>
-                    <span class="course-name">${c.name}</span>
-                    <span class="course-time">${c.time}</span>
+                const ok = courseChecked(c.id);
+                const a = courseStartMin(c), b = courseEndMin(c);
+                const span = (a !== null && b !== null && b > a) ? (fmtMinHM(a) + '-' + fmtMinHM(b)) : (c.time || '');
+                const dur = (a !== null && b !== null && b > a) ? fmtDuration(b - a) : '';
+                html += `<div class="course-card${ok ? ' done' : ''}" id="course-${c.id}">
+                    <span class="course-icon">${c.icon || '📘'}</span>
+                    <div class="course-main">
+                        <div class="course-name">${c.name}</div>
+                        <div class="course-meta">${span}${dur ? ' · ' + dur : ''}</div>
+                    </div>
+                    <button class="course-check${ok ? ' done' : ''}" onclick="event.stopPropagation();toggleCourse('${c.id}')">${ok ? '✅ 已上完' : '上完了'}</button>
                 </div>`;
             }
             html += '</div>';
@@ -5938,7 +6191,7 @@
                 nextTip = '<div class="medal-next">\uD83C\uDFAF ' + verb + ' <b>' + nearestLeft + ' \u5929</b>\uff0c\u5c31\u80fd\u5f97\u5230 ' +
                           nearest.icon + ' <b>' + nearest.name + '</b>\uff08' + nearest.desc + '\uff09</div>';
             } else {
-                nextTip = '<div class="medal-next">\U0001F3C6 \u5168\u90e8\u52cb\u7ae0\u90fd\u5f97\u5230\u4e86\uff01\u4f60\u771f\u7684\u5f88\u80fd\u575a\u6301</div>';
+                nextTip = '<div class="medal-next">\uD83C\uDFC6 \u5168\u90e8\u52cb\u7ae0\u90fd\u5f97\u5230\u4e86\uff01\u4f60\u771f\u7684\u5f88\u80fd\u575a\u6301</div>';
             }
             area.innerHTML = '<div class="medal-card">' +
                 '<div class="medal-head"><span>\uD83C\uDFC5 \u6211\u7684\u52cb\u7ae0</span>' +
@@ -6032,7 +6285,7 @@
             } else if (savedMins > 0) {
                 timeBlock += '<div class="report-ask">\uD83D\uDCAD \u4f60\u5df2\u7ecf\u6709"\u65e9\u505a\u5b8c"\u7684\u65e5\u5b50\u4e86\u2014\u2014\u60f3\u60f3\u770b\uff0c\u90a3\u5929\u4e3a\u4ec0\u4e48\u5feb\uff1f</div>';
             } else {
-                timeBlock += '<div class="report-ask">\uD83D\uDCAF \u8fd9\u5468\u8fd8\u6ca1\u6709"\u5168\u90e8\u90fd\u505a\u5b8c"\u7684\u8bb0\u5f55\u3002\u4e0d\u7528\u6025\uff0c\u5148\u4ece\u4eca\u5929\u65e9\u4e00\u70b9\u70b9\u5f00\u59cb \U0001F331</div>';
+                timeBlock += '<div class="report-ask">\uD83D\uDCAF \u8fd9\u5468\u8fd8\u6ca1\u6709"\u5168\u90e8\u90fd\u505a\u5b8c"\u7684\u8bb0\u5f55\u3002\u4e0d\u7528\u6025\uff0c\u5148\u4ece\u4eca\u5929\u65e9\u4e00\u70b9\u70b9\u5f00\u59cb \uD83C\uDF31</div>';
             }
 
             const inner =
@@ -6102,6 +6355,19 @@
         // 目标线：20:30 前做完"当天该做的事"（不含睡前任务）；早完成的部分就是她自己的自由时间。
         // 磨蹭的自然后果是自由时间变短 —— 自然结果，不是惩罚。
         const FREE_DEADLINE_MIN = 20 * 60 + 30;
+        // ☠️ 2026-10-27 v8：20:30 是**写死的**，而周五英语课正好 18:00-20:30 ——
+        //    课上完就到线了，"省下的时间"永远算不出来（甚至算出负数），
+        //    页面还会说出"今天做完啦～明天早一点能多出自己的时间"这种与事实相反的话。
+        //    → 目标线改成"当天课程结束后 30 分钟"，且不早于 20:30。
+        //    周五 = max(20:30, 20:30+30) = 21:00。
+        function freeDeadlineMin() {
+            let line = FREE_DEADLINE_MIN;
+            getTodayCourses().forEach(function (c) {
+                const e = courseEndMin(c);
+                if (e !== null && e + 30 > line) line = e + 30;
+            });
+            return line;
+        }
         // 当天的时间侧摘要：几点开始、几点做完、省下多少分钟（history 与周报要用）
         function calcDayTimes() {
             let firstAt = 0, lastAt = 0;
@@ -6175,7 +6441,7 @@
             const at = calcFreeStartAt();
             if (!at) return null;
             const d = new Date(at);
-            return FREE_DEADLINE_MIN - (d.getHours() * 60 + d.getMinutes());
+            return freeDeadlineMin() - (d.getHours() * 60 + d.getMinutes());
         }
         function fmtHM(ms) {
             const d = new Date(ms);
@@ -6276,7 +6542,8 @@
                 const left = freeTimeTasks().filter(function (t) { return !state.todayChecks[t.id]; }).length;
                 if (mins === null) {
                     if (left > 0) {
-                        fh.innerHTML = '⏰ <b>20:30 前</b>做完，省下的时间都归你';
+                        // 2026-10-27 v8：这条线跟着当天课程走，不能写死 20:30
+                        fh.innerHTML = '⏰ <b>' + fmtMinHM(freeDeadlineMin()) + ' 前</b>做完，省下的时间都归你';
                         fh.className = 'free-hint';
                     } else {
                         fh.innerHTML = '🏠 今天该做的都做完啦';
@@ -6284,6 +6551,10 @@
                     }
                 } else if (mins > 0) {
                     fh.innerHTML = '🎈 省下 <b>' + mins + ' 分钟</b>，都是你自己的时间！';
+                    fh.className = 'free-hint done';
+                } else if (hasCourseToday()) {
+                    // 有课的日子超了线不是她磨蹭 —— 别拿"明天早一点"冤枉她
+                    fh.innerHTML = '🏫 今天有课，能把这些做完已经很棒了';
                     fh.className = 'free-hint done';
                 } else {
                     fh.innerHTML = '今天做完啦～明天早一点，能多出自己的时间';
@@ -6740,12 +7011,26 @@
                 const catLabel = (weekend && config.weekendLabel) ? config.weekendLabel : config.label;
                 const allActiveInCat = state.tasks.filter(t => t.category === catKey && taskActiveToday(t));
                 const doneInCat = allActiveInCat.filter(t => state.todayChecks[t.id]).length;
+                // 2026-10-27 v8：有课的日子在这一段的标题上标出来。
+                // 天姝定的是「只标注不减负」：项数一个不动，只告诉她
+                // "今天时间被课占了，不是你磨蹭"。周末 after 段不看时间（startMinOf
+                // 返回 0），标了反而让人误以为要等到下午 → 只在工作日显示。
+                let courseNote = '';
+                if (catKey === 'after' && !weekend && hasCourseToday()) {
+                    let lastEnd = 0;
+                    getTodayCourses().forEach(function (c) {
+                        const e = courseEndMin(c);
+                        if (e !== null && e > lastEnd) lastEnd = e;
+                    });
+                    courseNote = `<span class="cat-course-note">🏫 今天有课`
+                               + (lastEnd ? ` · ${fmtMinHM(lastEnd)} 后` : '') + `</span>`;
+                }
 
                 // 2026-10-27 v7：分组段不再是一条长列表 —— 每个科目单独一张卡片
                 html += `<div class="category ${config.class}">
                     <div class="category-header">
                         ${catLabel}
-                        <span class="category-count">${doneInCat}/${allActiveInCat.length}</span>
+                        <span class="category-count">${doneInCat}/${allActiveInCat.length}</span>${courseNote}
                     </div>`;
 
                 // 一张任务卡（平铺和按学科分组两条路都要用，所以抽出来）
@@ -7980,6 +8265,7 @@
                 state.petBook = []; state.history = []; state.leftovers = []; state.poemLog = {};
                 state.claimedRewards = []; state.totalStars = 0; state.streak = 0;
                 state.coinsEver = 0; state.coinsSpent = 0; state.maxExp = 0; state.todayChecks = {};
+                state.courseDate = ''; state.courseChecks = {}; state.courseChecksAt = 0;
                 state.petWish = ''; state.petWishDate = ''; state.petWishDone = false;
                 state.freeSettledDate = ''; state.fourFullDate = '';
                 state.wearing = { decor: '', scene: '', medal: '', at: 0 };
@@ -8033,6 +8319,24 @@
 
                 state.history = Array.from(byDate.values())
                     .sort((a, b) => b.date.localeCompare(a.date));
+            }
+            // ===== 今日课程打卡合并（2026-10-27 v8）=====
+            // 照 todayChecks 那套的教训：一律“只增不减”会让撤销永远输给云端残留。
+            // 所以比时间戳：两端都有今天的记录 → courseChecksAt 大的整份赢；
+            // 本机没今天的记录 → 取云端的。
+            // ☠️ 只有 data.courseDate === 今天 才采信云端：否则会把昨天的
+            //    课程打卡当成今天的 → 她明明没上课却显示“已上完”。
+            const _ctoday = getTodayStr();
+            if (data.courseDate === _ctoday) {
+                const _myOk = (state.courseDate === _ctoday);
+                const _lTs = _myOk ? ((typeof state.courseChecksAt === 'number') ? state.courseChecksAt : 0) : 0;
+                const _rTs = (typeof data.courseChecksAt === 'number') ? data.courseChecksAt : 0;
+                if (!_myOk || _rTs > _lTs) {
+                    state.courseDate = _ctoday;
+                    state.courseChecks = (data.courseChecks && typeof data.courseChecks === 'object' && !Array.isArray(data.courseChecks))
+                        ? Object.assign({}, data.courseChecks) : {};
+                    state.courseChecksAt = _rTs;
+                }
             }
             // 云端显式把伙伴设为 null（远程清空/重置）→ 本机跟着清，否则老宠物会在某一端"复活"
             if (data.pet === null) state.pet = null;
@@ -8371,7 +8675,7 @@
         // ⚠️ 只在 data/*.json 真的改了内容时才 bump（它只是 fetch 的 ?v= 缓存破除键）。
         //    2026-09-23 bump：data/shop.json 小家三档价格 200/350/500 → 120/180/250。
         //    （围巾落点 nk 改动在 HTML 里，不涉及 data/，靠 APP_VERSION 破除即可。）
-        const STATIC_DATA_VER = '20261027.1';
+        const STATIC_DATA_VER = '20261027.2';
         const STATIC_FILES = {
             tasks:     'data/tasks.json',
             shop:      'data/shop.json',
@@ -8422,7 +8726,10 @@
             if (D.tasks)     { DEFAULT_TASKS = D.tasks; state.tasks = DEFAULT_TASKS; }
             if (D.shop)      { DEFAULT_SHOP = D.shop; state.shop = DEFAULT_SHOP; }
             if (D.pets)      PET_KINDS = D.pets;
-            if (D.courses)   COURSE_SCHEDULE = D.courses;
+            // ⚠️ 2026-10-27 v8：空数组也是 truthy。原写法 `if (D.courses)` 在远端 courses.json
+            //    被误写成 [] 时会把课程表**整份清空**（内嵌兜底已经被顶掉）→ 课程区永久空白，
+            //    而这时恰恰是最需要兜底的时刻。加长度守卫。
+            if (Array.isArray(D.courses) && D.courses.length) COURSE_SCHEDULE = D.courses;
             if (D.mottos)    MOTTOS = D.mottos;
             if (D.dictBank)  DICTATION_BANK = D.dictBank;
             if (D.praise)    { PRAISE_LIST = D.praise; buildPraiseAudio(); }
