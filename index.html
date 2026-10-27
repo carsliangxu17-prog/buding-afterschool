@@ -8,7 +8,7 @@
     <meta http-equiv="Expires" content="0" data-page-node-id="YXlbOTFHU2Nr6SGRQHt7cy">
     <script>
         (function () {
-            var APP_VERSION = '20261026.1';
+        var APP_VERSION = '20261027.1';
             window.APP_VERSION_STR = APP_VERSION;   // 主脚本里做线上版本自检要用
             try {
                 var params = new URLSearchParams(location.search);
@@ -2209,6 +2209,193 @@
     .bank-del { border:none; background:#ff7675; color:#fff; border-radius:6px; padding:5px 9px; cursor:pointer; }
     .bank-wrong { margin-top:14px; padding-top:12px; border-top:1px dashed #ccc; }
     .bank-wrong-title { font-weight:700; margin-bottom:8px; color:#e74c3c; }
+        /* <<<V7_SKIN_START>>> */
+        /* ==========================================================================
+           2026-10-27 v7 新皮肤「奶油蜜橘」+ 科目独立卡片
+           ⚠️ 这一整段是**追加覆盖层**：不改上面任何一条旧规则。
+              出问题把本段整块删掉，观感即完整回滚到 20261026.1，不动任何逻辑。
+           ⚠️ 完成态（打勾的绿）**故意保留青绿不换** —— 那是语义色（做完=绿），
+              不是品牌色；换成橘色反而让「做完了」这个信号变弱。
+           ========================================================================== */
+        :root {
+            --v7-primary:   #E8734A;   /* 蜜橘：标题、进度、放学后 */
+            --v7-primary-d: #C85A34;
+            --v7-gold:      #D19A2B;   /* 金币 */
+            --v7-ink:       #3F3733;   /* 暖黑正文 */
+            --v7-ink-2:     #9C8F88;   /* 暖灰次要 */
+        }
+
+        body {
+            background: linear-gradient(170deg, #FFFBF4 0%, #FFF4EA 38%, #FFF1F3 72%, #FBF1FA 100%);
+            background-attachment: fixed;
+            color: var(--v7-ink);
+        }
+
+        /* ---------- 顶部 ---------- */
+        .header-title {
+            color: #D9603A;
+            text-shadow: 0 2px 10px rgba(232,115,74,0.20);
+        }
+        .header-subtitle { color: var(--v7-ink-2); }
+        .header-day {
+            background: linear-gradient(135deg, #F0925C, #E8734A);
+            box-shadow: 0 3px 12px rgba(232,115,74,0.30);
+        }
+
+        /* ---------- 统计卡 / 进度 ---------- */
+        .stat-card { box-shadow: 0 2px 12px rgba(180,140,110,0.10); }
+        .stat-label { color: var(--v7-ink-2); }
+        .today-stars { color: #E8734A; }
+        .total-stars { color: var(--v7-gold); }
+        .progress-bar { background: rgba(232,115,74,0.10); }
+        .progress-fill { background: linear-gradient(90deg, #F6B45C, #E8734A); }
+        .progress-text { color: #8A7A72; }
+        .pending-hint { color: #B4703F; }
+
+        .motto-bar {
+            background: linear-gradient(135deg, #FFFCF6 0%, #FFF3E9 100%);
+            border-color: #F5E0CC;
+            box-shadow: 0 2px 12px rgba(232,115,74,0.08);
+        }
+
+        /* ---------- 时段标题：从「高饱和渐变条」改成「白卡 + 左侧色条」 ---------- */
+        .category > .category-header {
+            background: #FFFFFF;
+            color: var(--v7-ink);
+            font-size: 16px;
+            font-weight: 800;
+            letter-spacing: 0.4px;
+            padding: 11px 12px 11px 15px;
+            border-radius: 16px;
+            border-left: 5px solid var(--v7-primary);
+            box-shadow: 0 2px 10px rgba(180,140,110,0.10);
+        }
+        .category > .category-header .category-count {
+            margin-left: auto;
+            font-size: 12px;
+            font-weight: 800;
+            color: #FFFFFF;
+            background: var(--v7-primary);
+            border-radius: 10px;
+            padding: 2px 10px;
+        }
+        /* morning（早上） */
+        .cat-morning > .category-header { border-left-color: #F0925C; }
+        .cat-morning > .category-header .category-count { background: #F0925C; }
+        /* after（放学后 / 周末学习）—— 现用 class 名仍是 cat-english，别被名字骗了 */
+        .cat-english > .category-header { border-left-color: var(--v7-primary); }
+        /* night（睡前） */
+        .cat-life > .category-header { border-left-color: #6E67B8; }
+        .cat-life > .category-header .category-count { background: #6E67B8; color: #FFFFFF; }
+        /* 今日已完成：金色，保持「成就感」*/
+        .category.cat-completed > .category-header {
+            background: linear-gradient(135deg, #FFFCF0, #FFF3DA);
+            border-left-color: #E0A62C;
+        }
+        .category.cat-completed > .category-header .category-count {
+            background: #E0A62C;
+            color: #FFFFFF;
+        }
+
+        /* ---------- 科目独立卡片 ---------- */
+        .subject-grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 10px;
+            margin-top: 10px;
+            align-items: start;
+        }
+        .subject-card {
+            --sc: #8A98A3;
+            --sc-soft: #F4F7F9;
+            --sc-edge: #E3EBF0;
+            background: var(--sc-soft);
+            border: 1.5px solid var(--sc-edge);
+            border-radius: 18px;
+            padding: 4px 8px 8px;
+        }
+        .sc-chinese { --sc: #D95D7C; --sc-soft: #FFF2F5; --sc-edge: #F9DCE4; }
+        .sc-english { --sc: #3E93C4; --sc-soft: #EEF7FC; --sc-edge: #D5EAF6; }
+        .sc-math    { --sc: #7466C9; --sc-soft: #F3F1FD; --sc-edge: #E1DCF8; }
+        .sc-sport   { --sc: #E09420; --sc-soft: #FFF8E9; --sc-edge: #F8E6BD; }
+        .sc-mixed   { --sc: #3D9C82; --sc-soft: #EDF8F3; --sc-edge: #D3EDE3; }
+        .sc-life    { --sc: #8A98A3; --sc-soft: #F4F7F9; --sc-edge: #E3EBF0; }
+
+        .subject-card > .subject-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin: 0;
+            padding: 8px 7px 7px;
+            border-bottom: none;
+        }
+        .subject-card .subject-label {
+            font-size: 14px;
+            font-weight: 800;
+            color: var(--sc);
+            letter-spacing: 0.4px;
+        }
+        .subject-card .subject-count {
+            font-size: 11px;
+            font-weight: 800;
+            color: #FFFFFF;
+            background: var(--sc);
+            border-radius: 9px;
+            padding: 1px 8px;
+        }
+        .subject-card > .task-list { padding: 0; }
+
+        /* 任务卡统一紧凑一档（全页一致）：只收内边距与控件尺寸，字号不缩到看不清 */
+        .category .task-card {
+            padding: 10px;
+            margin: 6px 0;
+            border-radius: 13px;
+            gap: 9px;
+            box-shadow: 0 1px 5px rgba(160,130,110,0.09);
+        }
+        .category .task-card:first-child { margin-top: 0; }
+        .category .task-card:last-child { margin-bottom: 0; }
+        .category .task-card .check-circle { width: 30px; height: 30px; }
+        .category .task-card .task-icon { font-size: 18px; }
+        .category .task-card .task-name { font-size: 13.5px; line-height: 1.35; }
+        .category .task-card .task-order { gap: 3px; margin-left: 2px; }
+        .category .task-card .task-order button { width: 26px; height: 20px; font-size: 9px; }
+        .category .task-card .star-mini { font-size: 12px; }
+        .category .task-card .nutri-tag { font-size: 10px; padding: 1px 6px; margin-left: 4px; }
+
+        /* ---------- 今日课程 / 连续打卡徽章：原为灰绿色块，跟暖橘底撞色 → 一起暖化 ----------
+           .streak-badge 的背景是 JS 内联写死的（renderStreak 里），CSS 必须 !important 才盖得住 */
+        .course-section {
+            background: linear-gradient(135deg, #FFFCF6, #FFF2E8) !important;
+            border-color: #F3E2D2 !important;
+        }
+        .streak-badge {
+            background: linear-gradient(135deg, #F2A47C, #E8734A) !important;
+            color: #FFFFFF !important;
+        }
+        /* .course-empty 是 #F5F5F5 纯灰、.course-card 是天蓝渐变 —— 在奶油底上都显冷 */
+        .course-empty {
+            background: linear-gradient(135deg, #FFFCF6, #FFF4EA) !important;
+            border-left-color: #F0A57F !important;
+            color: #A89A92 !important;
+        }
+        .course-card {
+            background: linear-gradient(135deg, #FFF7EF, #FFEEDF) !important;
+            border-left-color: #E8734A !important;
+            box-shadow: 0 2px 6px rgba(232,115,74,0.10) !important;
+        }
+        .course-header { color: var(--v7-ink); }
+        /* 「还剩 N 项」原来是青绿（跟完成态撞），改成主色 —— 它是提示，不是"已完成" */
+        .progress-percent { color: var(--v7-primary); }
+
+        /* ---------- 宽屏（平板横屏 / 电脑）：两列并排，纵向长度再砍一半 ----------
+           #app 原来是 max-width:480px，两列在 480 里放不下（每列仅 215px），
+           所以只在 >=700px 的屏上放宽容器；手机（含平板竖屏 768 以下）完全不受影响。 */
+        @media (min-width: 700px) {
+            #app { max-width: 760px; }
+            .subject-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+        }
+        /* <<<V7_SKIN_END>>> */
 </style>
     <!-- 云端同步改用 LeanCloud（纯 REST，无需 SDK；配置见下方 LC 对象） -->
 </head>
@@ -2707,13 +2894,18 @@
 
             // ===== 放学后（工作日 16:00-21:00）/ 周末学习：按学科分组 =====
             // —— 语文 ——
-            { id:'e_read',      name:'课外阅读 15 分钟',          icon:'\uD83D\uDCDA', category:'after', subject:'chinese', stars:2, nutri:'wisdom' },
+            // 2026-10-27 v7：课外阅读按时长拆两条 —— 工作日 15 分钟，周六日 30 分钟（金币不变）
+            { id:'e_read',      name:'课外阅读 15 分钟',          icon:'\uD83D\uDCDA', category:'after', subject:'chinese', stars:2, nutri:'wisdom', days:[1,2,3,4,5] },
+            { id:'e_read_wk',   name:'课外阅读 30 分钟',          icon:'\uD83D\uDCDA', category:'after', subject:'chinese', stars:2, nutri:'wisdom', days:[6,0] },
             { id:'e_words',     name:'认识生字 6 个',             icon:'\u270F\uFE0F', category:'after', subject:'chinese', stars:1, nutri:'wisdom', days:[1,2,3,4], startMin:1140 },
             { id:'e_cn_review', name:'语文当日课文复习',           icon:'\uD83D\uDCC4', category:'after', subject:'chinese', stars:2, nutri:'wisdom', days:[1,2,3,4], startMin:1140 },
             { id:'e_cn_dict',   name:'语文当日字词听写',           icon:'\uD83D\uDCDD', category:'after', subject:'chinese', stars:3, nutri:'wisdom', days:[1,2,3,4], startMin:1140 },
             { id:'a_dictation', name:'词语听写 10 个',            icon:'\u270D\uFE0F', category:'after', subject:'chinese', stars:2, nutri:'wisdom', days:[6,0], modal:'dictation' },
             { id:'w_weiyang6',  name:'未泱中文阅读 2 个',          icon:'\uD83D\uDCDA', category:'after', subject:'chinese', stars:2, nutri:'wisdom', days:[6] },
             { id:'w_weiyang0',  name:'未泱中文阅读 3 个',          icon:'\uD83D\uDCDA', category:'after', subject:'chinese', stars:3, nutri:'wisdom', days:[0] },
+            // 2026-10-27 v7 新增：周六专项（校内单元复习 + 生字挂图）
+            { id:'w_cn_unit',   name:'本周语文校内单元复习',        icon:'\uD83D\uDCD6', category:'after', subject:'chinese', stars:3, nutri:'wisdom', days:[6] },
+            { id:'w_cn_chart',  name:'本周新生字挂图复习',          icon:'\uD83D\uDDBC\uFE0F', category:'after', subject:'chinese', stars:3, nutri:'wisdom', days:[6] },
             // —— 英语 ——
             { id:'a_dog',       name:'百词斩（单词小狗）',         icon:'\uD83D\uDC36', category:'after', subject:'english', stars:1, nutri:'wisdom' },
             { id:'a_weiyang',   name:'未泱英文 3 个',             icon:'\uD83D\uDCDA', category:'after', subject:'english', stars:2, nutri:'wisdom', days:[1,2,3,4] },
@@ -2726,10 +2918,9 @@
             { id:'e_53',        name:'53 天天练 · 数学同步',       icon:'\uD83D\uDCD8', category:'after', subject:'math',    stars:2, nutri:'wisdom', days:[1,2,3,4], startMin:1140 },
             { id:'e_math_talk', name:'数学说题（当日例题）',        icon:'\uD83D\uDCAC', category:'after', subject:'math',    stars:2, nutri:'wisdom', days:[1,2,3,4], startMin:1140 },
             { id:'w_math_hw',   name:'数学思维课作业',             icon:'\u270F\uFE0F', category:'after', subject:'math',    stars:3, nutri:'wisdom', days:[0] },
+            { id:'w_math_unit', name:'本周数学校内单元复习',        icon:'\uD83D\uDCD0', category:'after', subject:'math',    stars:3, nutri:'wisdom', days:[6] },
             // —— 运动 ——
             { id:'w_family',    name:'运动 30 分钟',              icon:'\uD83E\uDD38', category:'after', subject:'sport',   stars:3, nutri:'energy', days:[6,0] },
-            // —— 综合（跨学科）——
-            { id:'w_review',    name:'复习上周语文 + 数学',        icon:'\uD83D\uDD01', category:'after', subject:'mixed',   stars:3, nutri:'wisdom', days:[6] },
             // —— 生活 ——
             { id:'e_pack',      name:'整理书包',                  icon:'\uD83C\uDF92', category:'after', subject:'life',    stars:1, nutri:'peace',  days:[1,2,3,4], startMin:1140 },
 
@@ -3380,7 +3571,7 @@
             m_break:   ['task_calcium1'],            // 「早餐吃完啦」只对早餐成立
             m_milk:    ['task_calcium2'],            // 「喝了好喝的牛奶」只对牛奶成立
             m_enread:  ['task_wisdom1'],
-            e_read:    ['task_wisdom1'], e_engread: ['task_wisdom1'],
+            e_read:    ['task_wisdom1'], e_read_wk: ['task_wisdom1'], e_engread: ['task_wisdom1'],
             a_abc:     ['task_wisdom1'], a_weiyang: ['task_wisdom1'],
             w_weiyang6:['task_wisdom1'], w_weiyang0:['task_wisdom1'],
             // 2026-10-26：a_sport（户外运动）已从任务库删除，周末运动改用 w_family ——
@@ -4716,7 +4907,7 @@
         }
 
         // 一次性任务参数校准（ensureValidState 里调用，只跑一遍）
-        const TASK_PATCH_VER = 6;
+        const TASK_PATCH_VER = 7;
         function applyTaskPatches() {
             if ((state.taskPatchVer || 0) >= TASK_PATCH_VER) return;
             if (!Array.isArray(state.tasks)) state.tasks = [];
@@ -4891,6 +5082,69 @@
             state.tasks.sort(function (a, b) {
                 const ia = a ? V6_SEQ.indexOf(a.id) : -1;
                 const ib = b ? V6_SEQ.indexOf(b.id) : -1;
+                return (ia < 0 ? 9000 : ia) - (ib < 0 ? 9000 : ib);
+            });
+            // ============================================================
+            // v7（2026-10-27，天姝）：周末专项补齐 + 课外阅读按时长拆分
+            //   ① 删：复习上周语文 + 数学(w_review)
+            //   ② 新增「本周语文校内单元复习」(w_cn_unit)，仅周六，3 金币
+            //   ③ 新增「本周数学校内单元复习」(w_math_unit)，仅周六，3 金币
+            //   ④ 新增「本周新生字挂图复习」(w_cn_chart)，仅周六，3 金币
+            //   ⑤ 课外阅读拆两条：工作日「课外阅读 15 分钟」(e_read) /
+            //      周六日「课外阅读 30 分钟」(e_read_wk)，都是 2 金币
+            // ⚠️ 同 v4/v5/v6：删任务必须显式 filter（mergeDefaultTasks 只补不删）；
+            //    新增项自带完整定义（applyStaticOverrides 会整份替换 DEFAULT_TASKS）；
+            //    只动 state.tasks，不碰 todayChecks。
+            // ============================================================
+            state.tasks = state.tasks.filter(function (x) {
+                return !x || x.id !== 'w_review';
+            });
+            const readV7 = state.tasks.find(function (x) { return x && x.id === 'e_read'; });
+            if (readV7) {
+                readV7.name = '课外阅读 15 分钟';
+                readV7.days = [1, 2, 3, 4, 5];   // 工作日 15 分钟；周六日交给 e_read_wk
+            }
+            [{
+                id: 'e_read_wk', name: '课外阅读 30 分钟', icon: '\uD83D\uDCDA',
+                category: 'after', subject: 'chinese', stars: 2, nutri: 'wisdom',
+                days: [6, 0]
+            }, {
+                id: 'w_cn_unit', name: '本周语文校内单元复习', icon: '\uD83D\uDCD6',
+                category: 'after', subject: 'chinese', stars: 3, nutri: 'wisdom',
+                days: [6]
+            }, {
+                id: 'w_cn_chart', name: '本周新生字挂图复习', icon: '\uD83D\uDDBC\uFE0F',
+                category: 'after', subject: 'chinese', stars: 3, nutri: 'wisdom',
+                days: [6]
+            }, {
+                id: 'w_math_unit', name: '本周数学校内单元复习', icon: '\uD83D\uDCD0',
+                category: 'after', subject: 'math', stars: 3, nutri: 'wisdom',
+                days: [6]
+            }].forEach(function (def) {
+                const got = state.tasks.find(function (x) { return x && x.id === def.id; });
+                if (got) {
+                    got.name = def.name;
+                    got.category = def.category;
+                    got.subject = def.subject;
+                    if (typeof got.stars !== 'number') got.stars = def.stars;
+                    if (!got.nutri) got.nutri = def.nutri;
+                    if (def.days) got.days = def.days.slice();
+                } else {
+                    state.tasks.push(Object.assign({ weekendOnly: false }, def));
+                }
+            });
+            // 顺序：语文组把两条周末专项排最后，数学组把单元复习排最后
+            const V7_SEQ = [
+                'm_listen', 'm_break', 'm_milk', 'm_egg', 'm_enread',
+                'e_read', 'e_read_wk', 'e_words', 'e_cn_review', 'e_cn_dict',
+                'a_dictation', 'w_weiyang6', 'w_weiyang0', 'w_cn_unit', 'w_cn_chart',
+                'a_dog', 'a_weiyang', 'a_en_dict', 'a_abc', 'e_engread', 'w_eng_hw',
+                'a_calc', 'e_53', 'e_math_talk', 'w_math_hw', 'w_math_unit',
+                'w_family', 'e_pack', 'n_sleep', 'n_eyedrop'
+            ];
+            state.tasks.sort(function (a, b) {
+                const ia = a ? V7_SEQ.indexOf(a.id) : -1;
+                const ib = b ? V7_SEQ.indexOf(b.id) : -1;
                 return (ia < 0 ? 9000 : ia) - (ib < 0 ? 9000 : ib);
             });
             state.taskPatchVer = TASK_PATCH_VER;
@@ -5304,7 +5558,7 @@
         // 2026-09-23：warn_calcium「牛奶还没喝完」/ warn_wisdom「想听你讲一个故事」都点了具体的事，
         // 判据必须落到具体任务上，否则维度被判"未完成"时会说出与事实不符的提醒。
         // 2026-10-26：m_read_cn（语文朗读·金波四季美文）已删，从判定表里移除
-        const READING_IDS = ['m_enread', 'e_read', 'e_engread',
+        const READING_IDS = ['m_enread', 'e_read', 'e_read_wk', 'e_engread',
                              'a_abc', 'a_weiyang', 'w_weiyang6', 'w_weiyang0'];
         function hasPendingTask(id) {
             return calcTodayPending().some(function (t) { return t.id === id; });
@@ -5547,7 +5801,7 @@
             { id:'fast5',  name:'闪电早餐',   icon:'\u26A1',      need:5, mode:'total',  desc:'一共做到 5 天，早餐都在 15 分钟内吃完',
               check:function(ids){ return !!(ids['m_break'] && ids['m_break'].flag === 'ok'); } },
             { id:'read5',  name:'小书虫',     icon:'\uD83D\uDC1B', need:5, mode:'streak', desc:'连着 5 天读书',
-              check:function(ids){ return !!(ids['e_read'] || ids['m_enread']); } },
+              check:function(ids){ return !!(ids['e_read'] || ids['e_read_wk'] || ids['m_enread']); } },
             // 2026-10-26：工作日不再有运动任务，运动只剩周末的「运动 30 分钟」(w_family)。
             //   勋章判据只看 w_family —— 攒 5 天要跨 3 个周末，比原来慢，但仍可达。
             { id:'sport5', name:'运动小将',   icon:'\uD83C\uDFC5', need:5, mode:'total',  desc:'一共做到 5 天，出去玩或和爸妈一起运动',
@@ -6470,12 +6724,12 @@
                 const allActiveInCat = state.tasks.filter(t => t.category === catKey && taskActiveToday(t));
                 const doneInCat = allActiveInCat.filter(t => state.todayChecks[t.id]).length;
 
+                // 2026-10-27 v7：分组段不再是一条长列表 —— 每个科目单独一张卡片
                 html += `<div class="category ${config.class}">
                     <div class="category-header">
                         ${catLabel}
                         <span class="category-count">${doneInCat}/${allActiveInCat.length}</span>
-                    </div>
-                    <div class="task-list">`;
+                    </div>`;
 
                 // 一张任务卡（平铺和按学科分组两条路都要用，所以抽出来）
                 const cardHTML = function (task) {
@@ -6501,6 +6755,9 @@
                 };
 
                 // 2026-10-26：放学后 / 周末学习 按学科做二级分组；早上、睡前平铺
+                // 2026-10-27 v7：分组段把每一科包成**独立卡片**（.subject-card），
+                //   宽屏两列并排、手机单列 —— 原来是一条长列表 + 虚线小标题，
+                //   11 项串下来整屏都放不下，看着又长又腻。
                 if (SUBJECT_GROUPED_CATS.indexOf(catKey) >= 0) {
                     const bySubject = {};
                     for (const task of tasks) {
@@ -6508,6 +6765,7 @@
                         if (!bySubject[sk]) bySubject[sk] = [];
                         bySubject[sk].push(task);
                     }
+                    html += `<div class="subject-grid">`;
                     for (const sk of SUBJECT_ORDER) {
                         const arr = bySubject[sk];
                         if (!arr || !arr.length) continue;
@@ -6516,16 +6774,22 @@
                             return (SUBJECT_CONFIG[t.subject] ? t.subject : 'life') === sk;
                         });
                         const doneInSub = allInSub.filter(function (t) { return state.todayChecks[t.id]; }).length;
-                        html += `<div class="subject-header">
-                            <span class="subject-label">${SUBJECT_CONFIG[sk].label}</span>
-                            <span class="subject-count">${doneInSub}/${allInSub.length}</span>
-                        </div>`;
+                        html += `<div class="subject-card sc-${sk}" id="subject-${catKey}-${sk}">
+                            <div class="subject-header">
+                                <span class="subject-label">${SUBJECT_CONFIG[sk].label}</span>
+                                <span class="subject-count">${doneInSub}/${allInSub.length}</span>
+                            </div>
+                            <div class="task-list">`;
                         for (const task of arr) html += cardHTML(task);
+                        html += `</div></div>`;
                     }
+                    html += `</div>`;
                 } else {
+                    html += `<div class="task-list">`;
                     for (const task of tasks) html += cardHTML(task);
+                    html += `</div>`;
                 }
-                html += `</div></div>`;
+                html += `</div>`;
             }
 
             // 2. 渲染已完成区域
@@ -8090,7 +8354,7 @@
         // ⚠️ 只在 data/*.json 真的改了内容时才 bump（它只是 fetch 的 ?v= 缓存破除键）。
         //    2026-09-23 bump：data/shop.json 小家三档价格 200/350/500 → 120/180/250。
         //    （围巾落点 nk 改动在 HTML 里，不涉及 data/，靠 APP_VERSION 破除即可。）
-        const STATIC_DATA_VER = '20261026.1';
+        const STATIC_DATA_VER = '20261027.1';
         const STATIC_FILES = {
             tasks:     'data/tasks.json',
             shop:      'data/shop.json',
