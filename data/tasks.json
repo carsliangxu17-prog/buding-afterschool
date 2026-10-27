@@ -60,6 +60,27 @@
     "subject": "chinese",
     "stars": 2,
     "nutri": "wisdom",
+    "days": [
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "weekendOnly": false
+  },
+  {
+    "id": "e_read_wk",
+    "name": "课外阅读 30 分钟",
+    "icon": "📚",
+    "category": "after",
+    "subject": "chinese",
+    "stars": 2,
+    "nutri": "wisdom",
+    "days": [
+      6,
+      0
+    ],
     "weekendOnly": false
   },
   {
@@ -151,6 +172,32 @@
     "nutri": "wisdom",
     "days": [
       0
+    ],
+    "weekendOnly": false
+  },
+  {
+    "id": "w_cn_unit",
+    "name": "本周语文校内单元复习",
+    "icon": "📖",
+    "category": "after",
+    "subject": "chinese",
+    "stars": 3,
+    "nutri": "wisdom",
+    "days": [
+      6
+    ],
+    "weekendOnly": false
+  },
+  {
+    "id": "w_cn_chart",
+    "name": "本周新生字挂图复习",
+    "icon": "🖼️",
+    "category": "after",
+    "subject": "chinese",
+    "stars": 3,
+    "nutri": "wisdom",
+    "days": [
+      6
     ],
     "weekendOnly": false
   },
@@ -304,6 +351,19 @@
     "weekendOnly": false
   },
   {
+    "id": "w_math_unit",
+    "name": "本周数学校内单元复习",
+    "icon": "📐",
+    "category": "after",
+    "subject": "math",
+    "stars": 3,
+    "nutri": "wisdom",
+    "days": [
+      6
+    ],
+    "weekendOnly": false
+  },
+  {
     "id": "w_family",
     "name": "运动 30 分钟",
     "icon": "🤸",
@@ -314,19 +374,6 @@
     "days": [
       6,
       0
-    ],
-    "weekendOnly": false
-  },
-  {
-    "id": "w_review",
-    "name": "复习上周语文 + 数学",
-    "icon": "🔁",
-    "category": "after",
-    "subject": "mixed",
-    "stars": 3,
-    "nutri": "wisdom",
-    "days": [
-      6
     ],
     "weekendOnly": false
   },
