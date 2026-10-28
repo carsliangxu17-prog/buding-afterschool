@@ -8,7 +8,7 @@
     <meta http-equiv="Expires" content="0" data-page-node-id="YXlbOTFHU2Nr6SGRQHt7cy">
     <script>
         (function () {
-        var APP_VERSION = '20261028.2';
+        var APP_VERSION = '20261028.3';
             window.APP_VERSION_STR = APP_VERSION;   // 主脚本里做线上版本自检要用
             try {
                 var params = new URLSearchParams(location.search);
@@ -6122,6 +6122,42 @@
         function courseDoneCount() {
             return getTodayCourses().filter(function (c) { return courseChecked(c.id); }).length;
         }
+        // ===== 2026-10-28 v12：课程打卡的**历史口径** =====
+        // ☠️ 原有 bug（云端实测确认）：coursefull 的 have() 只读 courseDoneCount()（只看今天），
+        //    而换天时 courseChecks 会被清空 → 这枚勋章**永远拿不到**（云端 medals 里确实没有它）。
+        //    ⚠️ 注意「跨天不归档」这个说法是**错的**：saveTodayToHistory 一直在写
+        //       courses:{done,total}（v8 就有），归档早就在 → 缺的是「读它的人」。
+        //    ⇒ 补两个历史口径函数，勋章改读它们。
+        // ⚠️ 必须排除「今天」：实时打卡会先把今天写进 history（saveTodayToHistory 非跨天场景），
+        //    不排除就会与 courseDoneCount() 重复计数。
+        function courseHistDays() {
+            return (state.history || []).filter(function (h) {
+                return h && h.date && h.date !== state.todayDate
+                    && h.courses && typeof h.courses === 'object';
+            });
+        }
+        // 累计上完的课节数（历史 + 今天）
+        function allCourseDoneTotal() {
+            let n = 0;
+            courseHistDays().forEach(function (h) {
+                const d = h.courses.done;
+                if (typeof d === 'number' && d > 0) n += d;
+            });
+            return n + courseDoneCount();
+        }
+        // 「当天有课、且那天的课全上完」的天数（历史 + 今天）
+        function fullCourseDays() {
+            let n = 0;
+            courseHistDays().forEach(function (h) {
+                const c = h.courses;
+                const t = (typeof c.total === 'number') ? c.total : 0;
+                const d = (typeof c.done === 'number') ? c.done : 0;
+                if (t > 0 && d === t) n++;
+            });
+            const cs = getTodayCourses();
+            if (cs.length > 0 && courseDoneCount() === cs.length) n++;
+            return n;
+        }
         // 上完一节 / 取消。课程不写 todayChecks，所以自己管账。
         function toggleCourse(courseId) {
             ensureToday();   // 页面常驻后台不重载 → 必须先保证这一笔记在「今天」的账上
@@ -6413,7 +6449,16 @@
               check:function(ids){ return !!ids['a_calc']; } },
             { id:'coursefull', name:'全课满勤日', icon:'🏫', need:1,  mode:'custom',
               desc:'有一天把当天的课全都上完了',
-              have:function(){ const _c = getTodayCourses(); return (_c.length > 0 && courseDoneCount() === _c.length) ? 1 : 0; } },
+              // 2026-10-28 v12：口径从「今天的课全上完」改成**历史累计**
+              //   （原版跨天必然归零 → 这枚勋章永远拿不到）。need 保持 1，不提高难度。
+              have:function(){ return fullCourseDays(); } },
+            // ===== 2026-10-28 v12：课程累计勋章 =====
+            // 一周 5 节课（周三合唱 / 周四合唱 / 周五英语 / 周六数学 / 周日阅读）
+            //   → 12 节 ≈ 2.5 周可达，定为首枚。
+            { id:'course12', name:'课程收藏家', icon:'🎓', need:12, mode:'custom',
+              desc:'一共上完 12 节课',
+              unit:'节',   // custom 型的进度文案单位（否则会沿用「上完当天的课」，语义错）
+              have:function(){ return allCourseDoneTotal(); } },
             // ===== 2026-10-28 v10：家务勋章 =====
             // 门槛按"只在周末出现"定：一周最多 2 天（周六日）→ 攒 2 天 = 一到两周可达。
             // rep:1 = 之后每达标一个自然周（周末做过 1 天）就能再得一枚。
@@ -6675,8 +6720,12 @@
                     prog = (wh >= m.rep) ? '本周已得 \u2713' : ('本周再做 ' + (m.rep - wh) + ' 天');
                 } else {
                     prog = got ? '\u5df2\u5f97\u5230'
-                        : (p.mode === 'custom' ? '\u4e0a\u5b8c\u5f53\u5929\u7684\u8bfe'
-                        : (p.mode === 'total' ? ('\u518d\u6512 ' + left + ' \u5929') : ('\u8fd8\u5dee ' + left + ' \u5929')));
+                        // 2026-10-28 v12：custom 型的文案原来硬编码「上完当天的课」，
+                        //   对新增的 course12（累计 12 节）完全不成立 → 改成看 `unit` 字段：
+                        //   有 unit 就说「再上 N 节」，没有才用课程满勤那句。
+                        : (p.mode === 'custom'
+                            ? (m.unit ? ('\u518d\u4e0a ' + left + ' ' + m.unit) : '\u4e0a\u5b8c\u5f53\u5929\u7684\u8bfe')
+                          : (p.mode === 'total' ? ('\u518d\u6512 ' + left + ' \u5929') : ('\u8fd8\u5dee ' + left + ' \u5929')));
                 }
                 // custom 型不参与"离最近的目标"推荐：它的条件不是攒天数，
                 // 否则 left 恒为 1 会一直霸占 nearest，把真正的攒天数目标挤掉。
@@ -9197,7 +9246,10 @@
         //    （围巾落点 nk 改动在 HTML 里，不涉及 data/，靠 APP_VERSION 破除即可。）
         //    2026-10-27 bump：data/medals.json 7 → 14 条（v9 只改了内置兜底、忘了外置，
         //    而外置是权威 ⇒ 页面一直只显示 7 枚。这是"静态数据必须两边一起改"的实例。）
-        const STATIC_DATA_VER = '20261028.1';
+        //    2026-10-28 bump：data/medals.json 14 → 15 条（v12 加「课程收藏家」course12；
+        //    同时改 coursefull 的判定口径 —— 口径是函数在 HTML 里，但 medal 条目在外置，
+        //    两边必须一起动，否则远端会把这个 id 过滤掉）。⚠️ 最终列表 = 外置 JSON 的 id 集合。
+        const STATIC_DATA_VER = '20261028.3';
         const STATIC_FILES = {
             tasks:     'data/tasks.json',
             shop:      'data/shop.json',
@@ -9277,6 +9329,9 @@
                         // v10：rep（本周需要几天才算再得一枚）也是"逻辑"，但它是数字、能存进 JSON。
                         //   远端旧缓存里没有这个字段 → 用内置兜底，否则升级后累计功能会静默失效。
                         if (typeof m.rep !== 'number') m.rep = byId[m.id].rep;
+                        // v12：unit（custom 型的进度单位，如「节」）同理 —— 远端旧缓存没有它，
+                        //   不回挂的话 course12 会显示成「上完当天的课」（语义完全错）。
+                        if (typeof m.unit !== 'string') m.unit = byId[m.id].unit;
                         return m;
                     });
             }
