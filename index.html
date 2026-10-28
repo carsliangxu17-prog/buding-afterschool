@@ -8,7 +8,7 @@
     <meta http-equiv="Expires" content="0" data-page-node-id="YXlbOTFHU2Nr6SGRQHt7cy">
     <script>
         (function () {
-        var APP_VERSION = '20261028.1';
+        var APP_VERSION = '20261028.2';
             window.APP_VERSION_STR = APP_VERSION;   // 主脚本里做线上版本自检要用
             try {
                 var params = new URLSearchParams(location.search);
@@ -888,6 +888,28 @@
         .medal-total { font-size:11px;color:#2E9E6B;margin-top:8px;text-align:center;font-weight:600; }
         .medal-total b { color:#F5A623;font-size:13px; }
         /* ===== 勋章累计角标（2026-10-28 v10） END ===== */
+        /* ===== 续命卡 / 妈妈补 / 家长面板（2026-10-28 v11） START ===== */
+        /* ⚠️ 本块整体可删（删掉即回滚外观，JS 逻辑不受影响） */
+        .shield-chip { display:inline-block;margin-left:6px;padding:1px 7px;border-radius:9px;
+            font-size:11px;font-weight:700;color:#fff;background:linear-gradient(135deg,#7F77DD,#534AB7); }
+        .parent-tag { display:inline-block;margin-left:5px;padding:0 5px;border-radius:7px;
+            font-size:10px;font-weight:600;color:#993C1D;background:#FAECE7;vertical-align:middle; }
+        .pp-tip { font-size:12.5px;color:#5F5E5A;line-height:1.6;margin-bottom:10px; }
+        .pp-status { font-size:12.5px;color:#2E9E6B;background:#E1F5EE;border-radius:8px;
+            padding:7px 10px;margin-bottom:12px;text-align:center; }
+        /* ☠️ 内层不写死列数，用 auto-fill + minmax(min(100%,140px),1fr)（错误 43） */
+        .pp-grid { display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,140px),1fr));gap:8px; }
+        .pp-btn { display:flex;align-items:center;gap:6px;padding:9px 10px;border-radius:9px;
+            border:0.5px solid #D3D1C7;background:#fff;font-size:12.5px;color:#2C2C2A;
+            text-align:left;cursor:pointer;font-family:inherit; }
+        .pp-btn:active { background:#F1EFE8; }
+        .pp-ico { font-size:15px;line-height:1; }
+        .pp-name { flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap; }
+        .pp-empty { font-size:13px;color:#2E9E6B;text-align:center;padding:14px 0;font-weight:600; }
+        .pp-locked { font-size:11.5px;color:#888780;line-height:1.6;margin-top:12px;
+            padding-top:10px;border-top:0.5px solid #E8E6DF; }
+        /* ===== 续命卡 / 妈妈补 / 家长面板（2026-10-28 v11） END ===== */
+
         .float-star.golden { font-size:28px;filter:drop-shadow(0 0 8px rgba(255,201,60,.95)); }
 
         /* ========== 通用弹窗（周报） ========== */
@@ -2820,7 +2842,9 @@
         // 上传到云端的数据只包含动态打卡记录（任务/奖励用本地默认值）
         // ⚠️ coinsSpent（累计花费）必须在这里（2026-09-26）：它是"钱花掉了"的唯一记录，
         //    不同步的话另一台设备永远不知道她花过钱，就会继续把钱退回给她。
-        const SYNC_FIELDS = ['todayChecks', 'todayDate', 'totalStars', 'streak', 'history', 'claimedRewards', 'pet', 'medals', 'poemLog', 'owned', 'leftovers', 'petBook', 'maxExp', 'coinsEver', 'coinsSpent', 'courseDate', 'courseChecks', 'courseChecksAt', 'achv', 'petWish', 'petWishDate', 'petWishDone', 'resetAt', 'fourFullDate', 'checksUpdatedAt', 'wearing', 'foodToday', 'foodLog', 'petLegs'];
+        const SYNC_FIELDS = ['todayChecks', 'todayDate', 'totalStars', 'streak', 'history', 'claimedRewards', 'pet', 'medals', 'poemLog', 'owned', 'leftovers', 'petBook', 'maxExp', 'coinsEver', 'coinsSpent', 'courseDate', 'courseChecks', 'courseChecksAt', 'achv', 'petWish', 'petWishDate', 'petWishDone', 'resetAt', 'fourFullDate', 'checksUpdatedAt', 'wearing', 'foodToday', 'foodLog', 'petLegs',
+            // v11：只同步「只增」的量，别同步「手上还剩几张」（余量类不能 max 合并）
+            'streakShieldIssued', 'streakShieldWeek', 'streakShieldDates'];
 
         // 上传数据到 Supabase（upsert 固定 id，多端共用同一份；只更新提供的列，不覆盖其它列）
         function syncToCloud() {
@@ -4314,7 +4338,13 @@
             let key, text;
             const stage = getPetStage(state.pet.exp || 0);
             const wish = petWishToday();
-            if (calcTodayCompleted() === 0) {
+            // v11：断 >=2 天优先说「有点想你了，快来打卡吧！」
+            // ☠️ 只用现成台词（hungry2）：预录语音与文字必须一字不差，改文案就得重录 mp3
+            const _miss = missDaysCount();
+            if (calcTodayCompleted() === 0 && _miss >= 2) {
+                key = 'hungry2';
+                text = PET_LINE[key];
+            } else if (calcTodayCompleted() === 0) {
                 // 第一句不说"你怎么还没打卡"——说"我需要你"，或"我陪你开始"
                 if (wish && stage > 0) {
                     key = 'wish_' + wish;
@@ -4801,11 +4831,13 @@
             document.getElementById('plateYes').onclick = function () { mask.remove(); finishCheck(task, task.stars, 'ok'); };
             document.getElementById('plateNo').onclick  = function () { mask.remove(); finishCheck(task, 1, 'leftover'); };
         }
-        function finishCheck(task, stars, flag) {
+        function finishCheck(task, stars, flag, byParent) {
             ensureToday();   // 2026-09-16：写入打卡前兜底保证记在今天的账上
             const golden = (flag !== 'leftover') && (Math.random() < 0.15);
             const gain = golden ? stars * 2 : stars;
             state.todayChecks[task.id] = { stars: gain, flag: flag, nutri: task.nutri, at: Date.now(), golden: golden };
+            // v11：家长补打留痕 —— 不写的话"她点的"和"妈妈补的"在历史里完全一样
+            if (byParent) state.todayChecks[task.id].byParent = true;
             state.checksUpdatedAt = Date.now();
             state.totalStars += gain;
             state.coinsEver = (state.coinsEver || 0) + gain;
@@ -4921,6 +4953,13 @@
             todayDate: getTodayStr(),
             totalStars: 0,
             streak: 0,
+            // ===== 连击续命卡（2026-10-28 v11）=====
+            // issued：**累计发出**的张数（只增）；dates：已被护住的日期（只增并集）。
+            // 手上剩几张 = issued − dates.length，**不单独存余量**（余量不能做多端合并）。
+            streakShieldIssued: 0,
+            streakShieldWeek: '',
+            streakShieldDates: [],
+            missYouDate: '',        // 「宠物想你」一天只说一次
             pet: null,
             medals: [],
             petBook: [],
@@ -5609,6 +5648,7 @@
             if (state.todayDate === getTodayStr()) return false;
             rescueMisfiledTodayChecks();
             if (state.todayDate !== getTodayStr()) checkNewDay();
+            try { dailyCareTick(); } catch (e) { console.warn('dailyCareTick', e); }
             return true;
         }
 
@@ -5668,6 +5708,7 @@
                     stars: (typeof rec.stars === 'number') ? rec.stars : t.stars,   // 实际到账（含金色翻倍）
                     category: t.category,
                     flag: rec.flag || 'ok',
+                    byParent: !!rec.byParent,   // v11：妈妈补的项，历史可追溯
                 };
             });
             const todayEarned = taskDetails.reduce(function (s, t) { return s + t.stars; }, 0);
@@ -5812,13 +5853,196 @@
             });
             return out;
         }
+        // ========== 续命卡 / 宠物想你 / 家长补打（2026-10-28 v11） ==========
+        // 天姝要"连续不打卡有点代价"，但**不能扣金币**，理由两条（见 AGENTS.md 错误 50）：
+        //   ① 手工打卡分不清"做了忘点"和"没做"，扣钱必然误伤 → 逼出乱点 → 数据失真
+        //      （而 data 一旦失真，就再也没法判断"是时间不够还是动力不够"）
+        //   ② 惩罚要治"不打开"，可惩罚只在她打开时才结算 → 逻辑死结
+        // 换成的两样都不动钱包：宠物想你 / 连击续命卡。
+        const STREAK_SHIELD_MAX = 2;
+
+        // 被护住的日期集合（**只增数组** → 多端合并取并集，天然安全）
+        function shieldDateSet() {
+            const m = {};
+            (state.streakShieldDates || []).forEach(function (d) { if (d) m[d] = true; });
+            return m;
+        }
+        // 手上还剩几张 = 累计发放 − 已被护住的天数
+        // ☠️ 卡数是**余量类**，绝不能拿"手上的张数"去 Math.max 合并
+        //    （用掉一张会被另一台顶回来 —— 正是错误 24 那个坑）
+        //    → 所以只同步"只增"的 issued 与 dates，手上几张靠减出来
+        function shieldLeft() {
+            const used = (state.streakShieldDates || []).length;
+            return Math.max(0, (state.streakShieldIssued || 0) - used);
+        }
+        // 自然周每周发 1 张（与勋章 rep 共用 weekKeyOf，周一起算）
+        function grantShieldIfDue() {
+            const wk = weekKeyOf(state.todayDate);
+            if (!wk) return false;
+            if (state.streakShieldWeek && wk <= state.streakShieldWeek) return false;
+            state.streakShieldWeek = wk;
+            if (shieldLeft() < STREAK_SHIELD_MAX) {
+                state.streakShieldIssued = (state.streakShieldIssued || 0) + 1;
+                saveState();
+                return true;
+            }
+            saveState();
+            return false;
+        }
+        // 结算：**只护"断 1 天"**（昨天没打卡、前天有打卡）
+        //   连断 >=2 天不护 —— 一张卡护不住，而且那已经不是"小意外"了
+        function settleStreakShield() {
+            if (shieldLeft() <= 0) return false;
+            const set = shieldDateSet();
+            const y = new Date(state.todayDate); y.setDate(y.getDate() - 1);
+            const ys = fmtDate(y);
+            const b = new Date(state.todayDate); b.setDate(b.getDate() - 2);
+            const bs = fmtDate(b);
+            if (set[ys]) return false;                    // 已经护过，绝不重复消耗
+            const byDate = {};
+            (state.history || []).forEach(function (h) { if (h && h.date) byDate[h.date] = h; });
+            const yDone = byDate[ys] ? (byDate[ys].completed || 0) : 0;
+            const bDone = byDate[bs] ? (byDate[bs].completed || 0) : 0;
+            if (yDone > 0) return false;                  // 昨天打了卡，不需要护
+            if (bDone === 0) return false;                // 前天也没打卡 → 不是单日断裂
+            state.streakShieldDates = (state.streakShieldDates || []).concat([ys]);
+            saveState();
+            return true;
+        }
+        // 距最近一次"有打卡"的日子过了几天（不含今天）；没有历史 = 0
+        function missDaysCount() {
+            if (calcTodayCompleted() > 0) return 0;
+            const byDate = {};
+            (state.history || []).forEach(function (h) { if (h && h.date) byDate[h.date] = h; });
+            const t = new Date(state.todayDate);
+            for (let i = 1; i <= 60; i++) {
+                const d = new Date(t); d.setDate(d.getDate() - i);
+                const h = byDate[fmtDate(d)];
+                if (h && (h.completed || 0) > 0) return i - 1;
+            }
+            return 0;
+        }
+        // 每次打开 / 跨天跑一次：发卡 → 结算护住的（幂等，可重复调）
+        function dailyCareTick() {
+            if (!Array.isArray(state.streakShieldDates)) state.streakShieldDates = [];
+            if (typeof state.streakShieldIssued !== 'number') state.streakShieldIssued = 0;
+            const granted = grantShieldIfDue();
+            const used = settleStreakShield();
+            if (granted) {
+                setTimeout(function () {
+                    showToast('\uD83D\uDEE1 这周的新续命卡到啦（共 ' + shieldLeft() + ' 张）',
+                              'linear-gradient(135deg,#7F77DD,#534AB7)');
+                }, 700);
+            }
+            if (used) {
+                setTimeout(function () {
+                    showToast('\uD83D\uDEE1 连击护住啦！用掉 1 张续命卡',
+                              'linear-gradient(135deg,#7F77DD,#534AB7)');
+                }, 1500);
+            }
+        }
+        // 连击徽章后面的护盾小标
+        function shieldChipHTML() {
+            const n = shieldLeft();
+            if (n <= 0) return '';
+            return '<span class="shield-chip" title="断 1 天会自动帮你保住连击">\uD83D\uDEE1 ' + n + '</span>';
+        }
+        // 任务卡上的「妈妈补」标记 —— 补打必须留痕，别和"她自己点的"混为一谈
+        function parentTagHTML(taskId) {
+            const rec = state.todayChecks ? state.todayChecks[taskId] : null;
+            if (!rec || typeof rec !== 'object' || !rec.byParent) return '';
+            return '<span class="parent-tag">\uD83D\uDC69 妈妈补</span>';
+        }
+        // 家长小工具：长按宠物 1.4 秒进入（孩子摸头是短点 → 不易误触）
+        function openParentPanel() {
+            const all = getActiveTasks();
+            const doneN = calcTodayCompleted();
+            const pending = all.filter(function (t) {
+                if (state.todayChecks[t.id]) return false;
+                if (t.modal || t.plate || t.timer) return false;   // 这几类必须她自己走流程
+                return true;
+            });
+            const locked = all.filter(function (t) {
+                return !state.todayChecks[t.id] && (t.modal || t.plate || t.timer);
+            });
+            let inner = '<div class="pp-tip">她做了但忘了点？点一下就能替她补上 —— '
+                      + '卡片上会标「\uD83D\uDC69 妈妈补」，历史里也留痕。</div>';
+            inner += '<div class="pp-status">\uD83D\uDEE1 续命卡 ' + shieldLeft() + ' 张'
+                   + '　·　\uD83D\uDD25 连续 ' + calcStreak() + ' 天'
+                   + '　·　今天还差 ' + (all.length - doneN) + ' 项</div>';
+            if (!pending.length) {
+                inner += '<div class="pp-empty">今天能补的都补完了 \uD83C\uDF89</div>';
+            } else {
+                inner += '<div class="pp-grid">';
+                pending.forEach(function (t) {
+                    inner += '<button class="pp-btn" onclick="parentCheck(\'' + t.id + '\')">'
+                           + '<span class="pp-ico">' + t.icon + '</span>'
+                           + '<span class="pp-name">' + t.name + '</span></button>';
+                });
+                inner += '</div>';
+            }
+            if (locked.length) {
+                inner += '<div class="pp-locked">这几项得她自己点（要听写 / 要计时 / 光盘才算）：'
+                       + locked.map(function (t) { return t.icon + t.name; }).join('、') + '</div>';
+            }
+            showModal('\uD83D\uDC69 家长小工具', inner);
+        }
+        function parentCheck(taskId) {
+            const task = state.tasks.find(function (t) { return t.id === taskId; });
+            if (!task) return;
+            finishCheck(task, task.stars, 'ok', true);   // 第 4 个参数 = 家长补打（留痕）
+            const mask = document.querySelector('.modal-mask');
+            if (mask) mask.remove();
+            setTimeout(openParentPanel, 320);            // 补完继续列剩下的
+        }
+        function bindParentEntry() {
+            let _t = null, _fired = false;
+            const hit = function (e) {
+                const el = e.target;
+                return (el && el.closest) ? el.closest('#petAvatar') : null;
+            };
+            const start = function (e) {
+                if (!hit(e)) return;
+                _fired = false;
+                _t = setTimeout(function () { _fired = true; openParentPanel(); }, 1400);
+            };
+            const cancel = function () { if (_t) { clearTimeout(_t); _t = null; } };
+            document.addEventListener('mousedown', start);
+            document.addEventListener('touchstart', start, { passive: true });
+            document.addEventListener('mouseup', cancel);
+            document.addEventListener('mouseleave', cancel);
+            document.addEventListener('touchend', cancel);
+            document.addEventListener('touchcancel', cancel);
+            // 长按结束后紧跟的那次 click 要吞掉，否则会顺带触发一次「摸摸头」
+            document.addEventListener('click', function (e) {
+                if (_fired && hit(e)) { _fired = false; e.stopPropagation(); e.preventDefault(); }
+            }, true);
+        }
+
         function calcStreak() {
             // 连续打卡：当天只要完成 1 项就算数，降低门槛，孩子更容易坚持
+            // ☠️ 2026-10-28 v11 修一个**既有 bug**：原来只遍历 state.history 数组，
+            //    而"整天没打开 App"的那天**根本不在 history 里** → 循环直接跳过缺口，
+            //    连击会跨过 2~3 天的空白继续数 → 显示的"连续 8 天"其实是假的。
+            //    改成按日历逐日往前推（与 contStreak 的严格口径一致），
+            //    顺带让续命卡有了意义：被护住的那天**跳过但不计数**（连击不断、天数不虚增）。
             let streak = calcTodayCompleted() > 0 ? 1 : 0;
-            for (const day of state.history) {
-                if (day.date === state.todayDate) continue;   // 跳过今天，避免重复计
-                if ((day.completed || 0) > 0) streak++;
+            const shielded = shieldDateSet();
+            const byDate = {};
+            (state.history || []).forEach(function (h) {
+                if (h && h.date) byDate[h.date] = h;
+            });
+            const d = new Date(state.todayDate);
+            // 今天还没打卡不清零 —— 从昨天接着数（她的"连击"不该被"今天还没开始"打断）
+            if (streak === 0) d.setDate(d.getDate() - 1);
+            for (let i = 0; i < 400; i++) {
+                const ds = fmtDate(d);
+                const h = byDate[ds];
+                const done = h ? (h.completed || 0) : 0;
+                if (done > 0) streak++;
+                else if (shielded[ds]) { /* 护住：跳过，既不加也不断 */ }
                 else break;
+                d.setDate(d.getDate() - 1);
             }
             return streak;
         }
@@ -6856,6 +7080,7 @@
             } else {
                 streakArea.innerHTML = `<div class="streak-badge" style="background:linear-gradient(135deg,#B9C6C0,#8AA39A);">今天还没打卡，开始连续记录吧 💪</div>`;
             }
+            streakArea.innerHTML += shieldChipHTML();   // v11：🛡 剩余续命卡
         }
 
 
@@ -7319,7 +7544,7 @@
 
                 // 一张任务卡（平铺和按学科分组两条路都要用，所以抽出来）
                 const cardHTML = function (task) {
-                    const tag = task.plate ? '<span class="weekend-tag">光盘才算</span>' : '';
+                    const tag = (task.plate ? '<span class="weekend-tag">光盘才算</span>' : '') + parentTagHTML(task.id);
                     return `<div class="task-card" 
                                 id="task-${task.id}" 
                                 onclick="toggleTask('${task.id}')">
@@ -7388,7 +7613,7 @@
                     <div class="task-list">`;
 
                 for (const task of completedTasks) {
-                    const tag = task.plate ? '<span class="weekend-tag">光盘才算</span>' : '';
+                    const tag = (task.plate ? '<span class="weekend-tag">光盘才算</span>' : '') + parentTagHTML(task.id);
                     html += `<div class="task-card completed-item" 
                                 id="task-${task.id}" 
                                 onclick="toggleTask('${task.id}')">
@@ -8730,6 +8955,17 @@
             if (typeof data.streak === 'number') {
                 state.streak = Math.max(state.streak || 0, data.streak);
             }
+            // 续命卡（v11）：只合并"只增"的两个量，手上几张靠减出来。
+            // ☠️ 绝不把"手上还剩几张"取 max —— 余量类，用掉一张会被另一台顶回来（错误 24）
+            if (typeof data.streakShieldIssued === 'number') {
+                state.streakShieldIssued = Math.max(state.streakShieldIssued || 0, data.streakShieldIssued);
+            }
+            if (typeof data.streakShieldWeek === 'string' && data.streakShieldWeek > (state.streakShieldWeek || '')) {
+                state.streakShieldWeek = data.streakShieldWeek;
+            }
+            if (Array.isArray(data.streakShieldDates)) {
+                state.streakShieldDates = Array.from(new Set([...(state.streakShieldDates || []), ...data.streakShieldDates]));
+            }
             // 古诗记录合并
             if (data.poemLog && typeof data.poemLog === 'object') {
                 state.poemLog = Object.assign({}, state.poemLog || {}, data.poemLog);
@@ -9060,6 +9296,13 @@
         function init() {
             loadState();
             ensureValidState();
+            // v11：续命卡发卡/结算 + 家长端长按入口。
+            // ☠️ 必须放在 loadState() **之后**：本函数会 saveState()，而这时 state 还是默认值
+            //    的话，等于把本机存档洗成空白（错误 28 同一类 —— 在 state 就绪前动 state）。
+            //    2026-10-28 第一版就写在了 armPetGreeting() 旁边（顶层），
+            //    结果 11 个老测试全线报「todayChecks/history 全空」，一跑就露。
+            try { dailyCareTick(); } catch (e) { console.warn('dailyCareTick', e); }
+            try { bindParentEntry(); } catch (e) { console.warn('bindParentEntry', e); }
             // 2026-09-16：先把「今天打的、却记在旧日期名下」的卡救回今天，再参与云端合并
             // （否则 mergeCloudIntoState 会把本机那份判为"停在昨天的不可信数据"直接丢掉）
             rescueMisfiledTodayChecks();
@@ -9072,6 +9315,8 @@
                 // 云端合并后再归档「今天之前的一天」，此时 history 已完整，不会丢天
                 checkNewDay();
                 ensureValidState();
+                // v11：云端合并后再 tick 一次 —— 另一台可能刚发了卡、或护过某一天（幂等）
+                try { dailyCareTick(); } catch (e) { console.warn('dailyCareTick', e); }
                 saveState(); // 持久化合并结果并上传云端（history 已含本地+云端所有天）
                 renderAll();
                 listenCloudChanges(); // 启动多端轮询同步
