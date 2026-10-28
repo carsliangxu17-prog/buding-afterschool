@@ -395,6 +395,20 @@
     "weekendOnly": false
   },
   {
+    "id": "e_chore",
+    "name": "和妈妈一起做家务",
+    "icon": "🧹",
+    "category": "after",
+    "subject": "life",
+    "stars": 3,
+    "nutri": "peace",
+    "days": [
+      6,
+      0
+    ],
+    "weekendOnly": false
+  },
+  {
     "id": "n_sleep",
     "name": "21:00 前上床睡觉",
     "icon": "🌙",
