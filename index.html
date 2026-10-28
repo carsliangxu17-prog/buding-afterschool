@@ -8,7 +8,7 @@
     <meta http-equiv="Expires" content="0" data-page-node-id="YXlbOTFHU2Nr6SGRQHt7cy">
     <script>
         (function () {
-        var APP_VERSION = '20261027.6';
+        var APP_VERSION = '20261028.1';
             window.APP_VERSION_STR = APP_VERSION;   // 主脚本里做线上版本自检要用
             try {
                 var params = new URLSearchParams(location.search);
@@ -875,6 +875,19 @@
             background:#FFF6E3;box-shadow:0 0 0 2px #F5A623 inset; }
         @keyframes medalPop { 0%{transform:scale(.3);opacity:0} 60%{transform:scale(1.3)} 100%{transform:scale(1);opacity:1} }
         .medal-cell.justgot .medal-emoji { animation:medalPop .8s ease; }
+        /* ===== 勋章累计角标（2026-10-28 v10） START ===== */
+        /* 同一枚勋章可以反复获得 → 右上角显示 ×N。
+           只加角标、不新增格子：勋章墙格数仍 = MEDALS.length，
+           否则"她有多少枚"会膨胀成一整面墙，反而看不清哪枚是哪枚。
+           ⚠️ 本块整体可删（删掉即回滚，不影响 JS 逻辑，只少个角标）。 */
+        .medal-cell { position:relative; }
+        .medal-rep { position:absolute;top:-3px;right:1px;font-size:10px;font-weight:700;
+            color:#fff;background:linear-gradient(135deg,#FFC93C,#F5A623);
+            border-radius:9px;padding:0 5px;line-height:15px;white-space:nowrap;
+            box-shadow:0 1px 3px rgba(245,166,35,.45); }
+        .medal-total { font-size:11px;color:#2E9E6B;margin-top:8px;text-align:center;font-weight:600; }
+        .medal-total b { color:#F5A623;font-size:13px; }
+        /* ===== 勋章累计角标（2026-10-28 v10） END ===== */
         .float-star.golden { font-size:28px;filter:drop-shadow(0 0 8px rgba(255,201,60,.95)); }
 
         /* ========== 通用弹窗（周报） ========== */
@@ -3037,6 +3050,11 @@
             { id:'w_family',    name:'运动 30 分钟',              icon:'\uD83E\uDD38', category:'after', subject:'sport',   stars:3, nutri:'energy', days:[6,0] },
             // —— 生活 ——
             { id:'e_pack',      name:'整理书包',                  icon:'\uD83C\uDF92', category:'after', subject:'life',    stars:1, nutri:'peace',  days:[1,2,3,4], startMin:1140 },
+            // 2026-10-28 v10（天姝）：生活板块新增「和妈妈一起做家务」。
+            //   只在周末（days [6,0]）：工作日放学后已经排满（周三周四长期超载），
+            //   家务放周末才不是加压。3 金币 = 和「运动 30 分钟」同档，比整理书包(1)重。
+            //   ⚠️ 同步改 data/tasks.json（外置是权威，漏边就只有内置兜底生效）。
+            { id:'e_chore',     name:'和妈妈一起做家务',           icon:'\uD83E\uDDF9', category:'after', subject:'life',    stars:3, nutri:'peace',  days:[6,0] },
 
             // ===== 睡前 21:00 =====
             { id:'n_sleep',     name:'21:00 前上床睡觉',          icon:'\uD83C\uDF19', category:'night', subject:'life', stars:2, nutri:'peace' },
@@ -5042,7 +5060,7 @@
         }
 
         // 一次性任务参数校准（ensureValidState 里调用，只跑一遍）
-        const TASK_PATCH_VER = 7;
+        const TASK_PATCH_VER = 8;
         function applyTaskPatches() {
             if ((state.taskPatchVer || 0) >= TASK_PATCH_VER) return;
             if (!Array.isArray(state.tasks)) state.tasks = [];
@@ -5280,6 +5298,45 @@
             state.tasks.sort(function (a, b) {
                 const ia = a ? V7_SEQ.indexOf(a.id) : -1;
                 const ib = b ? V7_SEQ.indexOf(b.id) : -1;
+                return (ia < 0 ? 9000 : ia) - (ib < 0 ? 9000 : ib);
+            });
+            // ============================================================
+            // v8（2026-10-28，天姝）：生活板块新增「和妈妈一起做家务」
+            //   · 只在周末出现（days [6,0]）：工作日放学后已经排满，周三周四长期超载
+            //     （v8 课程那次已定"只标注不减负"），家务放周末才不是再加压
+            //   · 3 金币：比整理书包(1)重，和「运动 30 分钟」(3) 同档
+            // ⚠️ 同 v4~v7：新增项自带完整定义（applyStaticOverrides 会整份替换 DEFAULT_TASKS）；
+            //    只动 state.tasks，不碰 todayChecks。
+            // ============================================================
+            [{
+                id: 'e_chore', name: '和妈妈一起做家务', icon: '\uD83E\uDDF9',
+                category: 'after', subject: 'life', stars: 3, nutri: 'peace',
+                days: [6, 0]
+            }].forEach(function (def) {
+                const got = state.tasks.find(function (x) { return x && x.id === def.id; });
+                if (got) {
+                    got.name = def.name;
+                    got.category = def.category;
+                    got.subject = def.subject;
+                    if (typeof got.stars !== 'number') got.stars = def.stars;
+                    if (!got.nutri) got.nutri = def.nutri;
+                    if (def.days) got.days = def.days.slice();
+                } else {
+                    state.tasks.push(Object.assign({ weekendOnly: false }, def));
+                }
+            });
+            // 顺序：家务排在「整理书包」后面（同属生活组）
+            const V8_SEQ = [
+                'm_listen', 'm_break', 'm_milk', 'm_egg', 'm_enread',
+                'e_read', 'e_read_wk', 'e_words', 'e_cn_review', 'e_cn_dict',
+                'a_dictation', 'w_weiyang6', 'w_weiyang0', 'w_cn_unit', 'w_cn_chart',
+                'a_dog', 'a_weiyang', 'a_en_dict', 'a_abc', 'e_engread', 'w_eng_hw',
+                'a_calc', 'e_53', 'e_math_talk', 'w_math_hw', 'w_math_unit',
+                'w_family', 'e_pack', 'e_chore', 'n_sleep', 'n_eyedrop'
+            ];
+            state.tasks.sort(function (a, b) {
+                const ia = a ? V8_SEQ.indexOf(a.id) : -1;
+                const ib = b ? V8_SEQ.indexOf(b.id) : -1;
                 return (ia < 0 ? 9000 : ia) - (ib < 0 ? 9000 : ib);
             });
             state.taskPatchVer = TASK_PATCH_VER;
@@ -6085,21 +6142,21 @@
         //    而"每天都要做"的引导已经由宠物愿望/每日金币/全勤王承担，不必让勋章兼职。
         const MEDAL_COINS = 10;   // 每得一枚勋章奖励的金币（2026-10-27 v9）
         let MEDALS = [
-            { id:'milk3',  name:'牛奶勋章',   icon:'\uD83E\uDD5B', need:3, mode:'streak', desc:'连着 3 天把牛奶喝光光',
+            { id:'milk3',  name:'牛奶勋章',   icon:'\uD83E\uDD5B', need:3, mode:'streak', rep:2, desc:'连着 3 天把牛奶喝光光',
               check:function(ids){ return !!(ids['m_milk'] && ids['m_milk'].flag !== 'leftover'); } },
-            { id:'fast5',  name:'闪电早餐',   icon:'\u26A1',      need:5, mode:'total',  desc:'一共做到 5 天，早餐都在 15 分钟内吃完',
+            { id:'fast5',  name:'闪电早餐',   icon:'\u26A1',      need:5, mode:'total', rep:3,  desc:'一共做到 5 天，早餐都在 15 分钟内吃完',
               check:function(ids){ return !!(ids['m_break'] && ids['m_break'].flag === 'ok'); } },
-            { id:'read5',  name:'小书虫',     icon:'\uD83D\uDC1B', need:5, mode:'streak', desc:'连着 5 天读书',
+            { id:'read5',  name:'小书虫',     icon:'\uD83D\uDC1B', need:5, mode:'streak', rep:2, desc:'连着 5 天读书',
               check:function(ids){ return !!(ids['e_read'] || ids['e_read_wk'] || ids['m_enread']); } },
             // 2026-10-26：工作日不再有运动任务，运动只剩周末的「运动 30 分钟」(w_family)。
             //   勋章判据只看 w_family —— 攒 5 天要跨 3 个周末，比原来慢，但仍可达。
-            { id:'sport5', name:'运动小将',   icon:'\uD83C\uDFC5', need:5, mode:'total',  desc:'一共做到 5 天，出去玩或和爸妈一起运动',
+            { id:'sport5', name:'运动小将',   icon:'\uD83C\uDFC5', need:5, mode:'total', rep:1,  desc:'一共做到 5 天，出去玩或和爸妈一起运动',
               check:function(ids){ return !!ids['w_family']; } },
-            { id:'eng5',   name:'英语小达人', icon:'\uD83E\uDD9C', need:5, mode:'streak', desc:'连着 5 天学英语',
+            { id:'eng5',   name:'英语小达人', icon:'\uD83E\uDD9C', need:5, mode:'streak', rep:3, desc:'连着 5 天学英语',
               check:function(ids){ return !!(ids['a_abc'] || ids['a_weiyang'] || ids['e_engread'] || ids['m_listen'] || ids['m_enread']); } },
-            { id:'sleep5', name:'早睡星人',   icon:'\uD83C\uDF19', need:5, mode:'total',  desc:'一共做到 5 天，21 点前上床',
+            { id:'sleep5', name:'早睡星人',   icon:'\uD83C\uDF19', need:5, mode:'total', rep:1,  desc:'一共做到 5 天，21 点前上床',
               check:function(ids){ return !!ids['n_sleep']; } },
-            { id:'all7',   name:'全勤王',     icon:'\uD83D\uDC51', need:7, mode:'streak', desc:'连着 7 天至少完成 1 项',
+            { id:'all7',   name:'全勤王',     icon:'\uD83D\uDC51', need:7, mode:'streak', rep:4, desc:'连着 7 天至少完成 1 项',
               check:function(ids){ return Object.keys(ids).length > 0; } },
             // ===== 2026-10-27 v9：勋章 7 → 14 枚 =====
             // 布丁反馈「我的勋章里面内容有点少，她希望多获得一些」。
@@ -6112,27 +6169,33 @@
             //    全课满勤日 = 单日达成型，不靠攒天数
             //    （"攒够 N 节课"需要新增计数器 + 改跨天归档时序，且撤销该不该减会掉进
             //      coinsEver 同款坑 → 本轮不做，记挂起清单）
-            { id:'math10',     name:'数学小达人', icon:'🔢', need:10, mode:'total',
+            { id:'math10',     name:'数学小达人', icon:'🔢', need:10, mode:'total', rep:2,
               desc:'一共做到 10 天，数学里任意一项',
               check:function(ids){ return !!(ids['a_calc'] || ids['e_53'] || ids['e_math_talk'] || ids['w_math_hw'] || ids['w_math_unit']); } },
-            { id:'chinese6',   name:'语文小秀才', icon:'✏️', need:6,  mode:'total',
+            { id:'chinese6',   name:'语文小秀才', icon:'✏️', need:6,  mode:'total', rep:2,
               desc:'一共做到 6 天，语文里任意一项',
               check:function(ids){ return !!(ids['e_words'] || ids['e_cn_review'] || ids['e_cn_dict'] || ids['w_cn_unit'] || ids['w_cn_chart']); } },
-            { id:'pack10',     name:'整理小能手', icon:'🎒', need:10, mode:'total',
+            { id:'pack10',     name:'整理小能手', icon:'🎒', need:10, mode:'total', rep:2,
               desc:'一共做到 10 天，自己整理书包',
               check:function(ids){ return !!ids['e_pack']; } },
-            { id:'listen15',   name:'英语聆听家', icon:'🎧', need:15, mode:'total',
+            { id:'listen15',   name:'英语聆听家', icon:'🎧', need:15, mode:'total', rep:3,
               desc:'一共做到 15 天，每天听英语 30 分钟',
               check:function(ids){ return !!ids['m_listen']; } },
-            { id:'words10',    name:'生字收藏家', icon:'📖', need:10, mode:'total',
+            { id:'words10',    name:'生字收藏家', icon:'📖', need:10, mode:'total', rep:2,
               desc:'一共做到 10 天，每天认识 6 个生字',
               check:function(ids){ return !!ids['e_words']; } },
-            { id:'calc12',     name:'口算小超人', icon:'🧮', need:12, mode:'total',
+            { id:'calc12',     name:'口算小超人', icon:'🧮', need:12, mode:'total', rep:2,
               desc:'一共做到 12 天，数学计算题 1 页',
               check:function(ids){ return !!ids['a_calc']; } },
             { id:'coursefull', name:'全课满勤日', icon:'🏫', need:1,  mode:'custom',
               desc:'有一天把当天的课全都上完了',
               have:function(){ const _c = getTodayCourses(); return (_c.length > 0 && courseDoneCount() === _c.length) ? 1 : 0; } },
+            // ===== 2026-10-28 v10：家务勋章 =====
+            // 门槛按"只在周末出现"定：一周最多 2 天（周六日）→ 攒 2 天 = 一到两周可达。
+            // rep:1 = 之后每达标一个自然周（周末做过 1 天）就能再得一枚。
+            { id:'chore',      name:'家务小帮手', icon:'\uD83E\uDDF9', need:2, mode:'total', rep:1,
+              desc:'一共做到 2 天，和妈妈一起做家务',
+              check:function(ids){ return !!ids['e_chore']; } },
         ];
         function dayFlags(dateStr) {
             if (dateStr === state.todayDate) {
@@ -6179,6 +6242,77 @@
             }
             return n;
         }
+        // ===== 可累计勋章（2026-10-28 v10）=====
+        // 天姝要「同一枚勋章可以反复获得」：每达标一个自然周，就再得一枚。
+        // ☠️ 三条硬约束（要改先想清楚）：
+        //   ① 周期只能是**自然周**（周一~周日）。7 岁的时间感就是"星期几"，
+        //      "两周/一个月"对她等于"很久很久"，起不到"每轮都有新冲刺"的作用。
+        //   ② 枚数**只增不减**。新一周开始时旧枚数绝不清零 —— 否则她的感受是
+        //      "勋章被收走了"，跟"金币被退回"是同一类事故。实现上 = 数历史达标周数，天生单调。
+        //   ③ 重复枚**不发金币**（天姝 2026-10-28 定）。理由有两条，都不是保守：
+        //      a) coinsEver 多设备结算会重复发（同 9-26 那次虚高的坑，已定"不修"→
+        //         不能再造第二个）；
+        //      b) 商店最高 250（星空房）、月收入约 550，重复枚若按 10 币发，
+        //         每月多 100+ 币会直接打乱定价，她会觉得"攒钱没意义"。
+        // ⚠️ 可累计的判定门槛是 m.rep（本周需要几天），与 m.need（首枚门槛）是两回事：
+        //    首枚保证"入门不难"，rep 保证"每周都有机会"，两者不能混。
+        function weekKeyOf(dateStr) {
+            // 返回该日期所在自然周的周一（'YYYY-MM-DD'）
+            const p = String(dateStr || '').split('-');
+            const y = Number(p[0]), mo = Number(p[1]), da = Number(p[2]);
+            if (!y || !mo || !da) return '';
+            const t = new Date(y, mo - 1, da);
+            const wd = t.getDay();                 // 0=周日
+            t.setDate(t.getDate() - (wd === 0 ? 6 : wd - 1));
+            return fmtDate(t);
+        }
+        // 每个自然周命中了几天 → { '2026-10-19': 3, ... }
+        function weekHitsMap(checkFn) {
+            const per = {}, marks = {};
+            (state.history || []).forEach(function (h) {
+                if (!h || !h.date) return;
+                marks[h.date] = true;
+                let ok = false;
+                try { ok = !!checkFn(dayFlags(h.date) || {}); } catch (e) { ok = false; }
+                if (!ok) return;
+                const k = weekKeyOf(h.date);
+                if (k) per[k] = (per[k] || 0) + 1;
+            });
+            // 今天还没归档时也要算进本周，否则"今天刚做完"要等明天才生效
+            const t = state.todayDate;
+            if (t && !marks[t]) {
+                const fl = dayFlags(t);
+                let ok = false;
+                try { ok = !!(fl && checkFn(fl)); } catch (e) { ok = false; }
+                if (ok) { const k = weekKeyOf(t); if (k) per[k] = (per[k] || 0) + 1; }
+            }
+            return per;
+        }
+        function weeksHit(checkFn, repNeed) {
+            const per = weekHitsMap(checkFn);
+            let n = 0;
+            for (const k in per) if (per[k] >= repNeed) n++;
+            return n;
+        }
+        // 本周已经做到了几天（给她看"本周再做 N 天"）
+        function weekHitNow(m) {
+            if (!m || !m.rep || !m.check) return 0;
+            try { return weekHitsMap(m.check)[weekKeyOf(state.todayDate)] || 0; } catch (e) { return 0; }
+        }
+        // 这枚勋章现在一共算几枚（只增不减）
+        // 返回 0 = **还没得到过这枚** —— 历史里就算有达标周也不作数：
+        //   首枚没发，就不算她"有"，否则会显示成"灰色格子带 ×3"这种自相矛盾的样子。
+        // ☠️ 这里用 Math.max 是**合法**的，跟「余额不能取 max」不是一回事：
+        //    两个操作数都是单调量且含义相同（都是"她一共做到过几轮"）——
+        //    max(1, 历史达标周数) 只会把"已得的那一枚"垫住，永远不会凭空发钱。
+        //    判据（铁律）：说不清取大取小时先问"它是不是单调量"，是才能取。
+        function medalCopies(m) {
+            if (!state.medals || state.medals.indexOf(m.id) < 0) return 0;
+            if (!m || !m.rep || !m.check) return 1;
+            let hit = 0;
+            try { hit = weeksHit(m.check, m.rep); } catch (e) { hit = 0; }
+            return Math.max(1, hit);
+        }
         // 一枚勋章"现在到哪儿了" —— 发奖与显示共用这一处，永远同源
         function medalProgress(m) {
             // 2026-10-27 v9：新增 custom 口径 —— 判据不是"攒天数"的勋章（如全课满勤日）
@@ -6201,7 +6335,60 @@
                 if (state.medals.indexOf(m.id) >= 0) return;
                 if (medalProgress(m).have >= m.need) { state.medals.push(m.id); newly.push(m); }
             });
-            if (newly.length === 0) return;
+            // ===== 2026-10-28 v10：可累计勋章（同一枚可以反复获得）=====
+            // ☠️ 这段必须在 `if (newly.length === 0) return;` **之前**：
+            //    最常见的场景恰恰是"没有新种类、只是某枚又达标了一周"→
+            //    放在后面会被整段 return 掉，等于这个功能永远不触发。
+            let repChanged = false;
+            if (state.medalRepSeen == null || typeof state.medalRepSeen !== 'object') {
+                // 首次运行（老设备升级上来）：**只静默记账，一条都不弹**。
+                //   历史里已经积攒了很多达标周，一开页面弹十几条会刷屏；
+                //   枚数本身会立刻显示成 ×N，新鲜感不缺。
+                // ☠️ medalRepSeen 故意**不写进 DEFAULT_STATE**：写进去展开后必定是个 {}，
+                //    "是不是首次"的判据就恒假了（错误 28 同款）→ 这里判 `== null` 才成立。
+                state.medalRepSeen = {};
+                MEDALS.forEach(function (m) {
+                    if (m.rep) state.medalRepSeen[m.id] = medalCopies(m);
+                });
+                repChanged = true;
+            } else {
+                const repMsg = [];
+                MEDALS.forEach(function (m) {
+                    if (!m.rep) return;
+                    const c = medalCopies(m);
+                    const seen = Number(state.medalRepSeen[m.id]) || 0;
+                    if (c <= seen) return;
+                    state.medalRepSeen[m.id] = c;
+                    repChanged = true;
+                    if (state.medals.indexOf(m.id) < 0) return;                 // 首枚还没得，不提示
+                    if (newly.some(function (x) { return x.id === m.id; })) return;  // 首枚刚得，由首枚弹窗负责
+                    repMsg.push({ m: m, n: c });
+                });
+                // 一次最多弹 2 条：同周好几枚同时达标时不刷屏
+                if (!silent) {
+                    repMsg.slice(0, 2).forEach(function (it, i) {
+                        setTimeout(function () {
+                            showToast('\uD83C\uDF89 又得一枚 ' + it.m.icon + ' ' + it.m.name +
+                                      '\uff01现在有 \u00d7' + it.n,
+                                      'linear-gradient(135deg,#7ED321,#4CAF50)');
+                            playSound('celebrate');
+                        }, 900 + i * 1500);
+                    });
+                    if (repMsg.length > 2) {
+                        setTimeout(function () {
+                            showToast('\uD83C\uDF89 又得 ' + (repMsg.length - 2) + ' 枚勋章！',
+                                      'linear-gradient(135deg,#7ED321,#4CAF50)');
+                        }, 900 + 2 * 1500);
+                    }
+                }
+            }
+            if (newly.length === 0) {
+                // ⚠️ 只有累计枚变化时也要落盘，否则下次启动 seen 还是旧值、同一条提示会反复弹。
+                //    但**不能无条件 saveState**：checkMedals 每次打卡都会调用，
+                //    无条件写盘会高频 syncToCloud（整份覆写 payload），可能压掉别的设备的记录。
+                if (repChanged) { saveState(); renderMedals(); }
+                return;
+            }
             // 2026-10-27 v9：每得一枚勋章 +10 金币（天姝定的）。
             // ☠️ 三条硬约束：
             //   ① 只在 newly 里发 —— 已经拿到的勋章永远不会再进 newly，所以不补发；
@@ -6246,22 +6433,34 @@
             if (!area) return;
             if (!state.medals) state.medals = [];
             let cells = '';
+            let totalCopies = 0;                      // 含重复获得的枚数（角标口径仍是"种类"）
             let nearest = null, nearestLeft = 9999;   // 离解锁最近的一枚
             MEDALS.forEach(function (m) {
                 const got = state.medals.indexOf(m.id) >= 0;
                 const p = medalProgress(m);
                 const left = p.left;
+                const copies = medalCopies(m);
+                totalCopies += copies;
                 // 未解锁不再只显示 "2/3"（孩子推不出“再做什么就能拿到”），改成还差几天。
                 // 「连着做」与「攒够天数」用词不同，孩子才分得清这两类勋章。
-                const prog = got ? '\u5df2\u5f97\u5230'
-                    : (p.mode === 'custom' ? '\u4e0a\u5b8c\u5f53\u5929\u7684\u8bfe'
-                    : (p.mode === 'total' ? ('\u518d\u6512 ' + left + ' \u5929') : ('\u8fd8\u5dee ' + left + ' \u5929')));
+                // 2026-10-28 v10：可累计勋章已得之后，她关心的已经不是"有没有"，而是
+                //   "这周还能不能再拿一枚" → 改成本周进度，仍然只说"再做 N 天"，不说百分比。
+                let prog;
+                if (m.rep && got) {
+                    const wh = weekHitNow(m);
+                    prog = (wh >= m.rep) ? '本周已得 \u2713' : ('本周再做 ' + (m.rep - wh) + ' 天');
+                } else {
+                    prog = got ? '\u5df2\u5f97\u5230'
+                        : (p.mode === 'custom' ? '\u4e0a\u5b8c\u5f53\u5929\u7684\u8bfe'
+                        : (p.mode === 'total' ? ('\u518d\u6512 ' + left + ' \u5929') : ('\u8fd8\u5dee ' + left + ' \u5929')));
+                }
                 // custom 型不参与"离最近的目标"推荐：它的条件不是攒天数，
                 // 否则 left 恒为 1 会一直霸占 nearest，把真正的攒天数目标挤掉。
                 if (!got && p.mode !== 'custom' && left < nearestLeft) { nearestLeft = left; nearest = m; }
                 cells += '<div class="medal-cell' + (got ? ' got' : '') +
                         (justGotMedals.indexOf(m.id) >= 0 ? ' justgot' : '') +
                         '" title="' + m.desc + '">' +
+                    (copies >= 2 ? '<span class="medal-rep">\u00d7' + copies + '</span>' : '') +
                     '<div class="medal-emoji">' + m.icon + '</div>' +
                     '<div class="medal-name">' + m.name + '</div>' +
                     '<div class="medal-prog">' + prog + '</div>' +
@@ -6279,6 +6478,8 @@
             area.innerHTML = '<div class="medal-card">' +
                 '<div class="medal-head"><span>\uD83C\uDFC5 \u6211\u7684\u52cb\u7ae0</span>' +
                 '<span class="medal-count">' + state.medals.length + '/' + MEDALS.length + '</span></div>' +
+                '<div class="medal-total">\uD83C\uDFC5 一共有 <b>' + totalCopies + '</b> 枚勋章' +
+                    (totalCopies > state.medals.length ? '\uff08同一种可以拿好几次）' : '') + '</div>' +
                 '<div class="medal-rule">\u6bcf\u679a\u52cb\u7ae0\u4e0b\u9762\u90fd\u5199\u7740\u8fd8\u5dee\u51e0\u5929 \u2014\u2014 \u505a\u5230\u4e86\u5c31\u80fd\u62ff\u5230 \uD83C\uDF81</div>' +
                 '<div class="medal-grid">' + cells + '</div>' +
                 nextTip +
@@ -8760,7 +8961,7 @@
         //    （围巾落点 nk 改动在 HTML 里，不涉及 data/，靠 APP_VERSION 破除即可。）
         //    2026-10-27 bump：data/medals.json 7 → 14 条（v9 只改了内置兜底、忘了外置，
         //    而外置是权威 ⇒ 页面一直只显示 7 枚。这是"静态数据必须两边一起改"的实例。）
-        const STATIC_DATA_VER = '20261027.6';
+        const STATIC_DATA_VER = '20261028.1';
         const STATIC_FILES = {
             tasks:     'data/tasks.json',
             shop:      'data/shop.json',
@@ -8837,6 +9038,9 @@
                         //    （medalProgress 里 `if (m.mode === 'custom')` 拿到 m.have 是 undefined）。
                         //    凡是「函数字段」都必须在这里按 id 回挂，加新 mode 时记得回来加一行。
                         m.have  = byId[m.id].have;
+                        // v10：rep（本周需要几天才算再得一枚）也是"逻辑"，但它是数字、能存进 JSON。
+                        //   远端旧缓存里没有这个字段 → 用内置兜底，否则升级后累计功能会静默失效。
+                        if (typeof m.rep !== 'number') m.rep = byId[m.id].rep;
                         return m;
                     });
             }
