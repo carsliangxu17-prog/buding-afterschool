@@ -8,7 +8,7 @@
     <meta http-equiv="Expires" content="0" data-page-node-id="YXlbOTFHU2Nr6SGRQHt7cy">
     <script>
         (function () {
-        var APP_VERSION = '20261029.4';
+        var APP_VERSION = '20261029.5';
             window.APP_VERSION_STR = APP_VERSION;   // 主脚本里做线上版本自检要用
             try {
                 var params = new URLSearchParams(location.search);
@@ -2899,6 +2899,64 @@
             }
         }
         /* ===== 大屏版心统一 END ===== */
+        /* ===== 收藏区折叠（2026-10-29 v17）START =====
+           天姝 2026-10-29：「这里是否可以做个按钮，点击才显示，平时隐藏起来，
+           感觉更清爽一些。」
+           背景：收藏区（腿的颜色 / 装扮 / 小家 / 勋章 / 吃过）是「换一换」的低频功能，
+           打卡才是每天必做的高频动作。它在 860 宽的宠物卡里常年占 3 行，
+           而且宽屏是四列 grid 两栏（max-content 1fr max-content 1fr），
+           右栏常常只有 2 行内容 → 右边空出半张面板（她截图里的观感）。
+           收起来两个问题一起消失：卡片矮一截 + 不再有半张空面板。
+
+           ☠️ 展开状态**只活在当前会话**（JS 变量 _petCollectOpen）：
+              不进 state、不进 SYNC_FIELDS、不落 localStorage。
+              原因：每天第一次打开的主任务是「还剩几项」，要清爽；
+              若记住"上次是展开的"，她试完没收起就永远乱着。
+           ☠️ 但也不能只记在 DOM 上 —— renderAll() 会重绘宠物卡，
+              打一次卡就跳回收起。所以必须放模块级变量里。
+           ☠️ 收起时收藏区不显示，但「留痕」不受影响：她现在戴着的装扮/勋章
+              仍然画在宠物立绘上（wearing.decor / wearing.medal），
+              腿的颜色也还在 —— 藏起来的只是"挑选面板"，不是"结果"。
+           删本块即回滚（按钮会因为没有 display:none 而常显，功能不坏）。 */
+        /* 默认收起：id 特异性 1,0,0 直接压过 .pet-collect 的 display:grid，**不用 !important** */
+        #petCollectPanel { display: none; }
+        #petCollectPanel.open { display: grid; }
+        /* ☠️ 必须做成「居中胶囊」而不是通栏：第一版是 width:100% + 半透明白底，
+           实拍出来和宠物卡的米黄底几乎同色、边框也看不见 → 看着像一条分隔线，
+           7 岁不会去点它。胶囊 + 浅绿底 + 明显绿边才一眼是"按钮"。
+           ⚠️ 但也别做太强：它是次要操作（换装扮是低频），
+           不能抢过下面那三个实心按钮（成长档案 / 奖励商店）。 */
+        #petCollectToggle {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            width: -moz-fit-content;
+            width: fit-content;
+            max-width: 100%;
+            margin: 11px auto 0;
+            padding: 8px 18px;
+            background: linear-gradient(135deg, #EEFAF3, #DDF3E8);
+            border: 1.5px solid #A9DCC3;
+            border-radius: 999px;
+            font-family: inherit;
+            font-size: 13px;
+            font-weight: 700;
+            color: #2E8A66;
+            cursor: pointer;
+            -webkit-tap-highlight-color: transparent;
+            transition: background .14s ease, border-color .14s ease, transform .1s ease;
+        }
+        #petCollectToggle:hover { background: linear-gradient(135deg, #E3F7EC, #CFEEDD); border-color: #86CFAF; }
+        #petCollectToggle:active { transform: scale(.97); }
+        #petCollectToggle .pct-arrow { font-size: 9px; line-height: 1; opacity: .7; transition: transform .18s ease; }
+        #petCollectToggle .pct-off { display: none; }
+        /* 展开时：文字换成「收起来」、箭头翻上来，按钮和面板贴成"标题条 + 内容" */
+        #petCollectToggle.open .pct-on { display: none; }
+        #petCollectToggle.open .pct-off { display: inline; }
+        #petCollectToggle.open .pct-arrow { transform: rotate(180deg); }
+        #petCollectToggle.open + #petCollectPanel { margin-top: 6px; }
+        /* ===== 收藏区折叠 END ===== */
 </style>
     <!-- 云端同步改用 LeanCloud（纯 REST，无需 SDK；配置见下方 LC 对象） -->
 </head>
@@ -4989,7 +5047,15 @@
             // 涂色不是"买来的东西"，是"她自己画的"，不该等买了装扮才出现。
             const legRow = legColorRowHTML();
             const collectHTML = (decorList.length || sceneList.length || medalAll.length || fedList.length || legRow)
-                ? '<div class="pet-collect">' + legRow +
+                ? '<button class="pet-collect-toggle' + (_petCollectOpen ? ' open' : '') + '"' +
+                    ' id="petCollectToggle" onclick="togglePetCollect()"' +
+                    ' aria-expanded="' + (_petCollectOpen ? 'true' : 'false') + '"' +
+                    ' aria-controls="petCollectPanel">' +
+                    '<span class="pct-on">🎨 换一换装扮</span>' +
+                    '<span class="pct-off">收起来</span>' +
+                    '<span class="pct-arrow">▼</span>' +
+                  '</button>' +
+                  '<div class="pet-collect' + (_petCollectOpen ? ' open' : '') + '" id="petCollectPanel">' + legRow +
                     (decorList.length ? '<div class="pet-collect-row"><span class="pet-collect-label">🎀 装扮</span><span class="pet-collect-items">' +
                         decorList.map(function (d) {
                             return '<button class="pet-slot' + (decor && d.id === decor.id ? ' on' : '') +
@@ -5067,7 +5133,7 @@
                     '<div class="pet-actions">' +
                         '<button class="pet-profile-btn" onclick="showPetProfile()">📖 成长档案</button>' +
                         '<button class="pet-shop-btn" onclick="showRewardShop()">🎁 奖励商店</button>' +
-                        '<span class="pet-today-chip">' + (calcTodayPending().length === 0 ? '今天全做完啦 🎉' : '还剩 ' + calcTodayPending().length + ' 项') + '</span>' +
+                        '<span class="pet-today-chip">' + (calcTodayPending().length === 0 ? '今天全做完啦 🎉' : '🐾 我陪着你做') + '</span>' +
                     '</div>' +
                     '<div class="pet-hint">👆 点它会说话 · 打卡时它也会回应你 · 金币买食物能让它长得更快</div>' +
                 '</div>';
@@ -7153,6 +7219,22 @@
         //    并对每一天再 find 一次（O(n²)）。20 枚 × 30 天接近两万次；
         //    新功能若各算一遍会明显卡顿。指纹含 medals 与 history，任一变化即失效。
         let _copiesCache = { key: '', map: null };
+
+        // v17：收藏区（腿的颜色 / 装扮 / 小家 / 勋章 / 吃过）默认收起，点按钮才展开。
+        // ☠️ 只活在当前会话：不进 state、不进 SYNC_FIELDS、不落 localStorage。
+        //    理由见样式表末尾「收藏区折叠」块 —— 每天第一次打开要清爽，
+        //    但她点开换完装扮，也不能被 renderAll() 重绘打回收起。
+        let _petCollectOpen = false;
+        function togglePetCollect() {
+            _petCollectOpen = !_petCollectOpen;
+            const p = document.getElementById('petCollectPanel');
+            const b = document.getElementById('petCollectToggle');
+            if (p) p.classList.toggle('open', _petCollectOpen);
+            if (b) {
+                b.classList.toggle('open', _petCollectOpen);
+                b.setAttribute('aria-expanded', _petCollectOpen ? 'true' : 'false');
+            }
+        }
         function medalCopiesMap() {
             const key = String(state.todayDate || '') + '|' +
                         ((state.history || []).length) + '|' +
@@ -8088,7 +8170,7 @@
                     hint.textContent = '✅ 现在该做的都做完啦，晚一点还有 ' + pendingAll + ' 项';
                     hint.className = 'pending-hint done';
                 } else {
-                    hint.textContent = '现在该做还有 ' + pendingDue + ' 项，一样一样来 🙂';
+                    hint.textContent = '现在该做的还有 ' + pendingDue + ' 项，一样一样来 🙂';
                     hint.className = 'pending-hint';
                 }
             }
