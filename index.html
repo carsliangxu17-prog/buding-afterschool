@@ -8,7 +8,7 @@
     <meta http-equiv="Expires" content="0" data-page-node-id="YXlbOTFHU2Nr6SGRQHt7cy">
     <script>
         (function () {
-        var APP_VERSION = '20261029.5';
+        var APP_VERSION = '20261029.6';
             window.APP_VERSION_STR = APP_VERSION;   // 主脚本里做线上版本自检要用
             try {
                 var params = new URLSearchParams(location.search);
@@ -2955,8 +2955,71 @@
         #petCollectToggle.open .pct-on { display: none; }
         #petCollectToggle.open .pct-off { display: inline; }
         #petCollectToggle.open .pct-arrow { transform: rotate(180deg); }
-        #petCollectToggle.open + #petCollectPanel { margin-top: 6px; }
+        /* ⚠️ 原来这里有一条 `#petCollectToggle.open + #petCollectPanel { margin-top:6px }`，
+           v18 把折叠键移进 .pet-actions 之后两者不再是相邻兄弟 → 规则恒不匹配，已删除。
+           面板间距现在由 .pet-collect 自带的 margin-top:9px 负责。 */
         /* ===== 收藏区折叠 END ===== */
+        /* ===== 宠物卡四键一排（2026-10-29 v18）START =====
+           天姝 2026-10-29（截图）：「这四个按钮可以放在一排平铺」。
+           原状：换一换装扮是「居中胶囊」独占一行（v17 才做的），
+                 下面 成长档案 / 奖励商店 / 我陪着你做 又是一行 → 两行、两种间距、
+                 两种圆角、两种高度，看着是两套东西。
+           现在：四格等分一排，**只为「收起来时」服务**；
+                 点开换装扮 → 面板仍从这一排下方展开（DOM 顺序 ACTIONS→PANEL）。
+
+           ☠️ 等宽等高必须写死 height，不能靠 padding 撑：
+              三个是实心按钮（无边框），chip 是白底 + 1.5px 边框 → 靠 padding 对齐差 2px。
+           ☠️ 形状统一不代表「可点性」统一（错误 68）：
+              「我陪着你做」是**状态提示、点不动**，所以它保留白底绿字绿边，
+              三个真按钮保持紫/黄实心 —— 一眼能分出"哪个能按"。
+           ☠️ 它也不再抢镜：v17 那种居中大胶囊在四格里会自动退成"最浅的那个"。
+           删本块即回滚成两行（JS 已把 toggle 放进 .pet-actions，删了会变成一行四个不等宽 ——
+           所以回滚要连 JS 一起退，见 AGENTS.md 错误 70）。 */
+        /* 大屏（布丁的主路径 1536）：四列等分 */
+        @media (min-width: 768px) {
+            .pet-actions { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; }
+        }
+        /* 手机兜底：2×2，别硬挤四列（375 下每格只有 72px，「换一换装扮」会折行） */
+        @media (max-width: 767px) {
+            .pet-actions { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+        }
+        /* ☠️ 这条**正常路径走不到**，是防御而不是功能分支 —— 实测（v18）：
+              DEFAULT_STATE.pet = null，且 renderPet 在 !state.pet 时直接清空 petArea
+              → 只要宠物卡能渲染出来，state.pet 就有值
+              → legColorRowHTML() 必非空 → collectHas 恒真 → toggle 必渲染。
+           唯一能走到的情况是「宠物 kind 忘了配 PET_FIGURE」（配置遗漏的 bug 态），
+           那时只剩三键，没有这条规则第四格会留个空洞。
+           ⚠️ 别因为它"现在用不上"就删 —— 删了以后加新宠物漏配 figure 时，
+              版面会从"三格等分"静默退化成"三格 + 一个空洞"（难看但没有报错）。
+           _verify_v18_row.js 里有一条断言钉着这个前提，前提变了会先把人叫醒。 */
+        .pet-actions.no-collect { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+        .pet-actions > * {
+            box-sizing: border-box;
+            width: 100%;
+            min-width: 0;
+            height: 40px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            padding: 0 10px;
+            border-radius: 12px;
+            text-align: center;
+            white-space: nowrap;
+            -webkit-tap-highlight-color: transparent;
+        }
+        /* chip（状态提示）字号略小一点，但不改底色/边框 —— 它本来就不是按钮 */
+        .pet-actions > .pet-today-chip { font-size: 12.5px; }
+        /* 折叠键从「居中胶囊」降为「第一格」：原 margin 11px auto 0 + width fit-content 会把它顶歪 */
+        #petCollectToggle {
+            margin: 0;
+            width: 100%;
+            max-width: none;
+            height: 40px;
+            padding: 0 10px;
+            border-radius: 12px;
+            font-size: 13px;
+        }
+        /* ===== 宠物卡四键一排 END ===== */
 </style>
     <!-- 云端同步改用 LeanCloud（纯 REST，无需 SDK；配置见下方 LC 对象） -->
 </head>
@@ -5046,7 +5109,10 @@
             // 条件里补 state.pet：**即使她什么都还没买**，也要能看到「腿的颜色」 ——
             // 涂色不是"买来的东西"，是"她自己画的"，不该等买了装扮才出现。
             const legRow = legColorRowHTML();
-            const collectHTML = (decorList.length || sceneList.length || medalAll.length || fedList.length || legRow)
+            // v18：折叠键从收藏块里**拆出来**，挪到下面 .pet-actions 的第一格（四键一排）。
+            // 面板留在原处（ACTIONS 之后），展开时正好从按钮排底下长出来。
+            const collectHas = !!(decorList.length || sceneList.length || medalAll.length || fedList.length || legRow);
+            const collectToggleHTML = collectHas
                 ? '<button class="pet-collect-toggle' + (_petCollectOpen ? ' open' : '') + '"' +
                     ' id="petCollectToggle" onclick="togglePetCollect()"' +
                     ' aria-expanded="' + (_petCollectOpen ? 'true' : 'false') + '"' +
@@ -5054,8 +5120,10 @@
                     '<span class="pct-on">🎨 换一换装扮</span>' +
                     '<span class="pct-off">收起来</span>' +
                     '<span class="pct-arrow">▼</span>' +
-                  '</button>' +
-                  '<div class="pet-collect' + (_petCollectOpen ? ' open' : '') + '" id="petCollectPanel">' + legRow +
+                  '</button>'
+                : '';
+            const collectHTML = collectHas
+                ? '<div class="pet-collect' + (_petCollectOpen ? ' open' : '') + '" id="petCollectPanel">' + legRow +
                     (decorList.length ? '<div class="pet-collect-row"><span class="pet-collect-label">🎀 装扮</span><span class="pet-collect-items">' +
                         decorList.map(function (d) {
                             return '<button class="pet-slot' + (decor && d.id === decor.id ? ' on' : '') +
@@ -5129,12 +5197,13 @@
                     '<div class="pet-bubble" id="petBubble"></div>' +
                     wishHTML +
                     fedHTML +
-                    collectHTML +
-                    '<div class="pet-actions">' +
+                    '<div class="pet-actions' + (collectToggleHTML ? '' : ' no-collect') + '">' +
+                        collectToggleHTML +
                         '<button class="pet-profile-btn" onclick="showPetProfile()">📖 成长档案</button>' +
                         '<button class="pet-shop-btn" onclick="showRewardShop()">🎁 奖励商店</button>' +
                         '<span class="pet-today-chip">' + (calcTodayPending().length === 0 ? '今天全做完啦 🎉' : '🐾 我陪着你做') + '</span>' +
                     '</div>' +
+                    collectHTML +
                     '<div class="pet-hint">👆 点它会说话 · 打卡时它也会回应你 · 金币买食物能让它长得更快</div>' +
                 '</div>';
         }
