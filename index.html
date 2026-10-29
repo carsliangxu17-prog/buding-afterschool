@@ -8,7 +8,7 @@
     <meta http-equiv="Expires" content="0" data-page-node-id="YXlbOTFHU2Nr6SGRQHt7cy">
     <script>
         (function () {
-        var APP_VERSION = '20261029.3';
+        var APP_VERSION = '20261029.4';
             window.APP_VERSION_STR = APP_VERSION;   // 主脚本里做线上版本自检要用
             try {
                 var params = new URLSearchParams(location.search);
@@ -2857,6 +2857,48 @@
             .cat-course-note { font-size: 11px; padding: 2px 6px; }
         }
         /* <<<V8_COURSE_END>>> */
+        /* ===== 大屏版心统一（2026-10-29 v16）START =====
+           天姝 2026-10-29：「第一屏感觉排版很乱」。查出来不是审美问题，是版心不统一：
+           宽屏的居中一直用**手工登记白名单**（上面 @media(min-width:768px) 与
+           (min-width:1024px) 两处 .header/.stats-row/.progress-section/
+           .course-section/#streakArea/.history-section），而**之后每一版新加的区块
+           都没补进名单** —— 宠物卡 / 奖励商店条 / 古诗词 / 加一项 / 勋章墙 / 妈妈奖励
+           全部变成满宽。1536 视口（希沃大屏 + Windows 125%）实测
+           pet=1440 / stats=700 / shop=1440 → 一屏三种宽度、宽窄交替，
+           眼睛找不到一条对齐线，所以"乱"。
+
+           ☠️ 为什么是 860：宠物卡的内容（头像 + 名字 + 4 个时段小标 + 成长进度 +
+              今天想吃 + 收藏格）自然宽度就在 800 上下；给到 1100 它右边立刻空出 40%
+              （试过，见 tools/_wide_try.py 的 V3）。860 = 卡片刚好被内容填满。
+           ☠️ 为什么网格不跟着收：收到 860 还用三列，任务名就开始换行
+              （「百词斩（单词小狗）」「53 天天练·数学同步」），4 个分类也被挤到第二行
+              （V2）。所以任务网格保留 1300 / 三列，靠"内容窄版 + 网格宽版"分层，
+              网格在第二屏以下，跟前面对不齐也不刺眼。
+           ☠️ 所以这里写成**一条选择器清单**：以后新加区块只往这里加一行，
+              不用再去改 768 / 1024 两处白名单 —— 那两处各写一遍正是这次漏掉的机制原因。
+           ☠️ 手机不受影响（包在 @media min-width:768px 里）：375 下所有区块仍是 335，
+              540 下仍是 492，本来就是一条线。
+           删本块即回滚。 */
+        @media (min-width: 768px) {
+            .header,
+            #mottoBar,
+            #petArea,
+            #momGoalArea,
+            .stats-row,
+            #shopDoor,
+            .progress-section,
+            #courseSection,
+            #streakArea,
+            #poemArea,
+            .my-add-row,
+            #medalArea,
+            #historySection {
+                max-width: 860px;
+                margin-left: auto;
+                margin-right: auto;
+            }
+        }
+        /* ===== 大屏版心统一 END ===== */
 </style>
     <!-- 云端同步改用 LeanCloud（纯 REST，无需 SDK；配置见下方 LC 对象） -->
 </head>
