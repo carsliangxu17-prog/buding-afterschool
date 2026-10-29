@@ -8,7 +8,7 @@
     <meta http-equiv="Expires" content="0" data-page-node-id="YXlbOTFHU2Nr6SGRQHt7cy">
     <script>
         (function () {
-        var APP_VERSION = '20261029.1';
+        var APP_VERSION = '20261029.2';
             window.APP_VERSION_STR = APP_VERSION;   // 主脚本里做线上版本自检要用
             try {
                 var params = new URLSearchParams(location.search);
@@ -1003,6 +1003,74 @@
         }
         .medal-plain b { color: #F5A623; font-size: 14px; }
         /* ===== 勋章墙可视化重做 END ===== */
+        /* ===== 本周收获条 / 已得勋章三种活态（2026-10-29 v14） START ===== */
+        /* 为什么要这一块（天姝原话）：「我本周的成果，不能说过往我得过了，就没动力了。」
+           诊断：20 枚里 18 枚是可反复获得的（每周做够 N 天再得一枚），实测她 11 枚已得、
+           本周又攒了 4 枚 —— 但界面上只表现为角标 ×4→×5 的静默变化，等于没发生。
+           ☠️ 全部用已有数据算，没有新增任何 state 字段。 */
+        /* ① 本周收获条（替掉原来那句纯总数的「同一枚又得了 N 次」） */
+        .medal-week {
+            margin-top: 8px;
+            padding: 6px 9px;
+            border-radius: 9px;
+            background: #F4F7FA;
+            color: #5A6875;
+            font-size: 12px;
+            text-align: center;
+            line-height: 1.5;
+        }
+        /* 本周真有收获 → 绿底；和"什么都没攒到"一眼分开 */
+        .medal-week.hold {
+            background: linear-gradient(120deg, #EAF7F0, #DFF3E8);
+            color: #22795A;
+            font-weight: 600;
+        }
+        /* 差 1 天 → 橙红底。这是整面墙最强的拉力，值得单独一个颜色。
+           ☠️ 别用黄色系：第一版用 #A9660B 金棕，实拍发现和「已得」的金框 #EFC264
+              几乎分不出来（320px 下完全一样）→ 三种状态退化成两种，白做。 */
+        .medal-week.near {
+            background: linear-gradient(120deg, #FFF3EC, #FFE9DC);
+            color: #B4501E;
+            font-weight: 600;
+        }
+        .medal-week b { font-size: 13.5px; }
+        .medal-week-list {
+            display: inline-flex; gap: 2px; margin-left: 5px; vertical-align: -3px;
+        }
+        .medal-week-ico { font-size: 15px; line-height: 1; }
+        /* ② 本周又达标：绿框 + 淡绿底（金框=早就得到，绿框=这周又攒到一枚） */
+        .medal-cell.week-hit {
+            outline-color: #6FBF95;
+            background: linear-gradient(160deg, #FBFEFC, #EAF7F0);
+        }
+        /* ③ 差 1 天：橙红框 + 粉橙底。刻意**不加 animation**：fresh 已有呼吸动画，
+              两种动画同时跑会互相打断、看起来像闪屏。
+              ☠️ 用橙红不用金黄：金黄 #EFC264 是「已得」的专用色，实拍证明两者
+              在窄屏上分不出来 → 一条"就差一天"的提示等于没提示（2026-10-29） */
+        .medal-cell.near {
+            outline-color: #E4703C;
+            background: linear-gradient(160deg, #FFF7F2, #FFEDE2);
+        }
+        /* ④ 本周点阵：rep 个点、本周点亮几个就亮几个
+              —— 7 岁算得出「3 个点里亮了 2 个」，比读「本周再做 1 天」快得多。
+              ⚠️ 位置正好接原来 bar 的位置（已得本来没有 bar），不额外增加格子高度。 */
+        .medal-dots {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 3px;
+            margin: 4px 0 1px;
+            height: 6px;
+        }
+        .medal-dots i {
+            width: 5px; height: 5px; border-radius: 50%;
+            background: #DCE4EC;
+            display: block;
+        }
+        .medal-dots i.on { background: #6FBF95; }
+        .medal-cell.near .medal-dots i { background: #F3DCCE; }
+        .medal-cell.near .medal-dots i.on { background: #E4703C; }
+        /* ===== 本周收获条 / 已得勋章三种活态 END ===== */
         /* ===== 续命卡 / 妈妈补 / 家长面板（2026-10-28 v11） START ===== */
         /* ⚠️ 本块整体可删（删掉即回滚外观，JS 逻辑不受影响） */
         .shield-chip { display:inline-block;margin-left:6px;padding:1px 7px;border-radius:9px;
@@ -6720,7 +6788,10 @@
                 }
                 return out;
             }
-            const rec = state.history.find(function (h) { return h.date === dateStr; });
+            // ⚠️ h && 是防御：history 里混进 null 时（历史上出现过）原来的
+            //    h.date 会抛错，而 renderMedals → medalWeekReview 也走这条路，
+            //    抛在渲染里会连累整面勋章墙（错误 29 的隔离规则只保护 renderAll 那一层）
+            const rec = state.history.find(function (h) { return h && h.date === dateStr; });
             if (!rec) return null;
             const out = {};
             (rec.tasks || []).forEach(function (t) { out[t.id] = { flag: t.flag || 'ok' }; });
@@ -6965,27 +7036,75 @@
             const diff = Math.round((d1 - d0) / 86400000);
             return diff >= 0 && diff < MEDAL_FRESH_DAYS;
         }
+        // ===== v14（2026-10-29）：本周勋章收获 =====
+        // 天姝原话：「是否可以把本周新得的、以前得过的勋章也突出展示一下 ——
+        //   我本周的成果，不能说过往我得过了，就没动力了。」
+        //
+        // ☠️ 全部用**已有数据**算，一个新 state 字段都不加（零迁移风险）：
+        //   ① 本周新点亮 = medalGotAt[id] 落在本自然周（周一~周日）
+        //   ② 本周又攒一枚 = 已得 && weekHitNow(m) >= m.rep
+        //      —— 20 枚里 18 枚是 rep 型，**这才是「本周成果」的主体**。
+        //         实测 10-29 那周：新点亮 0 枚、又攒 4 枚。原来界面上只表现为
+        //         角标 ×4→×5 的静默变化，等于没发生。
+        //   ③ 差 1 天 = 已得 && weekHitNow === rep-1 —— 最有力的引导，原来完全没露出来
+        //      （实测那周有 3 枚差 1 天：英语小达人 2/3、数学小达人 1/2、语文小秀才 1/2）
+        function medalWeekReview() {
+            const wk = weekKeyOf(state.todayDate);
+            const out = { week: wk, newIds: [], againIds: [], moreIds: [], nearIds: [], hit: {} };
+            (MEDALS || []).forEach(function (m) {
+                // 未得的不算「本周成果」：它还没到手，属于"下一个目标"，由 bottom 的
+                // 「🎯 再坚持 N 天」那条负责推，两处不要混。
+                if ((state.medals || []).indexOf(m.id) < 0) return;
+                const at = (state.medalGotAt || {})[m.id] || '';
+                const isNew = !!(at && wk && weekKeyOf(at) === wk);
+                let wh = 0;
+                if (m.rep) { try { wh = weekHitNow(m); } catch (e) { wh = 0; } }
+                const rep = Number(m.rep) || 0;
+                // ⚠️ wh >= rep 一旦达成就保持到周日 —— 这是**故意的**：
+                //    她的成果应该整周可见，而不是"周三就消失了"。
+                const again = !!rep && wh >= rep;
+                out.hit[m.id] = { wh: wh, rep: rep, isNew: isNew, again: again };
+                if (isNew) out.newIds.push(m.id);
+                if (again) out.againIds.push(m.id);
+                // ☠️ 必须带 wh > 0：rep=1 的勋章（早睡星人 / 运动小将 / 家务小帮手）
+                //   在本周一天都没做时 wh=0=rep-1，会被误判成「差 1 天」→
+                //   头部永远显示「再做 1 天就能再得一枚」，把"还没开始"和"已经做了 2/3"
+                //   混成一回事，那条提示的拉力就废了（2026-10-29 测试抓出来的）。
+                if (rep && wh > 0 && wh === rep - 1) out.nearIds.push(m.id);
+            });
+            // 新得的那一枚必然也"本周达标"（首枚就靠达标发的）→ 从"又攒"里剔掉，
+            // 否则同一枚在「新点亮 1 个、又攒 1 枚」里被数两遍。
+            out.moreIds = out.againIds.filter(function (id) { return out.newIds.indexOf(id) < 0; });
+            out.freshCount = out.newIds.length;
+            out.moreCount = out.moreIds.length;
+            out.total = out.freshCount + out.moreCount;
+            return out;
+        }
         function renderMedals() {
             const area = document.getElementById('medalArea');
             if (!area) return;
             if (!state.medals) state.medals = [];
+            const wr = medalWeekReview();             // v14：本周收获（下面头部与格子共用）
             let cells = '';
-            let totalCopies = 0;                      // 含重复获得的枚数（角标口径仍是"种类"）
             let nearest = null, nearestLeft = 9999;   // 离解锁最近的一枚
             MEDALS.forEach(function (m) {
                 const got = state.medals.indexOf(m.id) >= 0;
                 const p = medalProgress(m);
                 const left = p.left;
                 const copies = medalCopies(m);
-                totalCopies += copies;
                 // 未解锁不再只显示 "2/3"（孩子推不出“再做什么就能拿到”），改成还差几天。
                 // 「连着做」与「攒够天数」用词不同，孩子才分得清这两类勋章。
                 // 2026-10-28 v10：可累计勋章已得之后，她关心的已经不是"有没有"，而是
                 //   "这周还能不能再拿一枚" → 改成本周进度，仍然只说"再做 N 天"，不说百分比。
+                // v14：已得勋章要「活着」—— 本周达标就说「本周又得」，
+                //   差 1 天的那几枚要大声喊出来（那是整面墙最强的拉力）。
+                const wkRec = wr.hit[m.id] || { wh: 0, rep: Number(m.rep) || 0, isNew: false, again: false };
                 let prog;
                 if (m.rep && got) {
-                    const wh = weekHitNow(m);
-                    prog = (wh >= m.rep) ? '本周已得 \u2713' : ('本周再做 ' + (m.rep - wh) + ' 天');
+                    const wh = wkRec.wh;
+                    prog = (wh >= m.rep)
+                        ? (wkRec.isNew ? '本周新得 \u2713' : '本周又得 \u2713')
+                        : ('本周再做 ' + (m.rep - wh) + ' 天');
                 } else {
                     prog = got ? '\u5df2\u5f97\u5230'
                         // 2026-10-28 v12：custom 型的文案原来硬编码「上完当天的课」，
@@ -7011,12 +7130,28 @@
                     const pct = Math.round(100 * doneN / need);
                     bar = '<div class="medal-bar"><i style="width:' + pct + '%"></i></div>';
                 }
+                // v14：已得的 rep 型画「本周点阵」—— rep 个点、本周点亮几个就亮几个。
+                //   7 岁算得出"3 个点里亮了 2 个，还差 1 个"，比读「本周再做 1 天」快得多。
+                //   ⚠️ 位置正好接原来 bar 的位置（已得本来没有 bar），**不增加格子高度**。
+                let dots = '';
+                if (got && wkRec.rep > 0) {
+                    const onN = Math.max(0, Math.min(wkRec.rep, wkRec.wh));
+                    let ds = '';
+                    for (let k = 0; k < wkRec.rep; k++) {
+                        ds += '<i' + (k < onN ? ' class="on"' : '') + '></i>';
+                    }
+                    dots = '<div class="medal-dots">' + ds + '</div>';
+                }
+                // 差 1 天：整格加一圈金边（同样要求 wh > 0，理由见 medalWeekReview 里那条注释）
+                const nearNow = got && wkRec.rep > 0 && wkRec.wh > 0 && wkRec.wh === wkRec.rep - 1;
                 // ⚠️ 角标位置分工（别叠在一起）：
                 //   右上 top:-3px right:1px = ×N 累计角标（已有规则，不重叠）
                 //   右上 = 🔒（只有"没得"时才出现，此时一定没有 ×N，天然互斥）
                 //   左上 = ✨新的（只有"刚得"时出现）
                 cells += '<div class="medal-cell' + (got ? ' got' : '') +
                         (fresh ? ' fresh' : '') +
+                        (wkRec.again ? ' week-hit' : '') +
+                        (nearNow ? ' near' : '') +
                         (justNow ? ' justgot' : '') +
                         '" data-medal-id="' + m.id + '" title="' + m.desc + '">' +
                     (copies >= 2 ? '<span class="medal-rep">\u00d7' + copies + '</span>' : '') +
@@ -7025,7 +7160,7 @@
                     '<div class="medal-emoji">' + m.icon + '</div>' +
                     '<div class="medal-name">' + m.name + '</div>' +
                     '<div class="medal-prog">' + prog + '</div>' +
-                    bar +
+                    bar + dots +
                 '</div>';
             });
             // 只推一个最近的目标：孩子面对一堆目标会分散，一个才记得住
@@ -7037,6 +7172,31 @@
             } else {
                 nextTip = '<div class="medal-next">\uD83C\uDFC6 \u5168\u90e8\u52cb\u7ae0\u90fd\u5f97\u5230\u4e86\uff01\u4f60\u771f\u7684\u5f88\u80fd\u575a\u6301</div>';
             }
+            // ===== v14：本周收获条 =====
+            // 这个位置原来放的是「🏅 同一枚又得了 21 次」—— 它说的是**总数**（纯静态、没有行动含义）。
+            // 「这周又攒了 4 枚」既有时效又有行动含义，两者讲的都是重复枚 → 留有时效的那个。
+            // 顺带把头部文字从 3 行降到 2 行：7 岁读不完 4 行小字，那等于一行都没有。
+            let weekBar = '';
+            (function () {
+                const icos = wr.newIds.concat(wr.moreIds).map(function (id) {
+                    const mm = MEDALS.filter(function (x) { return x && x.id === id; })[0];
+                    return mm ? '<span class="medal-week-ico">' + mm.icon + '</span>' : '';
+                }).join('');
+                let txt = '';
+                if (wr.freshCount) txt += '\u65b0\u70b9\u4eae ' + wr.freshCount + ' \u4e2a';
+                if (wr.freshCount && wr.moreCount) txt += '\u3001';
+                if (wr.moreCount) txt += '\u53c8\u6512\u4e86 ' + wr.moreCount + ' \u679a';
+                if (txt) {
+                    weekBar = '<div class="medal-week hold">\uD83C\uDF1F \u8fd9\u5468' + txt +
+                              (icos ? '<span class="medal-week-list">' + icos + '</span>' : '') + '</div>';
+                } else if (wr.nearIds.length) {
+                    // 差 1 天是整面墙最强的拉力 —— 不只写在格子里，头部也要喊一次
+                    weekBar = '<div class="medal-week near">\uD83C\uDF1F \u518d\u505a <b>1 \u5929</b>' +
+                              '\u5c31\u80fd\u518d\u5f97\u4e00\u679a\uff01</div>';
+                } else {
+                    weekBar = '<div class="medal-week">\uD83C\uDF1F \u8fd9\u5468\u8fd8\u6ca1\u6512\u5230\u65b0\u7684\uff0c\u52a8\u8d77\u6765\u5c31\u6709\u5566</div>';
+                }
+            })();
             area.innerHTML = '<div class="medal-card">' +
                 // v13：徽章以外再加一句人话 —— 7 岁读得懂"点亮了 11 个、还有 5 个在等你"，
                 //   读不懂"11/16"这种斜杠计数（她看到的是分数，不是"我有了几个"）。
@@ -7046,14 +7206,7 @@
                     (MEDALS.length > state.medals.length
                         ? '\u8fd8\u6709 <b>' + (MEDALS.length - state.medals.length) + '</b> \u4e2a\u5728\u7b49\u4f60'
                         : '\u5168\u90e8\u70b9\u4eae\u5566\uff01') + '</div>' +
-                // v13：这一行原来无条件再报一次「一共有 N 枚勋章」，可它和右上角 11/16、
-                //   还有上面那句「已点亮 11 个，还有 5 个在等你」三处说的是同一个数
-                //   → 信息重复反而稀释焦点（实拍看得最清楚，2026-10-29）。
-                //   改成**只在真有重复枚时才渲染**：那时它才带独家信息（角标 ×N 的来由）。
-                (totalCopies > state.medals.length
-                    ? '<div class="medal-total">\uD83C\uDFC5 同一枚又得了 <b>' +
-                      (totalCopies - state.medals.length) + '</b> 次</div>'
-                    : '') +
+                weekBar +
                 '<div class="medal-rule">\u6bcf\u679a\u52cb\u7ae0\u4e0b\u9762\u90fd\u5199\u7740\u8fd8\u5dee\u51e0\u5929 \u2014\u2014 \u505a\u5230\u4e86\u5c31\u80fd\u62ff\u5230 \uD83C\uDF81</div>' +
                 '<div class="medal-grid">' + cells + '</div>' +
                 nextTip +
