@@ -8,7 +8,7 @@
     <meta http-equiv="Expires" content="0" data-page-node-id="YXlbOTFHU2Nr6SGRQHt7cy">
     <script>
         (function () {
-        var APP_VERSION = '20261029.2';
+        var APP_VERSION = '20261029.3';
             window.APP_VERSION_STR = APP_VERSION;   // 主脚本里做线上版本自检要用
             try {
                 var params = new URLSearchParams(location.search);
@@ -1071,6 +1071,152 @@
         .medal-cell.near .medal-dots i { background: #F3DCCE; }
         .medal-cell.near .medal-dots i.on { background: #E4703C; }
         /* ===== 本周收获条 / 已得勋章三种活态 END ===== */
+/* ===== 段位 / 称号 / 月度回顾 / 妈妈奖励（2026-10-29 v15） START ===== */
+/* ① 段位环
+   ☠️ 必须用**绝对定位的圆环**，不能用 border/padding/margin 撑 ——
+      格子的宽是算死的（69px × 4 + 间隙 = 297 ≤ 可用 299px），
+      任何占布局的加宽都会掉回 3 枚/行（v13 已经栽过一次）。
+   ☠️ 也不用 conic-gradient + mask 做彩虹：老 WebView 不支持 mask 时
+      会退化成一块实心色块，比没有更糟。改用双层 box-shadow。 */
+.medal-cell .medal-emoji { position: relative; }
+.medal-cell .medal-emoji::after {
+    content: '';
+    position: absolute; left: 50%; top: 50%;
+    width: 41px; height: 41px; margin: -20.5px 0 0 -20.5px;
+    border-radius: 50%; pointer-events: none;
+    box-sizing: border-box;
+    border: 2px solid transparent;
+}
+.medal-cell.tier-t1 .medal-emoji::after { border-color: #C08A5E; opacity: .72; }
+.medal-cell.tier-t2 .medal-emoji::after {
+    border-color: #A8B6C4; opacity: .95;
+    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .75);
+}
+.medal-cell.tier-t3 .medal-emoji::after {
+    border-color: #EFC264;
+    box-shadow: 0 0 6px rgba(239, 194, 100, .55);
+}
+.medal-cell.tier-t4 .medal-emoji::after {
+    border-color: #F5A623;
+    box-shadow: 0 0 0 2.5px #7FD3C6, 0 0 9px rgba(245, 166, 35, .5);
+}
+
+/* ② 称号 —— 挂在宠物名字下面一行，只显示一个 */
+.pet-title {
+    display: inline-block;
+    margin-top: 7px; padding: 3px 10px;
+    background: linear-gradient(135deg, #FFF6E3, #FFEFD0);
+    color: #A9660B;
+    border-radius: 11px;
+    font-size: 12px; font-weight: 700;
+    line-height: 1.5;
+    white-space: nowrap;
+    max-width: 100%;
+    overflow: hidden; text-overflow: ellipsis;
+}
+
+/* ③ 妈妈奖励卡片 */
+#momGoalArea { margin: 10px 0 14px; }
+#momGoalArea:empty { display: none; }
+.mom-goal-card {
+    background: linear-gradient(160deg, #FFFBF2, #FFF4E4);
+    border: 1px solid #F6E2BE;
+    border-radius: 16px;
+    padding: 12px 14px;
+}
+.mg-head { font-size: 13px; font-weight: 700; color: #A9660B; margin-bottom: 9px; }
+.mg-row { display: flex; align-items: center; gap: 8px; font-size: 13px; color: #6B5738; }
+.mg-icon { font-size: 19px; line-height: 1; }
+.mg-name {
+    flex: 1; min-width: 0; font-weight: 600;
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.mg-need { font-size: 12px; color: #97826A; white-space: nowrap; }
+.mg-bar { height: 7px; margin: 9px 0 7px; background: #F1E4CE; border-radius: 4px; overflow: hidden; }
+.mg-bar i { display: block; height: 100%; border-radius: 4px;
+    background: linear-gradient(90deg, #FFD98A, #F5A623); }
+.mg-tip { font-size: 12px; color: #8A7859; }
+.mg-ready { font-size: 13px; font-weight: 700; color: #2E9E6B; }
+.mg-done { font-size: 13px; font-weight: 600; color: #2E9E6B; }
+
+/* ④ 月度回顾（弹窗内） */
+.mc-block { text-align: left; }
+.mc-big { font-size: 16px; font-weight: 700; color: #2E9E6B; text-align: center; margin: 4px 0 12px; }
+.mc-line { font-size: 14px; color: #4A5A52; line-height: 1.6; margin: 5px 0; }
+.mc-miss { color: #B4763C; }
+.mc-next {
+    margin-top: 14px; padding: 11px 13px;
+    background: #F0F8F4; border-radius: 12px;
+    font-size: 13px; color: #3A6B55; line-height: 1.55; text-align: left;
+}
+
+/* ⑤ 设置奖励的输入行 */
+.mr-tip { font-size: 12px; color: #7A8B82; line-height: 1.65; margin-bottom: 13px; text-align: left; }
+.mr-row { display: flex; gap: 8px; margin-bottom: 10px; }
+.mr-name {
+    flex: 1; min-width: 0; padding: 9px 11px;
+    border: 2px solid #E3EDE8; border-radius: 10px;
+    font-size: 14px; outline: none;
+}
+.mr-need {
+    width: 72px; flex: 0 0 72px; padding: 9px 6px;
+    border: 2px solid #E3EDE8; border-radius: 10px;
+    font-size: 14px; text-align: center; outline: none;
+}
+.mr-name:focus, .mr-need:focus { border-color: #3AA17E; }
+.mr-save {
+    width: 100%; margin-top: 6px; padding: 12px;
+    border: none; border-radius: 12px;
+    background: linear-gradient(135deg, #3AA17E, #2E9E6B);
+    color: #fff; font-size: 15px; font-weight: 700;
+}
+
+/* ⑥ 家长面板里的奖励块 */
+.pp-mom {
+    margin-top: 14px; padding: 12px;
+    background: #FFFBF2; border: 1px solid #F6E2BE; border-radius: 12px;
+}
+.pp-mom-t { font-size: 13px; font-weight: 700; color: #A9660B; margin-bottom: 9px; line-height: 1.5; }
+.pp-mom-btn {
+    width: 100%; padding: 11px;
+    border: none; border-radius: 10px;
+    background: linear-gradient(135deg, #F5A623, #EFC264);
+    color: #6B4400; font-size: 14px; font-weight: 700;
+}
+.pp-mom-btn.pp-mom-set {
+    margin-top: 8px;
+    background: #EAF4EF; color: #2E9E6B;
+}
+/* ⑧ 修「知道啦」按钮被挤成竖排（既有 bug，2026-10-29 实拍发现）
+   ☠️ 原因：.modal-close 有**两处冲突定义** ——
+      ① 1254 行：.modal-box 体系里的**底部通栏大按钮**（width:100%、绿色渐变）；
+      ② 1867 行：.modal-overlay/.modal-content 体系里的**右上角小 ×**
+         （position:absolute; top:16px; right:16px; width:36px）。
+      两处都写的是裸 .modal-close，② 在后面 → 赢。于是 showModal() 生成的
+      "知道啦"三个字被塞进 36px 宽的圆角方块里，竖着排成三行。
+   修法：把覆盖锚到**那一个按钮的 id**（#modalCloseBtn，特异性 1,0,0 高于 0,1,0，
+        **不用 !important**）。☠️ 别改成 `.modal-box .modal-close`：现在虽然也只剩
+        动态弹窗用 .modal-box，但将来谁往 HTML 里写一个静态 .modal-box，
+        那 6 个右上角小 × 就会跟着变成底部通栏 —— 锚到 id 才是一劳永逸的。 */
+#modalCloseBtn {
+    position: static;
+    width: 100%;
+    height: auto;
+    display: block;
+    margin-top: 14px;
+    padding: 11px;
+    font-size: 15px;
+    font-weight: 700;
+    color: #fff;
+    background: linear-gradient(135deg, #3AA17E, #2E9E6B);
+    border-radius: 14px;
+    cursor: pointer;
+}
+#modalCloseBtn:hover { background: linear-gradient(135deg, #349470, #278B5E); color: #fff; }
+
+/* ===== 段位 / 称号 / 月度回顾 / 妈妈奖励 END ===== */
+
+
         /* ===== 续命卡 / 妈妈补 / 家长面板（2026-10-28 v11） START ===== */
         /* ⚠️ 本块整体可删（删掉即回滚外观，JS 逻辑不受影响） */
         .shield-chip { display:inline-block;margin-left:6px;padding:1px 7px;border-radius:9px;
@@ -2731,6 +2877,10 @@
         <!-- 宠物养成区 -->
         <div id="petArea"></div>
 
+        <!-- v15：妈妈奖励（长期目标）—— 放宠物下方，因为她每天必经这里；
+             勋章墙在页面最底部，一周可能才看一次，放那儿等于没有拉力 -->
+        <div id="momGoalArea"></div>
+
         <!-- 统计卡片 -->
         <div class="stats-row" data-page-node-id="DQtdYbXEzQg7FVPW4z4UnK">
             <div class="stat-card" data-page-node-id="p6Rkll5t7GiCxTS0IDbHIz">
@@ -3027,7 +3177,10 @@
         //    不同步的话另一台设备永远不知道她花过钱，就会继续把钱退回给她。
         const SYNC_FIELDS = ['todayChecks', 'todayDate', 'totalStars', 'streak', 'history', 'claimedRewards', 'pet', 'medals', 'medalGotAt', 'poemLog', 'poemHard', 'poemSeen', 'owned', 'leftovers', 'petBook', 'maxExp', 'coinsEver', 'coinsSpent', 'courseDate', 'courseChecks', 'courseChecksAt', 'achv', 'petWish', 'petWishDate', 'petWishDone', 'resetAt', 'fourFullDate', 'checksUpdatedAt', 'wearing', 'foodToday', 'foodLog', 'petLegs',
             // v11：只同步「只增」的量，别同步「手上还剩几张」（余量类不能 max 合并）
-            'streakShieldIssued', 'streakShieldWeek', 'streakShieldDates'];
+            'streakShieldIssued', 'streakShieldWeek', 'streakShieldDates',
+            // v15：妈妈奖励必须同步 —— 它是**妈妈对孩子的承诺**，两台设备看到的不该不一样。
+            //   ⚠️ 合并走 mergeCloudIntoState 里专门的「只增」段，不能用最后写入赢。
+            'momRewards'];
 
         // 上传数据到 Supabase（upsert 固定 id，多端共用同一份；只更新提供的列，不覆盖其它列）
         function syncToCloud() {
@@ -3036,7 +3189,7 @@
                 const v = state[key];
                 // 关键：本地还没养伙伴 / 还没买装扮时不要上传空值，否则会把云端已有的养成进度洗掉
                 if (key === 'pet' && !v) return acc;
-                if ((key === 'owned' || key === 'medals' || key === 'petBook' || key === 'achv') && (!Array.isArray(v) || v.length === 0)) return acc;
+                if ((key === 'owned' || key === 'medals' || key === 'petBook' || key === 'achv' || key === 'momRewards') && (!Array.isArray(v) || v.length === 0)) return acc;
                 // 腿色空对象同理：别把它当成"她取消了自己的颜色"推上去
                 if (key === 'petLegs' && (!v || typeof v !== 'object' || !Object.keys(v).length)) return acc;
                 acc[key] = v;
@@ -4759,6 +4912,12 @@
                     ? '再一起打卡 ' + daysLeft + ' 天左右，我就能长成「' + PET_STAGE_NAME[stage + 1] + '」'
                     : '就快长大啦';
             }
+            // v15：称号 —— 只显示 1 个（7 岁看一排会散，等于一个都没记住）。
+            //   优先显示「最近解锁」的那个，她才会觉得"这是我新拿到的"。
+            const _title = currentTitle();
+            const titleHTML = _title
+                ? '<div class="pet-title">' + _title.icon + ' ' + _title.name + '</div>'
+                : '';
             const sceneList = petOwnedItems('scene');
             const decorList = petOwnedItems('decor');
             const fedList = foodLogList();
@@ -4851,6 +5010,7 @@
                             '<div class="pet-name">' + (state.pet.name || kind.name) +
                                 '<span class="pet-stage">' + PET_STAGE_NAME[stage] + '</span>' + starLine +
                             '</div>' +
+                            titleHTML +
                             '<div class="pet-mood">' + mood + '</div>' +
                             nutriRowHTML() +
                             '<div class="pet-exp-wrap"><div class="pet-exp-fill" style="width:' + expPct + '%;"></div></div>' +
@@ -5149,6 +5309,12 @@
             // ☠️ 原来用的是内存变量 justGotMedals，关掉页面就归零，
             //    等于她第二天再打开时"新得的"和"三月前得的"长得一模一样。
             medalGotAt: {},
+            // v15：妈妈奖励清单（天姝 2026-10-29 定）—— app 只记录，**不承诺**。
+            //   见 momRewardState 上面那段说明：必须家长点「已兑现」才算前进。
+            momRewards: [],
+            // v15：月度卡片「哪个月已经回顾过了」（'2026-10'）。**只存本地、不进 SYNC_FIELDS** ——
+            //   同步会让两端抢着弹 / 抢着不弹，而且它没有跨设备价值。
+            monthCardSeen: '',
             petBook: [],
             maxExp: 0,
             coinsEver: 0,
@@ -6202,6 +6368,19 @@
                 inner += '<div class="pp-locked">这几项得她自己点（要听写 / 要计时 / 光盘才算）：'
                        + locked.map(function (t) { return t.icon + t.name; }).join('、') + '</div>';
             }
+            // v15：妈妈奖励的「已兑现」只在这里 —— 孩子端点不到。
+            const _cur = momRewardCurrent();
+            inner += '<div class="pp-mom">';
+            if (_cur && momRewardState(_cur) === 'ready') {
+                inner += '<div class="pp-mom-t">\uD83C\uDF81 \u5df2\u8fbe\u6807\uff1a' + _cur.name + '</div>' +
+                    '<button class="pp-mom-btn" onclick="claimMomReward(\'' + _cur.id + '\')">' +
+                    '\u2705 \u6211\u5df2\u7ecf\u5151\u73b0\u5566</button>';
+            } else if (_cur) {
+                inner += '<div class="pp-mom-t">\uD83C\uDF81 \u8fd8\u5728\u6512\uff1a' + _cur.name +
+                    '\uff08' + totalMedalCopies() + ' / ' + (Math.max(1, Number(_cur.need) || 1)) + ' \u679a\uff09</div>';
+            }
+            inner += '<button class="pp-mom-btn pp-mom-set" onclick="showMomRewardEditor()">' +
+                '\u2699\ufe0f \u8bbe\u7f6e\u5988\u5988\u7684\u5956\u52b1</button></div>';
             showModal('\uD83D\uDC69 家长小工具', inner);
         }
         function parentCheck(taskId) {
@@ -6899,6 +7078,197 @@
             try { hit = weeksHit(m.check, m.rep); } catch (e) { hit = 0; }
             return Math.max(1, hit);
         }
+        // ================= v15：让"长期"看得见（2026-10-29 天姝定）=================
+        // 天姝的问题：「勋章得过以后如何还能持续保持动力？」
+        // 诊断结论（_diag_week_medals.js 实测）：机制早就有（18/20 枚可反复获得），
+        //   缺的是"第 2 次和第 1 次长得一模一样"。所以这批只做三件事：
+        //   ① 段位（同一枚的第 N 次要有形状）② 称号（身份，不是奖励）③ 月度（节奏）
+        // ☠️ 三件都**不碰金币账本**。理由：coinsEver 偏高那笔旧账还没清，
+        //   再接一条金币通道会让漂移更难判（2026-10-29 已明确否决"勋章换金币"）。
+
+        // ----- ① 段位 -----
+        // ☠️ 段位**不改边框颜色**：边框已被四态占满（灰虚线=未得 / 金=已得 /
+        //    绿=本周又得 / 橙红=差 1 天）。段位改的是 emoji 外面那圈环，
+        //    环用绝对定位，**不占布局宽度** —— 否则一行 4 枚会掉回 3 枚（v13 栽过一次）。
+        const MEDAL_TIERS = [
+            { at: 10, cls: 't4', name: '\u5f69\u8679', tip: '\u7b2c 10 \u679a\u4ee5\u4e0a' },
+            { at: 6,  cls: 't3', name: '\u91d1',     tip: '\u7b2c 6-9 \u679a' },
+            { at: 3,  cls: 't2', name: '\u94f6',     tip: '\u7b2c 3-5 \u679a' },
+            { at: 1,  cls: 't1', name: '\u94dc',     tip: '\u7b2c 1-2 \u679a' }
+        ];
+        // 表是**降序**的，从上往下找第一个够得着的档
+        function medalTier(copies) {
+            const c = Math.max(0, Number(copies) || 0);
+            if (c <= 0) return null;            // 未得的不显示段位
+            for (let i = 0; i < MEDAL_TIERS.length; i++) {
+                if (c >= MEDAL_TIERS[i].at) return MEDAL_TIERS[i];
+            }
+            return null;
+        }
+
+        // 一次算完所有勋章的枚数，段位 / 称号 / 妈妈奖励共用。
+        // ☠️ 为什么要缓存：medalCopies -> weeksHit -> weekHitsMap 每次都要遍历 history，
+        //    并对每一天再 find 一次（O(n²)）。20 枚 × 30 天接近两万次；
+        //    新功能若各算一遍会明显卡顿。指纹含 medals 与 history，任一变化即失效。
+        let _copiesCache = { key: '', map: null };
+        function medalCopiesMap() {
+            const key = String(state.todayDate || '') + '|' +
+                        ((state.history || []).length) + '|' +
+                        (state.medals || []).join(',');
+            if (_copiesCache.key === key && _copiesCache.map) return _copiesCache.map;
+            const map = {};
+            (MEDALS || []).forEach(function (m) {
+                try { map[m.id] = medalCopies(m); } catch (e) { map[m.id] = 0; }
+            });
+            _copiesCache = { key: key, map: map };
+            return map;
+        }
+        // 累计枚数 = 所有已得勋章的枚数之和（就是格子上那些 ×N 加起来）。
+        // 这是全项目唯一"没有上限、只增不减"的量 —— 所以妈妈的长期奖励阶梯挂在它上面。
+        function totalMedalCopies() {
+            const map = medalCopiesMap();
+            let n = 0;
+            Object.keys(map).forEach(function (k) { n += Number(map[k]) || 0; });
+            return n;
+        }
+
+        // ----- ② 称号 -----
+        // 同方向的几枚勋章**合计**枚数够门槛就解锁。用合计而不是单枚：
+        //   ①「方向」本来就是几枚合起来的意思；② 合计更容易在她真正使劲的地方先亮，
+        //   单枚门槛会把路堵死（阅读要单枚 3 枚的话，她永远到不了）。
+        // ☠️ 下面这些 need 是**用她 2026-10-29 的真实数据校准**的（_diag_v15_titles.js），
+        //    不是随手写的。校准目标不是"容易拿到"，而是**让解锁节奏错开**：
+        //    实测当时 6/8 个方向已超过原门槛（3/3/3/3/2/3/2）→ 上线当天会一次性全亮，
+        //    之后长期没有新称号 = 机制当场废掉。所以门槛抬到她当前值之上：
+        //    1 个立刻解锁（有兑现感）+ 3 个只差 1 枚（下周就能拿）+ 其余散到 3-6 周后。
+        // ⚠️ medalCopies 对**已得**勋章返回 max(1, 达标周数) —— 即"点亮一枚就至少算 1"，
+        //    合计口径比直觉更容易达标。定门槛必须用真实数据核，靠推算必错。
+        // ⚠️ 称号是**一次性里程碑**（解锁后不降级、也不重复）→ 8 个用完后，长期拉力靠
+        //    段位（copies 无限增长）+ 月度回顾 + 妈妈奖励阶梯，**别指望称号**。
+        const TITLES = [
+            { id: 't_read',  icon: '\uD83D\uDCDA', name: '\u9605\u8bfb\u5c0f\u884c\u5bb6', from: ['read5', 'listen15'],             need: 9 },
+            { id: 't_math',  icon: '\uD83E\uDDEE', name: '\u6570\u5b66\u5c0f\u535a\u58eb', from: ['math10', 'calc12', 'talk8'],      need: 7 },
+            { id: 't_cn',    icon: '\uD83D\uDCD6', name: '\u8ba4\u5b57\u9ad8\u624b',       from: ['chinese6', 'words10', 'write6'],  need: 4 },
+            { id: 't_life',  icon: '\uD83C\uDFE0', name: '\u751f\u6d3b\u5c0f\u4e3b\u4eba', from: ['pack10', 'chore', 'sleep5'],      need: 10 },
+            { id: 't_sport', icon: '\uD83C\uDFC3', name: '\u8fd0\u52a8\u5c0f\u8fbe\u4eba', from: ['sport5'],                         need: 2 },
+            { id: 't_early', icon: '\uD83C\uDF1E', name: '\u65e9\u8d77\u5c0f\u592a\u9633', from: ['morning7', 'fast5'],              need: 8 },
+            { id: 't_full',  icon: '\uD83C\uDF96', name: '\u5168\u52e4\u961f\u957f',       from: ['all7', 'coursefull', 'course12'], need: 6 },
+            // ⚠️ t_star 口径特殊：不是加 from 里的枚数，而是"点亮了几枚不同勋章"
+            //    （total: true 是 titleHave 走这条分支的开关，**别删**）
+            { id: 't_star',  icon: '\uD83C\uDF1F', name: '\u575a\u6301\u4e4b\u661f',       from: [],                          total: true, need: 16 }
+        ];
+        function titleHave(t) {
+            if (!t) return 0;
+            if (t.total) return (state.medals || []).length;
+            const map = medalCopiesMap();
+            let n = 0;
+            (t.from || []).forEach(function (id) {
+                if ((state.medals || []).indexOf(id) >= 0) n += Number(map[id]) || 0;
+            });
+            return n;
+        }
+        function titlesEarned() {
+            return TITLES.filter(function (t) { return titleHave(t) >= t.need; });
+        }
+        // 显示哪一个：优先「最近解锁」的（她要看到新的），拿不到时间就按定义顺序取第一个。
+        // ☠️ 只显示 1 个 —— 7 岁看一排称号会散，等于一个都没记住。
+        function currentTitle() {
+            const got = titlesEarned();
+            if (!got.length) return null;
+            const at = state.medalGotAt || {};
+            let best = null, bestAt = '';
+            got.forEach(function (t) {
+                let latest = '';
+                (t.from || []).forEach(function (id) {
+                    const d = String(at[id] || '');
+                    if (d > latest) latest = d;
+                });
+                if (latest > bestAt) { bestAt = latest; best = t; }
+            });
+            return best || got[0];
+        }
+
+        // ----- ③ 月度回顾 -----
+        // 7 岁的时间感上限大约就是「一个月」（一年等于不存在 —— 商店调价那次已验证：
+        // 27 天被换算成"不存在"）。所以长期节奏只能按月切，不能按学期。
+        // ☠️ 口径只数 history 里**有记录**的天：没记录的天不做失败处理
+        //    （她可能在姥姥家、可能生病）。把"没打卡"算成"没做到"是冤枉她。
+        function monthReview(ym) {
+            const out = { ym: ym, days: 0, full: 0, half: 0, miss: 0, stars: 0, copies: 0, newMedals: [] };
+            (state.history || []).forEach(function (h) {
+                if (!h || !h.date || String(h.date).slice(0, 7) !== ym) return;
+                out.days++;
+                out.stars += Number(h.stars) || 0;
+                const done = Number(h.completed) || 0;
+                const tot = Number(h.total) || 0;
+                if (tot > 0 && done >= tot) out.full++;
+                else if (tot > 0 && done * 2 >= tot) out.half++;
+                else out.miss++;
+            });
+            // 这月"又攒了几枚" = 该月内所有已得勋章达标周数之和，口径与 ×N 一致：
+            //   只看**周一落在该月内**的周（跨月周归前一个月），否则同一周会被数两次。
+            (MEDALS || []).forEach(function (m) {
+                if (!m || !m.rep || !m.check) return;
+                if ((state.medals || []).indexOf(m.id) < 0) return;
+                let per = {};
+                try { per = weekHitsMap(m.check); } catch (e) { per = {}; }
+                Object.keys(per).forEach(function (k) {
+                    if (String(k).slice(0, 7) === ym && per[k] >= m.rep) out.copies++;
+                });
+            });
+            const at = state.medalGotAt || {};
+            out.newMedals = (state.medals || []).filter(function (id) {
+                return String(at[id] || '').slice(0, 7) === ym;
+            });
+            return out;
+        }
+        function monthBefore(ym) {
+            const p = String(ym || '').split('-');
+            let y = Number(p[0]), m = Number(p[1]);
+            if (!y || !m) return '';
+            m--;
+            if (m < 1) { m = 12; y--; }
+            return y + '-' + (m < 10 ? '0' + m : m);
+        }
+        // 该不该弹上月回顾：跨月后**第一次**打开才弹；上月得有记录才值得回顾。
+        function monthCardShouldShow() {
+            const ym = String(state.todayDate || '').slice(0, 7);
+            if (!ym) return false;
+            const prev = monthBefore(ym);
+            if (!prev) return false;
+            if (String(state.monthCardSeen || '') === prev) return false;
+            return (state.history || []).some(function (h) {
+                return h && String(h.date || '').slice(0, 7) === prev;
+            });
+        }
+
+        // ----- ④ 妈妈奖励（app 不承诺、只记录）-----
+        // ☠️ 铁律：app 只显示「可以找妈妈换啦」，必须家长点「已兑现」才前进，
+        //    **绝不自动跳下一档**。承诺人是妈妈，不是 app。
+        //    一旦 app 单方面宣告"你赚到了"而现实没兑现，坏掉的不是这一次，
+        //    而是"这个 app 说的话算不算数" —— 那会把整套勋章一起带垮。
+        function momRewardList() {
+            const list = state.momRewards;
+            if (!Array.isArray(list)) return [];
+            return list.filter(function (r) {
+                return r && typeof r.name === 'string' && r.name.trim();
+            });
+        }
+        // 当前在追的那一档 = 第一个还没兑现的档（已兑现的不再显示在进度里）
+        function momRewardCurrent() {
+            const list = momRewardList();
+            for (let i = 0; i < list.length; i++) {
+                if (!list[i].claimedAt) return list[i];
+            }
+            return null;
+        }
+        function momRewardState(r) {
+            if (!r) return 'none';
+            if (r.claimedAt) return 'claimed';
+            const need = Math.max(1, Number(r.need) || 1);
+            return totalMedalCopies() >= need ? 'ready' : 'doing';
+        }
+
         // 一枚勋章"现在到哪儿了" —— 发奖与显示共用这一处，永远同源
         function medalProgress(m) {
             // 2026-10-27 v9：新增 custom 口径 —— 判据不是"攒天数"的勋章（如全课满勤日）
@@ -7080,6 +7450,137 @@
             out.total = out.freshCount + out.moreCount;
             return out;
         }
+        // ===== v15：妈妈奖励（长期目标）=====
+        // ☠️ app **只记录、不承诺**：她看到「可以找妈妈换啦」，但「已兑现」的按钮
+        //    只在家长入口里。app 单方面宣告"你赚到了"而现实没兑现，
+        //    坏掉的是"这个 app 说的话算不算数"，会把整套勋章一起带垮。
+        function renderMomGoal() {
+            const area = document.getElementById('momGoalArea');
+            if (!area) return;
+            const list = momRewardList();
+            if (!list.length) { area.innerHTML = ''; return; }
+            const total = totalMedalCopies();
+            const cur = momRewardCurrent();
+            let inner = '<div class="mg-head">\uD83C\uDF81 \u5988\u5988\u7684\u5956\u52b1</div>';
+            if (!cur) {
+                inner += '<div class="mg-done">\u5168\u90e8\u5151\u73b0\u5b8c\u5566\uff0c\u771f\u68d2\uff01</div>';
+            } else {
+                const need = Math.max(1, Number(cur.need) || 1);
+                const pct = Math.min(100, Math.round(total / need * 100));
+                inner += '<div class="mg-row">' +
+                        '<span class="mg-icon">' + (cur.icon || '\uD83C\uDF81') + '</span>' +
+                        '<span class="mg-name">' + cur.name + '</span>' +
+                        '<span class="mg-need">' + total + ' / ' + need + ' \u679a</span>' +
+                    '</div>' +
+                    '<div class="mg-bar"><i style="width:' + pct + '%"></i></div>' +
+                    (momRewardState(cur) === 'ready'
+                        ? '<div class="mg-ready">\u2705 \u53ef\u4ee5\u627e\u5988\u5988\u5151\u5566\uff01</div>'
+                        : '<div class="mg-tip">\u518d\u6512 <b>' + Math.max(0, need - total) + '</b> \u679a\u5c31\u80fd\u5151\u5566</div>');
+            }
+            area.innerHTML = '<div class="mom-goal-card">' + inner + '</div>';
+        }
+        // 妈妈确认兑现 —— **只能从家长入口进**，孩子端点不到
+        function claimMomReward(id) {
+            const list = state.momRewards || [];
+            let r = null;
+            for (let i = 0; i < list.length; i++) {
+                if (list[i] && list[i].id === id) { r = list[i]; break; }
+            }
+            if (!r || r.claimedAt) return;
+            r.claimedAt = String(state.todayDate || '');
+            saveState();
+            renderAll();
+            const mask = document.querySelector('.modal-mask');
+            if (mask) mask.remove();
+        }
+        function showMomRewardEditor() {
+            const list = momRewardList();
+            let rows = '';
+            for (let i = 0; i < 3; i++) {
+                const r = list[i] || { name: '', need: '' };
+                rows += '<div class="mr-row">' +
+                    '<input class="mr-name" maxlength="12" placeholder="\u5956\u52b1\u540d\u5b57\uff08\u5982\uff1a\u4e00\u6b21\u516c\u56ed\uff09" value="' +
+                        String(r.name || '').replace(/"/g, '&quot;') + '">' +
+                    '<input class="mr-need" type="number" min="1" max="999" placeholder="\u679a" value="' +
+                        (r.need ? Number(r.need) : '') + '">' +
+                '</div>';
+            }
+            const inner = '<div class="mr-tip">\u6512\u591f\u6307\u5b9a\u679a\u6570\u7684\u52cb\u7ae0\uff0c\u5979\u5c31\u4f1a\u770b\u5230\u300c\u53ef\u4ee5\u627e\u5988\u5988\u5151\u5566\u300d\u3002<br>' +
+                    '\u26a0\ufe0f app \u53ea\u63d0\u9192\uff0c<b>\u4e0d\u4f1a\u81ea\u52a8\u5151\u73b0</b> \u2014\u2014 \u5151\u4e0d\u5151\u7531\u4f60\u5b9a\u3002' +
+                    '\u76ee\u524d\u5979\u4e00\u5171\u6512\u4e86 <b>' + totalMedalCopies() + '</b> \u679a\u3002</div>' +
+                rows +
+                '<button class="mr-save" onclick="saveMomRewards()">\u4fdd\u5b58</button>';
+            showModal('\uD83C\uDF81 \u5988\u5988\u7684\u5956\u52b1', inner);
+        }
+        function saveMomRewards() {
+            const names = document.querySelectorAll('.mr-name');
+            const needs = document.querySelectorAll('.mr-need');
+            const old = momRewardList();
+            const out = [];
+            for (let i = 0; i < names.length; i++) {
+                const name = String(names[i].value || '').trim();
+                if (!name) continue;
+                const prev = old[out.length] || {};
+                out.push({
+                    id: prev.id || ('m' + (out.length + 1)),
+                    name: name,
+                    icon: prev.icon || '\uD83C\uDF81',
+                    need: Math.max(1, Number(needs[i].value) || 1),
+                    claimedAt: prev.claimedAt || ''
+                });
+            }
+            state.momRewards = out;
+            saveState();
+            renderAll();
+            const mask = document.querySelector('.modal-mask');
+            if (mask) mask.remove();
+        }
+
+        // ===== v15：月度回顾 =====
+        // 跨月后**第一次**打开才弹，一年最多 12 次，不会变成打扰。
+        // ☠️ 必须在 syncFromCloud 的 renderAll 之后再调：那时 history 才是完整的，
+        //    早调会算出"这个月 0 天"这种假数据（跨天丢卡事故同源）。
+        function maybeShowMonthCard() {
+            if (!monthCardShouldShow()) return;
+            const ym = monthBefore(String(state.todayDate || '').slice(0, 7));
+            const r = monthReview(ym);
+            state.monthCardSeen = ym;      // 先标记，避免渲染中途异常导致每次打开都弹
+            saveState();
+            const mo = Number(String(ym).slice(5, 7)) || 0;
+            let inner = '<div class="mc-block">' +
+                '<div class="mc-big">' + mo + ' \u6708\u53c8\u6512\u4e86 <b>' + r.copies + '</b> \u679a\u52cb\u7ae0</div>' +
+                '<div class="mc-line">\uD83D\uDCC5 \u4e00\u8d77\u6253\u5361 <b>' + r.days + '</b> \u5929</div>';
+            if (r.full > 0) {
+                inner += '<div class="mc-line">\uD83C\uDF1F \u5176\u4e2d <b>' + r.full + '</b> \u5929\u5168\u90e8\u505a\u5230\u4e86</div>';
+            }
+            if (r.half > 0) {
+                inner += '<div class="mc-line">\uD83D\uDC4D \u8fd8\u6709 <b>' + r.half + '</b> \u5929\u505a\u5230\u4e86\u4e00\u5927\u534a</div>';
+            }
+            if (r.miss > 0) {
+                // 天姝 2026-10-29 定：**要提没做到的天数**。不点名哪一天，不给羞耻感，
+                //   但保留真实信息量 —— 只说好话的回顾会变成"反正都是夸奖"，含金量归零。
+                // ☠️ 措辞必须说"做得不多"，不能说"没做到"：她那天**是打卡了的**，
+                //    只是做的事不到一半。说"没做到"会和上面"一起打卡 14 天"直接打架，
+                //    孩子的理解是"我明明打了卡，你还说我没做到" → 整个回顾就不可信了。
+                inner += '<div class="mc-line mc-miss">\uD83D\uDE14 \u8fd8\u6709 <b>' + r.miss +
+                         '</b> \u5929\u505a\u5f97\u4e0d\u591a\uff0c\u4e0b\u4e2a\u6708\u54b1\u4eec\u591a\u4e00\u70b9\u597d\u4e0d\u597d</div>';
+            }
+            inner += '</div>';
+            // 下个月只推一个目标 —— 和勋章墙底部同一个口径（一堆目标等于没有目标）
+            let nb = null, nl = 9999;
+            (MEDALS || []).forEach(function (m) {
+                if ((state.medals || []).indexOf(m.id) >= 0) return;
+                const l = medalProgress(m).left;
+                if (l > 0 && l < nl) { nl = l; nb = m; }
+            });
+            if (nb) {
+                inner += '<div class="mc-next">\uD83C\uDFAF \u4e0b\u4e2a\u6708\u5c0f\u76ee\u6807\uff1a' +
+                         (nb.mode === 'total' ? '\u518d\u505a' : '\u518d\u575a\u6301') +
+                         ' <b>' + nl + ' \u5929</b>\uff0c\u5c31\u80fd\u5f97\u5230 ' + nb.icon + ' ' + nb.name + '</div>';
+            }
+            showModal('\uD83D\uDCD6 ' + mo + ' \u6708\u56de\u987e', inner);
+        }
+
         function renderMedals() {
             const area = document.getElementById('medalArea');
             if (!area) return;
@@ -7087,11 +7588,14 @@
             const wr = medalWeekReview();             // v14：本周收获（下面头部与格子共用）
             let cells = '';
             let nearest = null, nearestLeft = 9999;   // 离解锁最近的一枚
+            // v15：枚数走共享缓存 —— 段位/称号/妈妈奖励三处都要用，各算一遍会卡（见 medalCopiesMap）
+            const _copiesNow = medalCopiesMap();
             MEDALS.forEach(function (m) {
                 const got = state.medals.indexOf(m.id) >= 0;
                 const p = medalProgress(m);
                 const left = p.left;
-                const copies = medalCopies(m);
+                const copies = Number(_copiesNow[m.id]) || 0;
+                const tier = medalTier(copies);   // v15：段位 = 同一枚的第 N 次要有形状
                 // 未解锁不再只显示 "2/3"（孩子推不出“再做什么就能拿到”），改成还差几天。
                 // 「连着做」与「攒够天数」用词不同，孩子才分得清这两类勋章。
                 // 2026-10-28 v10：可累计勋章已得之后，她关心的已经不是"有没有"，而是
@@ -7153,6 +7657,7 @@
                         (wkRec.again ? ' week-hit' : '') +
                         (nearNow ? ' near' : '') +
                         (justNow ? ' justgot' : '') +
+                        (tier ? ' tier-' + tier.cls : '') +
                         '" data-medal-id="' + m.id + '" title="' + m.desc + '">' +
                     (copies >= 2 ? '<span class="medal-rep">\u00d7' + copies + '</span>' : '') +
                     (fresh ? '<span class="medal-fresh-tag">\u2728 \u65b0\u7684</span>' : '') +
@@ -9197,6 +9702,14 @@
         //    一个渲染分支的小毛病，不该让整页变成"数据坏了"的样子。
         //    隔离后：坏掉的那块保留上一次的样子，其余照常刷新。
         function renderAll() {
+            // v15：每次整体渲染前清掉枚数缓存。
+            // ☠️ 缓存只服务于**同一次渲染内**的共用（renderPet 算称号、renderMedals 算段位、
+            //    renderMomGoal 算累计枚数，三处共用一次计算）——**绝不能跨渲染存活**。
+            //    它的指纹只有 history.length / medals / todayDate，而 history 的**内容**
+            //    可能变而长度不变（同一天记录被家长更正、跨天归档把今天并进历史），
+            //    那样称号和段位会拿到旧枚数。
+            //    2026-10-29 实拍真的撞到：自证条报「生活小主人」、画面却是「认字高手」。
+            _copiesCache = { key: '', map: null };
             const _steps = [
                 ['renderHeader',  renderHeader],
                 ['renderMotto',   renderMotto],
@@ -9205,6 +9718,7 @@
                 ['renderStats',   renderStats],
                 ['renderPoem',    renderPoem],
                 ['renderTasks',   renderTasks],
+                ['renderMomGoal', renderMomGoal],
                 ['renderMedals',  renderMedals],
                 ['renderHistory', renderHistory]
             ];
@@ -9704,6 +10218,39 @@
                     state.todayChecks = {};
                 }
             }
+            // v15：妈妈奖励清单 —— **只增**合并。
+            // ☠️ 不能"最后写入赢"：B 设备上还留着一份 claimedAt 为空的旧数组，
+            //    推上来会把 A 设备已「已兑现」的状态洗回未兑现 ——
+            //    对布丁来说就是"妈妈说好给我的又没了"。所以逐档取**更晚的兑现时间**。
+            //    判据同「余量不能取大」的反面：claimedAt 是**只增**量，所以取大合法。
+            if (Array.isArray(data.momRewards)) {
+                const lmap = {};
+                (Array.isArray(state.momRewards) ? state.momRewards : []).forEach(function (r) {
+                    if (r && r.id) lmap[r.id] = r;
+                });
+                state.momRewards = data.momRewards.filter(function (r) {
+                    return r && r.id && typeof r.name === 'string';
+                }).map(function (r) {
+                    const l = lmap[r.id] || {};
+                    const la = String(l.claimedAt || '');
+                    const ra = String(r.claimedAt || '');
+                    return {
+                        id: r.id,
+                        name: r.name,
+                        icon: r.icon || l.icon || '\uD83C\uDF81',
+                        need: Math.max(1, Number(r.need) || Number(l.need) || 1),
+                        // 谁晚听谁；空值永远输给有值（所以"已兑现"不可能被洗回未兑现）
+                        claimedAt: ra > la ? ra : la
+                    };
+                });
+                // 本机独有、云端还没有的档位补回去（比如断网时新建的）
+                Object.keys(lmap).forEach(function (id) {
+                    if (!state.momRewards.some(function (x) { return x.id === id; })) {
+                        state.momRewards.push(lmap[id]);
+                    }
+                });
+            }
+
             // 云端日期不是今天（跨天竞态，例如对方还没换天）：一概不动 todayDate / todayChecks，
             // 交给随后的 checkNewDay() 把本机过期的那一天正常归档并清空。
         }
@@ -9845,6 +10392,9 @@
                 try { dailyCareTick(); } catch (e) { console.warn('dailyCareTick', e); }
                 saveState(); // 持久化合并结果并上传云端（history 已含本地+云端所有天）
                 renderAll();
+                // v15：跨月首次打开弹上月回顾。☠️ 必须放在这里（云端合并之后）——
+                //   早了 history 还不完整，会算出"这个月 0 天"。
+                try { maybeShowMonthCard(); } catch (e) { console.warn('monthCard', e); }
                 listenCloudChanges(); // 启动多端轮询同步
                 checkLiveVersion();   // 上线新版本后，旧页面能自己追上来
                 document.addEventListener('visibilitychange', function () {
