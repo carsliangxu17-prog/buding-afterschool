@@ -8,7 +8,7 @@
     <meta http-equiv="Expires" content="0" data-page-node-id="YXlbOTFHU2Nr6SGRQHt7cy">
     <script>
         (function () {
-        var APP_VERSION = '20261028.4';
+        var APP_VERSION = '20261029.1';
             window.APP_VERSION_STR = APP_VERSION;   // 主脚本里做线上版本自检要用
             try {
                 var params = new URLSearchParams(location.search);
@@ -853,6 +853,40 @@
         }
         .poem-btn.done { background: #C8D6CE; }
 
+        /* ===== 古诗词复习态 / 「还背不出来」按钮（2026-10-29 v13） START =====
+           走追加覆盖层，不回改上面任何一条旧规则（删掉本块即完全回滚）。
+           配色沿用诗意卡片的暖褐系，但「不会」按钮刻意做得**弱**：
+           它不是反向操作，是"说实话"的出口，不能给奖励色，否则她会为了点它而点它。 */
+        .poem-card.poem-review {
+            background: linear-gradient(150deg, #F7FBFD 0%, #EAF2F8 100%);
+            border-color: #CFE0EE;
+            box-shadow: 0 3px 14px rgba(90,140,180,0.16);
+        }
+        .poem-card.poem-review .poem-head { color: #5A82A6; }
+        /* 表头两侧强制最小间隔：320px 下 space-between 只剩十几px，看起来像两句连在一起 */
+        .poem-head { gap: 10px; }
+        .poem-head > span:last-child { flex-shrink: 0; }
+        .poem-card.poem-review .poem-title { color: #2F5D82; }
+        .poem-card.poem-review .poem-text { color: #46617A; }
+        .poem-actions { display: flex; flex-direction: column; gap: 7px; }
+        .poem-btn.hard {
+            margin-top: 0;
+            background: #EDF1F5;
+            color: #7C8FA3;
+            border: 1.5px dashed #C6D3DF;
+            font-weight: 600;
+            font-size: 13px;
+        }
+        .poem-btn.hard:active { background: #E2E9F0; }
+        .poem-tally {
+            margin-top: 9px;
+            font-size: 12px;
+            color: #8AA0B4;
+            text-align: center;
+        }
+        .poem-tally b { color: #5A82A6; font-size: 13px; }
+        /* ===== 古诗词复习态 END ===== */
+
         /* ========== 勋章墙 ========== */
         .medal-card { background:#fff;border:2px solid #E3EAF6;border-radius:20px;margin:18px 0 6px;
             padding:14px 16px;box-shadow:0 3px 14px rgba(90,120,170,0.10); }
@@ -891,6 +925,84 @@
         .medal-total { font-size:11px;color:#2E9E6B;margin-top:8px;text-align:center;font-weight:600; }
         .medal-total b { color:#F5A623;font-size:13px; }
         /* ===== 勋章累计角标（2026-10-28 v10） END ===== */
+        /* ===== 勋章墙可视化重做（2026-10-29 v13） START =====
+           走追加覆盖层：上面 .medal-cell / .medal-cell.got 那几条旧规则**一行不动**，
+           此处靠"同特异性 + 靠后"覆盖。删掉本块即完全回滚外观，JS 逻辑不受影响。
+           ☠️ 判据：未得与已得必须**形状不同**（虚线 vs 实心金框），
+              不能只靠"颜色深浅" —— 只差深浅时扫一眼就是一堆同款方块。 */
+        .medal-cell {
+            box-sizing: border-box;
+            /* ☠️ 一行放几枚是算出来的，不是猜的（2026-10-29 实拍实测）：
+               375 屏 → card 335 → 去掉 padding 16×2 与 border 2×2 → **可用内宽 299px**。
+               （旧注释写的"可用内宽 314px、309 放 4 枚"算错了 —— 309 > 299，从来放不下，
+                 所以一直是 3 枚/行、16 枚排 6 行，一屏看不全。）
+               4×69 + 3×7 = 297 ≤ 299 ✓ → 改 69px 后 16 枚排 4 行，一屏看全。
+               窄屏（≤340）会自然降回 3 枚/行，属预期降级。 */
+            flex: 0 0 69px;
+            padding: 8px 2px 7px;
+            border-radius: 14px;
+            /* ☠️ 边框必须用 outline，不能用 border：border 会占掉内容区宽度，
+               内容被 min-content 撑大 → 格子实宽涨到 ~88px → 掉成 2 枚/行。 */
+            outline: 2px dashed #D5DDE6;
+            outline-offset: -2px;
+            background: #F7F9FB;
+            opacity: 1;            /* 不再整体压透明度：压了以后文字也糊，看不清"还差几天" */
+            filter: none;
+            transition: .3s;
+        }
+        /* 69px 内容区只有 65px，"本周再做 2 天" 在 10px 下要 68px 会溢出 → 收到 9px */
+        .medal-cell .medal-prog { font-size: 9px; }
+        .medal-cell .medal-name { font-size: 10.5px; }
+        .medal-cell .medal-emoji { font-size: 27px; filter: grayscale(1) opacity(.42); }
+        .medal-cell .medal-name  { color: #9AA7B4; }
+        .medal-cell.got {
+            outline: 2px solid #EFC264;
+            background: linear-gradient(160deg, #FFFDF4 0%, #FFF3D6 100%);
+            box-shadow: 0 3px 10px rgba(240,180,60,.22);
+        }
+        .medal-cell.got .medal-emoji { filter: none; }
+        .medal-cell.got .medal-name  { color: #8A6A18; }
+
+        /* 3 天内新得的：呼吸光晕 + ✨新的 角标（只有它会"动"，其余保持静止） */
+        .medal-cell.fresh {
+            outline-color: #F5A623;
+            animation: freshGlow 2.4s ease-in-out infinite;
+        }
+        @keyframes freshGlow {
+            0%, 100% { box-shadow: 0 0 0 2px rgba(245,166,35,.22), 0 4px 12px rgba(245,166,35,.28); }
+            50%      { box-shadow: 0 0 0 5px rgba(245,166,35,.42), 0 6px 18px rgba(245,166,35,.46); }
+        }
+        .medal-fresh-tag {
+            position: absolute; top: -7px; left: -5px;
+            background: linear-gradient(135deg, #FF7A59, #F5A623);
+            color: #fff; font-size: 9px; font-weight: 700;
+            padding: 1px 6px; border-radius: 9px; line-height: 15px;
+            box-shadow: 0 2px 5px rgba(245,120,60,.42);
+            white-space: nowrap;
+        }
+        /* 未得的锁：和 ×N 角标在同一个角，但两者天然互斥（没得时不可能有 ×N） */
+        .medal-lock {
+            position: absolute; top: -2px; right: 3px;
+            font-size: 9px; opacity: .5; line-height: 14px;
+        }
+        /* 未得格子的细进度条 —— 7 岁不懂百分比，看得懂条的长短 */
+        .medal-bar {
+            height: 4px; margin: 4px 5px 1px;
+            background: #E4EAEF; border-radius: 3px; overflow: hidden;
+        }
+        .medal-bar i {
+            display: block; height: 100%; min-width: 0;
+            background: linear-gradient(90deg, #A9C7E8, #6FA8DC);
+            border-radius: 3px; transition: width .45s ease;
+        }
+        /* 同行自动等高（flex 默认 align-items:stretch），不需要写死 min-height。
+           ☠️ 原来试过 min-height:112px "让格子等高"，结果勋章墙整体从 4 行拉到 6 行以上
+              —— 一屏看不全，"灰变彩"的对比反而更弱。高度交给内容。 */
+        .medal-plain {
+            font-size: 12px; color: #6B7785; margin-top: 7px; text-align: center;
+        }
+        .medal-plain b { color: #F5A623; font-size: 14px; }
+        /* ===== 勋章墙可视化重做 END ===== */
         /* ===== 续命卡 / 妈妈补 / 家长面板（2026-10-28 v11） START ===== */
         /* ⚠️ 本块整体可删（删掉即回滚外观，JS 逻辑不受影响） */
         .shield-chip { display:inline-block;margin-left:6px;padding:1px 7px;border-radius:9px;
@@ -2845,7 +2957,7 @@
         // 上传到云端的数据只包含动态打卡记录（任务/奖励用本地默认值）
         // ⚠️ coinsSpent（累计花费）必须在这里（2026-09-26）：它是"钱花掉了"的唯一记录，
         //    不同步的话另一台设备永远不知道她花过钱，就会继续把钱退回给她。
-        const SYNC_FIELDS = ['todayChecks', 'todayDate', 'totalStars', 'streak', 'history', 'claimedRewards', 'pet', 'medals', 'poemLog', 'owned', 'leftovers', 'petBook', 'maxExp', 'coinsEver', 'coinsSpent', 'courseDate', 'courseChecks', 'courseChecksAt', 'achv', 'petWish', 'petWishDate', 'petWishDone', 'resetAt', 'fourFullDate', 'checksUpdatedAt', 'wearing', 'foodToday', 'foodLog', 'petLegs',
+        const SYNC_FIELDS = ['todayChecks', 'todayDate', 'totalStars', 'streak', 'history', 'claimedRewards', 'pet', 'medals', 'medalGotAt', 'poemLog', 'poemHard', 'poemSeen', 'owned', 'leftovers', 'petBook', 'maxExp', 'coinsEver', 'coinsSpent', 'courseDate', 'courseChecks', 'courseChecksAt', 'achv', 'petWish', 'petWishDate', 'petWishDone', 'resetAt', 'fourFullDate', 'checksUpdatedAt', 'wearing', 'foodToday', 'foodLog', 'petLegs',
             // v11：只同步「只增」的量，别同步「手上还剩几张」（余量类不能 max 合并）
             'streakShieldIssued', 'streakShieldWeek', 'streakShieldDates'];
 
@@ -3053,7 +3165,7 @@
             { id:'e_read_wk',   name:'课外阅读 30 分钟',          icon:'\uD83D\uDCDA', category:'after', subject:'chinese', stars:2, nutri:'wisdom', days:[6,0] },
             { id:'e_words',     name:'认识生字 6 个',             icon:'\u270F\uFE0F', category:'after', subject:'chinese', stars:1, nutri:'wisdom', days:[1,2,3,4], startMin:1140 },
             { id:'e_cn_review', name:'语文当日课文复习',           icon:'\uD83D\uDCC4', category:'after', subject:'chinese', stars:2, nutri:'wisdom', days:[1,2,3,4], startMin:1140 },
-            { id:'e_cn_dict',   name:'语文当日字词听写',           icon:'\uD83D\uDCDD', category:'after', subject:'chinese', stars:3, nutri:'wisdom', days:[1,2,3,4], startMin:1140 },
+            { id:'e_cn_dict',   name:'语文当日字词默写',           icon:'\u270D\uFE0F', category:'after', subject:'chinese', stars:3, nutri:'wisdom', days:[1,2,3,4], startMin:1140 },
             { id:'a_dictation', name:'词语听写 10 个',            icon:'\u270D\uFE0F', category:'after', subject:'chinese', stars:2, nutri:'wisdom', days:[6,0], modal:'dictation' },
             { id:'w_weiyang6',  name:'未泱中文阅读 2 个',          icon:'\uD83D\uDCDA', category:'after', subject:'chinese', stars:2, nutri:'wisdom', days:[6] },
             { id:'w_weiyang0',  name:'未泱中文阅读 3 个',          icon:'\uD83D\uDCDA', category:'after', subject:'chinese', stars:3, nutri:'wisdom', days:[0] },
@@ -4965,6 +5077,10 @@
             missYouDate: '',        // 「宠物想你」一天只说一次
             pet: null,
             medals: [],
+            // v13：每枚勋章"哪天得的" —— 存日期才能让「✨新的」跨会话存活。
+            // ☠️ 原来用的是内存变量 justGotMedals，关掉页面就归零，
+            //    等于她第二天再打开时"新得的"和"三月前得的"长得一模一样。
+            medalGotAt: {},
             petBook: [],
             maxExp: 0,
             coinsEver: 0,
@@ -4989,6 +5105,10 @@
             resetAt: '', 
             fourFullDate: '', 
             poemLog: {},
+            // v13：不会背的诗 —— 记下来是为了让她隔天再遇到（复习），不是罚她
+            poemHard: {},
+            // v13：每首诗最近一次被展示的日期 —— 复习池靠它排"最久没出现"
+            poemSeen: {},
             poemLibVer: 0,
             dictationBank: null,
             dictationLearned: 0,
@@ -5102,7 +5222,7 @@
         }
 
         // 一次性任务参数校准（ensureValidState 里调用，只跑一遍）
-        const TASK_PATCH_VER = 8;
+        const TASK_PATCH_VER = 9;
         function applyTaskPatches() {
             if ((state.taskPatchVer || 0) >= TASK_PATCH_VER) return;
             if (!Array.isArray(state.tasks)) state.tasks = [];
@@ -5239,8 +5359,11 @@
                 if (typeof meta.startMin === 'number') x.startMin = meta.startMin;
             });
             // 新增两条（自带完整定义，不依赖 DEFAULT_TASKS）
+            // ⚠️ e_cn_dict 的名字/图标直接写**当前口径**（2026-10-29 起是「默写」✍️）。
+            //    原先这里写的是旧的「听写」📝，靠下面 v9 补丁再改回来 —— 同一个函数里
+            //    先写 A 再改 B，顺序一被调整就静默回退，等于埋了个必踩的坑。
             [{
-                id: 'e_cn_dict', name: '语文当日字词听写', icon: '\uD83D\uDCDD',
+                id: 'e_cn_dict', name: '语文当日字词默写', icon: '\u270D\uFE0F',
                 category: 'after', subject: 'chinese', stars: 3, nutri: 'wisdom',
                 days: [1, 2, 3, 4], startMin: 1140
             }, {
@@ -5367,6 +5490,16 @@
                     state.tasks.push(Object.assign({ weekendOnly: false }, def));
                 }
             });
+            // ===== v9（2026-10-29，天姝）：语文当日字词「听写」→「默写」=====
+            // 依据：e_cn_dict 上线 18 天 **0 次完成** —— "妈妈报词她写"这个形式在她家跑不起来
+            //   （家长不在/没时间），而默写她自己就能做。这是改任务的**执行形式**，不是降难度。
+            // ☠️ 必须在这里改：tasks 只存本机，光改 DEFAULT_TASKS 与 data/tasks.json
+            //    到不了已装设备（错误 2）。只动 state.tasks，不碰 todayChecks。
+            const cnDict = state.tasks.find(function (x) { return x && x.id === 'e_cn_dict'; });
+            if (cnDict) {
+                cnDict.name = '语文当日字词默写';
+                if (cnDict.icon === '\uD83D\uDCDD') cnDict.icon = '\u270D\uFE0F';
+            }
             // 顺序：家务排在「整理书包」后面（同属生活组）
             const V8_SEQ = [
                 'm_listen', 'm_break', 'm_milk', 'm_egg', 'm_enread',
@@ -5937,6 +6070,19 @@
                               'linear-gradient(135deg,#7F77DD,#534AB7)');
                 }, 700);
             }
+            // v13：记下"今天展示的是哪首诗" —— 复习池靠它排"最久没出现"。
+            // ☠️ 必须写在 state 变化后才 saveState 的分支里，**不能无条件写盘**：
+            //    这个 tick 每次 init/合并都会跑，无条件 saveState 会高频整份覆写云端。
+            try {
+                const tp = getTodayPoem();
+                if (tp && tp.t) {
+                    const seen = poemSeenMap();
+                    if (seen[tp.t] !== state.todayDate) {
+                        seen[tp.t] = state.todayDate;
+                        saveState();
+                    }
+                }
+            } catch (e) { console.warn('poemSeen', e); }
             if (used) {
                 setTimeout(function () {
                     showToast('\uD83D\uDEE1 连击护住啦！用掉 1 张续命卡',
@@ -6359,7 +6505,45 @@
             { t:'《浣溪沙》', a:'苏轼', g:'六下', x:'山下兰芽短浸溪，松间沙路净无泥，萧萧暮雨子规啼。谁道人生无再少？门前流水尚能西！休将白发唱黄鸡。' },
             { t:'《清平乐》', a:'黄庭坚', g:'六下', x:'春归何处？寂寞无行路。若有人知春去处，唤取归来同住。春无踪迹谁知？除非问取黄鹂。百啭无人能解，因风飞过蔷薇。' },
         ];
+        // ===== 2026-10-29 v13：古诗词「还背不出来」+ 复习池 =====
+        // ☠️ 动因（数据，不是感觉）：poemLog 24 天里 24 天都点了「背得出来」、0 次取消。
+        //   一年级孩子不可能 24 首全真会 → 那个按钮实际被当成了"我读完了"的勾。
+        //   界面没给她"不会"的位置，她就只能点"会"，于是数据全是假的。
+        //   给「不会」一个不丢人的出口，同时又**不扣星**（不扣钱是 v11 定下来的原则）。
+        function poemHardMap() {
+            if (!state.poemHard || typeof state.poemHard !== 'object' || Array.isArray(state.poemHard)) {
+                state.poemHard = {};
+            }
+            return state.poemHard;
+        }
+        function poemSeenMap() {
+            if (!state.poemSeen || typeof state.poemSeen !== 'object' || Array.isArray(state.poemSeen)) {
+                state.poemSeen = {};
+            }
+            return state.poemSeen;
+        }
+        // 复习池排序：最久没出现过的排最前，从没出现过（空串）最优先。
+        // 同一天进来时按标记时间先后兜底，保证顺序稳定（不会每次渲染都换一首）。
+        function poemHardList() {
+            const hard = poemHardMap(), seen = poemSeenMap();
+            return Object.keys(hard).filter(function (t) {
+                return POEM_LIB.some(function (p) { return p.t === t; });
+            }).sort(function (a, b) {
+                const sa = seen[a] || '', sb = seen[b] || '';
+                if (sa !== sb) return sa < sb ? -1 : 1;
+                return (Number(hard[a]) || 0) - (Number(hard[b]) || 0);
+            });
+        }
+        // 今天是"复习日"吗？隔天来一次 —— 天天复习同一首会烦，隔太久又会忘。
+        function todayPoemReview() {
+            const list = poemHardList();
+            if (!list.length) return null;
+            if (calcSummerDay() % 2 !== 0) return null;
+            return POEM_LIB.find(function (p) { return p.t === list[0]; }) || null;
+        }
         function getTodayPoem() {
+            const rev = todayPoemReview();
+            if (rev) return rev;
             const idx = (calcSummerDay() - 1) % POEM_LIB.length;
             return POEM_LIB[idx];
         }
@@ -6369,26 +6553,65 @@
             if (!area) return;
             const p = getTodayPoem();
             const done = !!state.poemLog[state.todayDate];
+            const review = !!todayPoemReview();
+            const hardN = poemHardList().length;
             area.innerHTML =
-                '<div class="poem-card">' +
-                    '<div class="poem-head"><span>\uD83D\uDCDC 今日一句 · 古诗词</span><span>' +
-                        (done ? '\u2705 今天已背' : '\u56de\u987e\u4e00\u9996') + '</span></div>' +
+                '<div class="poem-card' + (review ? ' poem-review' : '') + '">' +
+                    // v13：复习态文案拆成左边「做什么」右边「为什么」。原先把
+                    //   「再来一次 · 上次没背出来」整句塞在左半边，320px 实测两侧只剩
+                    //   13px 间隙，肉眼看就是两句粘在一起（见 _shot_v13_poem.py 实拍）。
+                    '<div class="poem-head"><span>\uD83D\uDCDC ' +
+                        (review ? '\uD83D\uDD01 再来一次' : '今日一句 · 古诗词') +
+                        '</span><span>' +
+                        (done ? '\u2705 今天已背'
+                              : (review ? '上次没背出来' : '\u56de\u987e\u4e00\u9996')) + '</span></div>' +
                     '<div class="poem-text">' +
                         '<span class="poem-title">' + p.t + '</span>' +
-                        '<span class="poem-author">' + p.a + (p.g ? '（' + p.g + '）' : '') + '</span>' +
+                        '<span class="poem-author">' + p.a + (p.g ? '\uff08' + p.g + '\uff09' : '') + '</span>' +
                         '<div class="poem-body">' + p.x + '</div>' +
                     '</div>' +
                     '<div class="poem-actions">' +
                         '<button class="poem-btn' + (done ? ' done' : '') + '" onclick="togglePoem()">' +
                             (done ? '\u2705 今天已完成（点击取消）' : '\u6211\u80cc\u5f97\u51fa\u6765\u4e86 +2\u2b50') +
                         '</button>' +
+                        // 只在"还没完成"时给这个出口：已经点过背得出来又点不会，会让她分不清自己到底会不会
+                        (done ? '' :
+                        '<button class="poem-btn hard" onclick="markPoemHard()">\uD83E\uDD14 \u8fd8\u80cc\u4e0d\u51fa\u6765</button>') +
                     '</div>' +
+                    (hardN > 0 ?
+                        '<div class="poem-tally">\uD83D\uDCDA 还有 <b>' + hardN + '</b> \u9996\u5728\u590d\u4e60\u5355\u91cc\uff0c隔\u5929\u4f1a\u518d\u51fa\u73b0</div>' : '') +
                 '</div>';
+        }
+        // 背不出来：记进复习池，**不扣星也不给星**，只是"记账"
+        function markPoemHard() {
+            const p = getTodayPoem();
+            const hard = poemHardMap();
+            if (hard[p.t]) {
+                showToast('\u8fd9\u9996\u5df2\u7ecf\u5728\u590d\u4e60\u5355\u91cc\u5566', 'linear-gradient(135deg,#9BB0C9,#7A8FA6)');
+                return;
+            }
+            hard[p.t] = Date.now();
+            // ⚠️ 不写 poemLog：没背出来就是今天没完成，别为了"好看"给她记一笔完成
+            saveState();
+            renderPoem();
+            showToast('\uD83D\uDCCC \u8bb0\u4e0b\u4e86\uff0c\u8fc7\u4e24\u5929\u518d\u6765\u590d\u4e60\u8fd9\u9996', 'linear-gradient(135deg,#9BB0C9,#7A8FA6)');
         }
         function togglePoem() {
             const done = !state.poemLog[state.todayDate];
             state.poemLog[state.todayDate] = done;
-            if (done) { state.totalStars += 2; state.coinsEver = (state.coinsEver || 0) + 2; feedPet(2); playSound('check'); showToast('\u2728 真棒！+2星，' + (state.pet ? state.pet.name : '\u5ba0\u7269') + ' 也长大啦'); }
+            const p = getTodayPoem();
+            if (done) {
+                state.totalStars += 2; state.coinsEver = (state.coinsEver || 0) + 2; feedPet(2); playSound('check'); showToast('\u2728 真棒！+2星，' + (state.pet ? state.pet.name : '\u5ba0\u7269') + ' \u4e5f\u957f\u5927\u5566');
+                // 复习的诗她背出来了 → 从"不会"池里移出。这是池子唯一的出口，
+                //   不删的话她会一直遇到同一首，变成惩罚。
+                const hard = poemHardMap();
+                if (hard[p.t]) {
+                    delete hard[p.t];
+                    setTimeout(function () {
+                        showToast('\uD83C\uDF89 \u8fd9\u9996\u7ec8\u4e8e\u4f1a\u80cc\u4e86\uff01', 'linear-gradient(135deg,#7ED321,#4CAF50)');
+                    }, 1600);
+                }
+            }
             else { state.totalStars = Math.max(0, state.totalStars - 2); deductPet(2); playSound('uncheck'); }
             saveState();
             saveTodayToHistory();
@@ -6468,6 +6691,26 @@
             { id:'chore',      name:'家务小帮手', icon:'\uD83E\uDDF9', need:2, mode:'total', rep:1,
               desc:'一共做到 2 天，和妈妈一起做家务',
               check:function(ids){ return !!ids['e_chore']; } },
+
+            // ===== 2026-10-29 v13：天姝点名要的 4 枚 =====
+            // ☠️ 门槛按**任务的设计意图**定，不按她当前的完成率定。
+            //   天姝原话：「不是让勋章迁就实际完成情况，而是让勋章的存在提醒和刺激
+            //   布丁要多关注完成率低的任务。」
+            //   实测完成率（35 天）：说题 6% / 眼药水 6% / 晨读 9% / 默写 0%
+            //   → 这 4 枚会长期是灰的，**这是故意的**：它们是目标，不是奖状。
+            //   rep = 达标之后"本周再做几天"能再得一枚，按任务的每周出现次数定。
+            { id:'talk8',    name:'说题小达人', icon:'\uD83D\uDDD7\uFE0F', need:8, mode:'total', rep:3,
+              desc:'一共做到 8 天，把当天的数学例题讲给我听',
+              check:function(ids){ return !!ids['e_math_talk']; } },
+            { id:'eye7',     name:'护眼小达人', icon:'\uD83D\uDC40', need:7, mode:'total', rep:4,
+              desc:'一共做到 7 天，记得滴眼药水',
+              check:function(ids){ return !!ids['n_eyedrop']; } },
+            { id:'morning7', name:'晨读小百灵', icon:'\uD83D\uDC26', need:7, mode:'total', rep:4,
+              desc:'一共做到 7 天，早上开口读英语',
+              check:function(ids){ return !!ids['m_enread']; } },
+            { id:'write6',   name:'默写小能手', icon:'\u270D\uFE0F', need:6, mode:'total', rep:3,
+              desc:'一共做到 6 天，语文当日字词默写',
+              check:function(ids){ return !!ids['e_cn_dict']; } },
         ];
         function dayFlags(dateStr) {
             if (dateStr === state.todayDate) {
@@ -6605,7 +6848,15 @@
             const newly = [];
             MEDALS.forEach(function (m) {
                 if (state.medals.indexOf(m.id) >= 0) return;
-                if (medalProgress(m).have >= m.need) { state.medals.push(m.id); newly.push(m); }
+                if (medalProgress(m).have >= m.need) {
+                    state.medals.push(m.id);
+                    newly.push(m);
+                    // v13：记下"哪天得的"，让「✨新的」角标能在关掉页面后继续存在
+                    if (!state.medalGotAt || typeof state.medalGotAt !== 'object' || Array.isArray(state.medalGotAt)) {
+                        state.medalGotAt = {};
+                    }
+                    if (!state.medalGotAt[m.id]) state.medalGotAt[m.id] = state.todayDate;
+                }
             });
             // ===== 2026-10-28 v10：可累计勋章（同一枚可以反复获得）=====
             // ☠️ 这段必须在 `if (newly.length === 0) return;` **之前**：
@@ -6700,6 +6951,20 @@
                 }, 900 + i * 1600);
             });
         }
+        // v13：这枚勋章是"最近 3 天内新得的"吗？
+        // ☠️ 必须容忍脏数据：medalGotAt 可能来自云端合并/手工修数据，
+        //    拿它直接 new Date 会得到 Invalid Date，差值是 NaN，判断恒假 —— 不崩但要能兜住。
+        const MEDAL_FRESH_DAYS = 3;
+        function isMedalFresh(id) {
+            let m = state.medalGotAt;
+            if (!m || typeof m !== 'object' || Array.isArray(m)) return false;
+            const at = m[id];
+            if (!at || typeof at !== 'string') return false;
+            const d0 = new Date(at + 'T00:00:00'), d1 = new Date(state.todayDate + 'T00:00:00');
+            if (isNaN(d0.getTime()) || isNaN(d1.getTime())) return false;
+            const diff = Math.round((d1 - d0) / 86400000);
+            return diff >= 0 && diff < MEDAL_FRESH_DAYS;
+        }
         function renderMedals() {
             const area = document.getElementById('medalArea');
             if (!area) return;
@@ -6733,13 +6998,34 @@
                 // custom 型不参与"离最近的目标"推荐：它的条件不是攒天数，
                 // 否则 left 恒为 1 会一直霸占 nearest，把真正的攒天数目标挤掉。
                 if (!got && p.mode !== 'custom' && left < nearestLeft) { nearestLeft = left; nearest = m; }
+                // v13：三件事让"从灰变彩"看得见
+                //   ① fresh = 3 天内新得 → 「✨新的」角标（跨会话存活，不再依赖内存变量）
+                //   ② 未得的格子右上角挂把锁，和已得的形状拉开差距
+                //   ③ 未得的格子加一条细进度条：7 岁不懂百分比，但看得懂条的长短
+                const fresh = got && isMedalFresh(m.id);
+                const justNow = justGotMedals.indexOf(m.id) >= 0;
+                let bar = '';
+                if (!got) {
+                    const need = Math.max(1, Number(m.need) || 1);
+                    const doneN = Math.max(0, Math.min(need, Number(p.have) || 0));
+                    const pct = Math.round(100 * doneN / need);
+                    bar = '<div class="medal-bar"><i style="width:' + pct + '%"></i></div>';
+                }
+                // ⚠️ 角标位置分工（别叠在一起）：
+                //   右上 top:-3px right:1px = ×N 累计角标（已有规则，不重叠）
+                //   右上 = 🔒（只有"没得"时才出现，此时一定没有 ×N，天然互斥）
+                //   左上 = ✨新的（只有"刚得"时出现）
                 cells += '<div class="medal-cell' + (got ? ' got' : '') +
-                        (justGotMedals.indexOf(m.id) >= 0 ? ' justgot' : '') +
-                        '" title="' + m.desc + '">' +
+                        (fresh ? ' fresh' : '') +
+                        (justNow ? ' justgot' : '') +
+                        '" data-medal-id="' + m.id + '" title="' + m.desc + '">' +
                     (copies >= 2 ? '<span class="medal-rep">\u00d7' + copies + '</span>' : '') +
+                    (fresh ? '<span class="medal-fresh-tag">\u2728 \u65b0\u7684</span>' : '') +
+                    (got ? '' : '<span class="medal-lock">\uD83D\uDD12</span>') +
                     '<div class="medal-emoji">' + m.icon + '</div>' +
                     '<div class="medal-name">' + m.name + '</div>' +
                     '<div class="medal-prog">' + prog + '</div>' +
+                    bar +
                 '</div>';
             });
             // 只推一个最近的目标：孩子面对一堆目标会分散，一个才记得住
@@ -6752,10 +7038,22 @@
                 nextTip = '<div class="medal-next">\uD83C\uDFC6 \u5168\u90e8\u52cb\u7ae0\u90fd\u5f97\u5230\u4e86\uff01\u4f60\u771f\u7684\u5f88\u80fd\u575a\u6301</div>';
             }
             area.innerHTML = '<div class="medal-card">' +
+                // v13：徽章以外再加一句人话 —— 7 岁读得懂"点亮了 11 个、还有 5 个在等你"，
+                //   读不懂"11/16"这种斜杠计数（她看到的是分数，不是"我有了几个"）。
                 '<div class="medal-head"><span>\uD83C\uDFC5 \u6211\u7684\u52cb\u7ae0</span>' +
                 '<span class="medal-count">' + state.medals.length + '/' + MEDALS.length + '</span></div>' +
-                '<div class="medal-total">\uD83C\uDFC5 一共有 <b>' + totalCopies + '</b> 枚勋章' +
-                    (totalCopies > state.medals.length ? '\uff08同一种可以拿好几次）' : '') + '</div>' +
+                '<div class="medal-plain">\u5df2\u70b9\u4eae <b>' + state.medals.length + '</b> \u4e2a\uff0c' +
+                    (MEDALS.length > state.medals.length
+                        ? '\u8fd8\u6709 <b>' + (MEDALS.length - state.medals.length) + '</b> \u4e2a\u5728\u7b49\u4f60'
+                        : '\u5168\u90e8\u70b9\u4eae\u5566\uff01') + '</div>' +
+                // v13：这一行原来无条件再报一次「一共有 N 枚勋章」，可它和右上角 11/16、
+                //   还有上面那句「已点亮 11 个，还有 5 个在等你」三处说的是同一个数
+                //   → 信息重复反而稀释焦点（实拍看得最清楚，2026-10-29）。
+                //   改成**只在真有重复枚时才渲染**：那时它才带独家信息（角标 ×N 的来由）。
+                (totalCopies > state.medals.length
+                    ? '<div class="medal-total">\uD83C\uDFC5 同一枚又得了 <b>' +
+                      (totalCopies - state.medals.length) + '</b> 次</div>'
+                    : '') +
                 '<div class="medal-rule">\u6bcf\u679a\u52cb\u7ae0\u4e0b\u9762\u90fd\u5199\u7740\u8fd8\u5dee\u51e0\u5929 \u2014\u2014 \u505a\u5230\u4e86\u5c31\u80fd\u62ff\u5230 \uD83C\uDF81</div>' +
                 '<div class="medal-grid">' + cells + '</div>' +
                 nextTip +
@@ -9022,6 +9320,23 @@
             if (data.poemLog && typeof data.poemLog === 'object') {
                 state.poemLog = Object.assign({}, state.poemLog || {}, data.poemLog);
             }
+            // v13：不会背的诗 / 已展示日期 —— 都取**并集**。
+            // ☠️ 不做"最后写入赢"：多复习一次只花两分钟，漏掉一个真不会的才是损失，
+            //    两个方向不对称，所以宁可让它"回来了"。这跟余额类必须精确是两回事。
+            if (data.poemHard && typeof data.poemHard === 'object' && !Array.isArray(data.poemHard)) {
+                const hm = poemHardMap();
+                Object.keys(data.poemHard).forEach(function (k) {
+                    const v = Number(data.poemHard[k]) || 0;
+                    if (v > (Number(hm[k]) || 0)) hm[k] = v;
+                });
+            }
+            if (data.poemSeen && typeof data.poemSeen === 'object' && !Array.isArray(data.poemSeen)) {
+                const sm = poemSeenMap();
+                Object.keys(data.poemSeen).forEach(function (k) {
+                    const v = String(data.poemSeen[k] || '');
+                    if (v > (sm[k] || '')) sm[k] = v;
+                });
+            }
             // 宠物 v3：图鉴 / 成就（并集）、累计值（取大）——只增不减
             if (Array.isArray(data.petBook)) state.petBook = Array.from(new Set([...(state.petBook || []), ...data.petBook]));
             if (Array.isArray(data.achv))    state.achv    = Array.from(new Set([...(state.achv || []), ...data.achv]));
@@ -9252,7 +9567,7 @@
         //    2026-10-28 bump：data/medals.json 14 → 15 条（v12 加「课程收藏家」course12；
         //    同时改 coursefull 的判定口径 —— 口径是函数在 HTML 里，但 medal 条目在外置，
         //    两边必须一起动，否则远端会把这个 id 过滤掉）。⚠️ 最终列表 = 外置 JSON 的 id 集合。
-        const STATIC_DATA_VER = '20261028.3';
+        const STATIC_DATA_VER = '20261029.1';
         const STATIC_FILES = {
             tasks:     'data/tasks.json',
             shop:      'data/shop.json',
