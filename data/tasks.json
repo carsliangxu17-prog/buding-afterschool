@@ -119,8 +119,8 @@
   },
   {
     "id": "e_cn_dict",
-    "name": "语文当日字词听写",
-    "icon": "📝",
+    "name": "语文当日字词默写",
+    "icon": "✍️",
     "category": "after",
     "subject": "chinese",
     "stars": 3,
